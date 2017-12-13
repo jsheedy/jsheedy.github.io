@@ -1,7 +1,64 @@
+<!DOCTYPE html>
 <html>
-  <head>
-  </head>
-  <body>
-    <h1>jsheedy.github.io</h1>
-  </body>
+	<head>
+		<meta charset=utf-8>
+		<title>Joseph L Sheedy / Full Spectrum Software Developer </title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="js/three.js"></script>
+		<script>
+				var scene = new THREE.Scene();
+				var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+				var renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+				//var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+				var material = new THREE.MeshPhongMaterial( { color: 0xffffff } );
+				var cube1 = new THREE.Mesh( geometry, material );
+				cube1.position.y = 1.5;
+				var cube2 = new THREE.Mesh( geometry, material );
+				cube2.position.y = 0;
+				var cube3 = new THREE.Mesh( geometry, material );
+				cube3.position.y = -1.5	;
+
+				scene.add( cube1 );
+				scene.add( cube2 );
+				scene.add( cube3 );
+
+				var light = new THREE.PointLight( 0xffffff, 10, 100, 2 );
+				light.position.set( 0, 10, 20 );
+				scene.add( light );
+
+				var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+				scene.add( light );
+
+				var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+				scene.add( directionalLight );
+
+				clock = new THREE.Clock;
+
+				function animate() {
+					requestAnimationFrame( animate );
+
+					var t = clock.getElapsedTime();
+					var r = 4;
+					//camera.position.z = r * Math.sin(0.5*t);
+					//camera.position.x = r * Math.cos(0.5*t);
+					camera.position.y = r * Math.cos(0.2*t);
+					cube1.rotation.x = t/1.0;
+					cube2.rotation.x = t/10.0;
+					cube3.rotation.x = t/100.0;
+					camera.lookAt(0,0,0);
+					renderer.render( scene, camera );
+				}
+				animate();
+		</script>
+	</body>
 </html>
