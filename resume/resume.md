@@ -116,12 +116,13 @@ Seattle, WA
 Gatineau, Quebec 
 2001-02 – 2002-07 
 - Managed infrastructure and developed products for an embedded Linux based operating system
-- Developed user services, packaged software, version control management, MySQL administration 
+- Developed user services, packaged software, version control management
+- MySQL administration 
 - Developed an automated build system. 
 
 ### Arctic Fox Technology - President, Consultant
 Fairbanks, AK 
-2000-04 – 2001-2 
+2000-04 – 2001-02 
 - Founded and provided leadership in technical and business aspects of a software consulting company
 - Developed tools and websites 
 - Onsite IT support
@@ -129,6 +130,7 @@ Fairbanks, AK
  
  ### Arctic Region Supercomputing Center - Research Assistant
  Fairbanks, AK 2000-02 – 2000-07 
+ - Provided end user support in a scientific unix environment
  
  ### Geophysical Institute - Research Assistant
  Fairbanks, AK 1998-08 – 2000-05 
@@ -144,9 +146,11 @@ Fairbanks, AK
  
  ### University of Washington, Dept. of Atmospheric Sciences - Programming Assistant
  Seattle, WA 1996-11 – 1997-03, 1997-03 - 1997-06, 1998-01 - 1998-06 
- - Developed and executed a meteorological model in C on a SunOS platform Research Assistant 
+ - Developed and executed a meteorological model in C on a SunOS platform
+ - Research Assistant 
 - Executed numerical weather models with scripting, FORTRAN, and NCAR graphics 
 - Web Developer
+
 
 ## Education
 
