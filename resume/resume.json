@@ -1,11 +1,14 @@
 {
   "basics": {
     "name": "Joseph L. Sheedy",
-    "label": "Lead Weather Forecast Engineer • Staff Data Engineer",
+    "label": "Staff Scientific Software & Data Engineer",
     "email": "joseph.sheedy@gmail.com",
+    "location": {
+      "address": "Oakland, CA"
+    },
     "phone": "",
     "url": "https://josephsheedy.com",
-    "summary": "Lead engineer combining deep atmospheric science expertise with 20+ years building high-performance, large-scale systems for weather, climate, oceanography, and geospatial domains. Proven track record re-architecting data pipelines, leading teams, and delivering order-of-magnitude efficiency gains in on-prem and cloud-native environments.",
+    "summary": "Staff software engineer and team lead with M.S. in Atmospheric Science, building mission-critical weather systems for autonomous robotics and 20+ years in high-performance, large-scale engineering",
     "profiles": [
       {
         "network": "GitHub",
@@ -23,103 +26,94 @@
     {
       "name": "Zipline",
       "location": "South San Francisco, CA",
-      "position": "Staff scientific software engineer / Lead Weather Forecast Engineer",
+      "position": "Staff Scientific Software Engineer",
       "url": "https://www.zipline.com",
-      "startDate": "2022-05",
-      "endDate": "",
+      "startDate": "2022-05-01",
+      "endDate": "2025-12-10",
       "highlights": [
-        "Technical lead for weather nowcast system automating go/no-go decisions for massive scale global drone operations",
-        "Designed and implemented the company's first data lake, unlocking fleet wide analytics",
-        "Built first ETL and API interfaces to all recent fleet telemetry data",
-        "Cloud-native services to process and deliver nowcast data",
-        "Identified and procured off the shelf groun weather stations, built realtime ETL and API services to them and integrated into nowcast system",
-        "Mentor engineers and drive projects end-to-end from concept through long-term maintenance"
+        "Conceptualized, architected, built, deployed, and maintained an operational weather nowcast system automating go/no-go decisions for thousands of daily commercial autonomous drone flights around the globe",
+        "Weather safety targets exceeded in commercial operations",
+        "Engineered Cloud-native services to generate and communicate nowcast and observational data",
+        "Joined Data Platform team to design and implement the company's log data lake and telemetry ETL+API services, unlocking fleet wide log analysis",
+        "Procured off the shelf ground weather stations, built ETL and API services, and integrated into the infrastructure",
+        "Installed and integrated end-to-end a remote weather satellite downlink station",
+        "Mentored engineers and drove projects end-to-end from concept through long-term maintenance"
       ]
     },
     {
       "name": "Saildrone",
       "location": "Alameda, CA",
-      "position": "Lead Weather Forecast Engineer • Platform Engineer",
+      "position": "Senior Weather Forecast Engineer & Platform Engineer",
       "url": "https://www.saildrone.com",
-      "startDate": "2019-01",
-      "endDate": "2022-04",
+      "startDate": "2019-01-01",
+      "endDate": "2022-04-01",
       "highlights": [
-        "Led weather forecast team and Data Pipeline team",
-        "Built first company datalake, unlocking robotic fleet wide analytics",
-        "Built one-click end-to-end solution for offloading payload and telemetry data from drones over wired network or hand carry via large intelligent portable storage devices", 
-        "Re-engineered multiple global weather forecast systems from first principles, achieving orders-of-magnitude efficiency and cost improvements",
-        "Designed and deployed cloud-native Python services using chunked gridded storage (Zarr, NetCDF) processing >100 GB of forecast data daily with sub-minute latency",
-        "Own Kubernetes deployments and observability for production forecast platform",
-        "Mentor engineers and drive projects end-to-end from concept through long-term maintenance"
+        "Led Weather and Data Pipeline teams",
+        "Architected and developed first company data lake, unlocking fleet wide analytics",
+        "Built one-click end-to-end solution for offloading payload and telemetry data from drones over wired network or hand carried intelligent portable storage devices", 
+        "Re-engineered global weather forecast system from first principles resulting in higher quality forecasts for fleet operations and commercial applications teams while achieving orders-of-magnitude efficiency and cost improvements",
+        "Designed and deployed cloud-native Python services using chunked gridded storage (Zarr, NetCDF) processing >100 GB of forecast data daily with low latency",
+        "Owned Kubernetes deployments and observability infrastructure for production forecast platform, enabling path planning of a global autonomous fleet",
+        "Mentored engineers and drove projects end-to-end from concept through long-term maintenance"
       ]
     },
     {
       "name": "Rooster Park",
       "location": "Seattle, WA",
-      "position": "Senior Developer",
-      "startDate": "2018-05",
-      "endDate": "2018-12",
+      "position": "Senior Software Developer",
+      "startDate": "2018-05-01",
+      "endDate": "2018-12-01",
       "highlights": [
-        "First full-stack engineer for a domain-specific CMS; stood up all infrastructure for hyper-growth phase",
-        "Built automated AWS environments, Python/Flask backend, React frontend, and full CI/CD pipeline"
+        "Founding full stack engineer for a political domain analytics engine and CMS",
+        "Stood up React frontend, Python backend, AWS infrastructure, and CI/CD for hyper-growth phase"
       ]
     },
     {
-      "name": "Vulcan Inc.",
+      "name": "Rooster Park / Vulcan Inc.",
       "location": "Seattle, WA",
       "position": "Senior Software Developer",
       "url": "https://www.vulcan.com",
-      "startDate": "2015-10",
-      "endDate": "2017-08",
+      "startDate": "2014-12-01",
+      "endDate": "2017-08-01",
       "highlights": [
-        "Converted from Rooster Park contract to FTE after successful Sea Around Us redesign",
-        "Ported legacy VB ecological modeling suite to high-performance Python (major usability + speed wins)",
-        "Led migration of monolithic ASP.NET app to Angular + Python REST API stack",
-        "Open-sourced core components: https://github.com/SeaAroundUs/",
-        "Built from-scratch D3.js mapping framework for global fisheries data",
+        "Converted from Rooster Park contract to FTE after successful full rewrite of the Sea Around Us fisheries model and analysis tools",
+        "Led migration of legacy Visual Basic / ASP.NET ecological modeling suite to high-performance Postgres/Python/Angular resulting in large usability and performance gains",
+        "Open-sourced core components including D3-based mapping framework to meet geographic projection requirements",
         "Designed and shipped real-time RabbitMQ event system for radio-collar wildlife tracking",
-        "Developed high-precision AR prototypes in Unity3D + Python/OpenCV/numpy for beacon-based localization"
+        "Developed high-precision AR prototypes in Unity3D + Python/OpenCV/numpy for beacon-based localization",
+        "Developed AR vision system for sporting events (US Patent 10,325,410: Augmented Reality For Enhancing Sporting Events)"
       ]
-    },
-    {
-      "name": "Rooster Park (contract for Vulcan)",
-      "location": "Seattle, WA",
-      "position": "Senior Developer",
-      "startDate": "2014-12",
-      "endDate": "2015-10"
     },
     {
       "name": "University of Washington Professional & Continuing Education",
       "location": "Seattle, WA",
       "position": "Part-time Instructor – Python 300",
-      "startDate": "2013-04",
-      "endDate": "2015-06",
+      "startDate": "2013-04-01",
+      "endDate": "2015-06-01",
       "highlights": [
-        "Created curriculum and taught the capstone course of the Python professional certificate program",
+        "Created curriculum and taught the Python professional certificate program",
         "Delivered classes on-site at UW and off-site for corporate clients"
       ]
     },
     {
       "name": "Velotron Heavy Industries",
       "location": "Seattle, WA",
-      "position": "Owner • Lead Developer",
-      "startDate": "2007-08",
-      "endDate": "2014-12",
+      "position": "Owner & Lead Developer",
+      "startDate": "2007-08-01",
+      "endDate": "2014-12-01",
       "highlights": [
         "Delivered dozens of commercial and research projects across weather, fisheries, energy, and interactive art",
-        "Built and shipped a successful Ruby on Rails real-time video streaming platform",
-        "Developed distributed Python geospatial analysis stacks for fisheries science",
-        "Created optical gesture / voice-controlled Windows 8 application (Ember.js + C# .NET)",
-        "Designed GeoDjango weather-model management systems and wind-power forecast delivery portals",
-        "Shipped interactive art installations integrating Unity3D, Max/MSP, Ableton Live, projection mapping, and node.js"
+        "Built and commercially successful educational platform for poker with integrated e-commerce, video streaming, and social components",
+        "Created a gesture and voice controlled Windows application as prototype for smart appliances (Ember.js + C# .NET)",
+        "Designed weather model management systems and wind power forecast delivery portals"
       ]
     },
     {
       "name": "ClipCard (formerly OneOcean)",
       "location": "Seattle, WA",
       "position": "Senior Developer",
-      "startDate": "2012-06",
-      "endDate": "2014-03",
+      "startDate": "2012-06-01",
+      "endDate": "2014-03-01",
       "highlights": [
         "Core engineer on distributed Django metadata extraction platform for oceanographic datasets",
         "Integrated proprietary formats, cloud storage, and multiple distributed task queues"
@@ -128,14 +122,49 @@
     {
       "name": "3TIER (now Vaisala)",
       "location": "Seattle, WA",
-      "position": "Developer • Systems Administrator",
-      "startDate": "2003-05",
-      "endDate": "2007-08",
+      "position": "Developer & Systems Administrator",
+      "startDate": "2003-05-01",
+      "endDate": "2007-08-01",
       "highlights": [
         "Built end-to-end meteorological data collection, modeling, and web delivery systems",
         "Managed large Linux clusters running numerical weather models",
-        "Introduced modern version control, bug tracking, and release practices"
+        "Introduced modern software development practices"
       ]
+    },
+    {
+      "name": "Chronotechnic",
+      "location": "Seattle, WA",
+      "position": "Java Developer",
+      "startDate": "2002-08-01",
+      "endDate": "2003-05-01"
+    },
+    {
+      "name": "OEOne",
+      "location": "Gatineau, QC",
+      "position": "IT Manager & Developer",
+      "startDate": "2001-02-01",
+      "endDate": "2002-07-01"
+    },
+    {
+      "name": "Arctic Fox Technology Incorporated",
+      "location": "Fairbanks, AK",
+      "position": "President & Technical Consultant",
+      "startDate": "2000-04-01",
+      "endDate": "2001-02-01"
+    },
+    {
+      "name": "University of Washington",
+      "location": "Seattle, WA",
+      "position": "Scientific Programmer & Web Developer",
+      "startDate": "1996-01-01",
+      "endDate": "1998-06-01"
+    },
+    {
+      "name": "New Mexico Tech at Langmuir Laboratory",
+      "location": "Socorro, NM",
+      "position": "Field Tech & Software Developer",
+      "startDate": "1997-06-01",
+      "endDate": "1998-09-01"
     }
   ],
   "education": [
@@ -143,60 +172,55 @@
       "institution": "University of Alaska Fairbanks",
       "area": "Atmospheric Science",
       "studyType": "M.S.",
-      "startDate": "1998",
-      "endDate": "2000"
+      "startDate": "1998-09-01",
+      "endDate": "2000-02-01"
     },
     {
       "institution": "University of Washington",
       "area": "Atmospheric Science",
       "studyType": "B.S.",
-      "startDate": "1994",
-      "endDate": "1998"
+      "startDate": "1994-09-01",
+      "endDate": "1998-06-01"
     },
     {
       "institution": "University of Washington",
       "area": "Physics",
       "studyType": "B.S.",
-      "startDate": "1994",
-      "endDate": "1998"
+      "startDate": "1994-09-01",
+      "endDate": "1998-06-01"
     }
   ],
   "certificates": [
     {
       "name": "Neural Networks and Deep Learning",
-      "issuer": "Coursera (deeplearning.ai)",
-      "date": "2017"
-    }
-  ],
-  "patents": [
-    {
-      "name": "Augmented reality for enhancing sporting events",
-      "date": "2017"
+      "issuer": "Coursera (deeplearning.ai)"
     }
   ],
   "skills": [
     {
-      "name": "Languages & Frameworks",
+      "name": "Languages & Tools",
       "keywords": [
-        "Python", "Kubernetes", "AWS", "Django", "Flask", "FastAPI", "React", "Angular", "D3.js",
-        "Ruby on Rails", "Unity3D", "C#", "Swift", "Objective-C", "Java", "FORTRAN"
+        "Python", "Typescript", "UNIX shell", "Ruby", "Go", "C/C++", "C#", "Rust", "Java", 
+        "Kubernetes", "AWS", "FastAPI", "React", "deck.gl", "D3.js",
+        "GLSL", "Unity3D"
       ]
     },
     {
       "name": "Data & Science",
       "keywords": [
-        "Numerical weather prediction", "Zarr", "NetCDF", "xarray", "Dask", "OpenCV", "numpy", "scipy",
-        "Geospatial analysis", "PostGIS", "GDAL", "RabbitMQ", "asyncio"
+        "Numerical weather prediction", "Parquet", "Zarr", "NetCDF", "xarray", "Dask", "OpenCV", "scipy",
+        "DuckDB", "PostGIS", "H3", "Kafka", "RabbitMQ", "python-asyncio", "HRRR", "MRMS", "METAR", "ECMWF", "GOES", "EUMETSAT"
       ]
     },
     {
       "name": "Leadership & Practices",
       "keywords": [
-        "Team lead", "Mentoring", "System design", "Cloud architecture", "CI/CD", "Observability"
+        "Team lead", "Mentor", "System Architecture", "CI/CD", "Observability"
       ]
     }
   ],
   "meta": {
-    "theme": "kendall"
+    "theme": "jsonresume-theme-modern-plain",
+    "$xtheme": "jsonresume-theme-modern-plain"
   }
 }

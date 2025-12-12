@@ -1,0 +1,12 @@
+#!/bin/bash
+
+JSON_RESUME_FILE="resume.json"
+
+echo "watching for changes to ${JSON_RESUME_FILE}"
+
+inotifywait -m -e close_write,moved_to ./ | while read -r path event file; do
+    if [ "$file" = "${JSON_RESUME_FILE}" ]; then
+      echo "$path $event $file"  
+      resumed export -o joseph-sheedy-resume.pdf
+    fi
+done
