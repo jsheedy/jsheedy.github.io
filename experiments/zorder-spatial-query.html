@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Order Spatial Query</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        .dual-range {
+            position: relative;
+            height: 4px;
+            width: 100%;
+        }
+
+        .dual-range input[type="range"] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        .dual-range input[type="range"]::-webkit-slider-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dual-range input[type="range"]::-moz-range-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dual-range::before {
+            content: "";
+            position: absolute;
+            height: 4px;
+            width: 100%;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            top: 0;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #00ff41;
+            filter: brightness(1.2);
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title-text">Z-ORDER SPATIAL QUERY</div>
+        <div class="title-subtitle">EXPLORE SPATIAL LOCALITY WITH Z-CODE RANGES</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="gridSize">16x16</div>
+                <div class="stat-label">Grid Size</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="hoveredCode">-</div>
+                <div class="stat-label">Hovered Z-Code</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="highlightedCount">0</div>
+                <div class="stat-label">Highlighted Count</div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Grid Depth: <span class="value-display" id="depthDisplay">4</span></label>
+            <input type="range" id="depth" min="1" max="6" value="4" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>Z-Code Range: <span class="value-display" id="rangeDisplay">-10 to +20</span></label>
+            <div class="dual-range">
+                <input type="range" id="minOffset" min="-100" max="0" value="-10" step="1" class="range-min">
+                <input type="range" id="maxOffset" min="0" max="100" value="20" step="1" class="range-max">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="showCodes" checked>
+                Show Z-Codes
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="showCoords">
+                Show Coordinates
+            </label>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+            generateGrid();
+            draw();
+        }
+
+        // Wait for DOM to be fully loaded before initial resize
+        window.addEventListener('load', () => {
+            resizeCanvas();
+        });
+        window.addEventListener('resize', resizeCanvas);
+
+        // Z-Order encoding class
+        class ZOrder {
+            static encode(x, y) {
+                return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
+            }
+
+            static interleave(n) {
+                n = (n | (n << 8)) & 0x00FF00FF;
+                n = (n | (n << 4)) & 0x0F0F0F0F;
+                n = (n | (n << 2)) & 0x33333333;
+                n = (n | (n << 1)) & 0x55555555;
+                return n;
+            }
+
+            static decode(code) {
+                return {
+                    x: ZOrder.deinterleave(code),
+                    y: ZOrder.deinterleave(code >> 1)
+                };
+            }
+
+            static deinterleave(n) {
+                n = n & 0x55555555;
+                n = (n | (n >> 1)) & 0x33333333;
+                n = (n | (n >> 2)) & 0x0F0F0F0F;
+                n = (n | (n >> 4)) & 0x00FF00FF;
+                n = (n | (n >> 8)) & 0x0000FFFF;
+                return n;
+            }
+        }
+
+        // Grid cell class
+        class GridCell {
+            constructor(gridX, gridY, zCode, screenX, screenY, cellSize) {
+                this.gridX = gridX;
+                this.gridY = gridY;
+                this.zCode = zCode;
+                this.screenX = screenX;
+                this.screenY = screenY;
+                this.cellSize = cellSize;
+            }
+
+            draw(ctx, showCodes, showCoords, isHighlighted = false, isHovered = false) {
+                const x = this.screenX;
+                const y = this.screenY;
+                const size = this.cellSize;
+
+                // Draw cell background
+                if (isHovered) {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.5)';
+                } else if (isHighlighted) {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.2)';
+                } else {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+                }
+                ctx.fillRect(x, y, size, size);
+
+                // Draw cell border
+                ctx.strokeStyle = isHovered ? '#00ff41' : 'rgba(0, 255, 65, 0.3)';
+                ctx.lineWidth = isHovered ? 2 : 1;
+                ctx.strokeRect(x, y, size, size);
+
+                // Calculate font size based on cell size
+                const fontSize = Math.max(10, Math.min(size / 4, 14));
+                ctx.font = `${fontSize}px 'Courier New', monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Draw Z-code
+                if (showCodes) {
+                    ctx.fillStyle = isHovered ? '#00ff41' : 'rgba(0, 255, 65, 0.8)';
+                    ctx.fillText(this.zCode.toString(), x + size / 2, y + size / 2);
+                }
+
+                // Draw coordinates
+                if (showCoords) {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.5)';
+                    ctx.font = `${Math.max(8, fontSize - 2)}px 'Courier New', monospace`;
+                    const coordText = `(${this.gridX},${this.gridY})`;
+                    const yOffset = showCodes ? size * 0.7 : size / 2;
+                    ctx.fillText(coordText, x + size / 2, y + yOffset);
+                }
+
+                // Draw hover indicator
+                if (isHovered) {
+                    ctx.fillStyle = '#00ff41';
+                    ctx.font = `bold ${Math.max(8, fontSize - 2)}px 'Courier New', monospace`;
+                    ctx.textAlign = 'left';
+                    ctx.fillText('⬤', x + 5, y + fontSize);
+                }
+            }
+
+            contains(mouseX, mouseY) {
+                return mouseX >= this.screenX &&
+                       mouseX <= this.screenX + this.cellSize &&
+                       mouseY >= this.screenY &&
+                       mouseY <= this.screenY + this.cellSize;
+            }
+        }
+
+        // State
+        let depth = 4;
+        let minOffset = -10;
+        let maxOffset = 20;
+        let showCodes = true;
+        let showCoords = false;
+        let cells = [];
+        let hoveredCell = null;
+
+        // Generate grid cells
+        function generateGrid() {
+            cells = [];
+
+            const cellsPerSide = 1 << depth; // 2^depth
+            const gridSize = Math.min(canvas.width, canvas.height) * 0.8;
+            const cellSize = gridSize / cellsPerSide;
+            const offsetX = (canvas.width - gridSize) / 2;
+            const offsetY = (canvas.height - gridSize) / 2;
+
+            // Generate all cells with their Z-codes
+            const cellMap = [];
+            for (let y = 0; y < cellsPerSide; y++) {
+                for (let x = 0; x < cellsPerSide; x++) {
+                    const zCode = ZOrder.encode(x, y);
+                    const screenX = offsetX + x * cellSize;
+                    const screenY = offsetY + y * cellSize;
+                    const cell = new GridCell(x, y, zCode, screenX, screenY, cellSize);
+                    cellMap.push(cell);
+                }
+            }
+
+            // Sort by Z-order
+            cellMap.sort((a, b) => a.zCode - b.zCode);
+            cells = cellMap;
+
+            // Update stats
+            document.getElementById('gridSize').textContent = `${cellsPerSide}x${cellsPerSide}`;
+        }
+
+        // Draw everything
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Determine which cells to highlight
+            let highlightedCells = new Set();
+            if (hoveredCell) {
+                const minZ = hoveredCell.zCode + minOffset;
+                const maxZ = hoveredCell.zCode + maxOffset;
+
+                for (let cell of cells) {
+                    if (cell.zCode >= minZ && cell.zCode <= maxZ && cell !== hoveredCell) {
+                        highlightedCells.add(cell);
+                    }
+                }
+            }
+
+            // Draw cells
+            for (let cell of cells) {
+                const isHovered = cell === hoveredCell;
+                const isHighlighted = highlightedCells.has(cell);
+                cell.draw(ctx, showCodes, showCoords, isHighlighted, isHovered);
+            }
+
+            // Update stats
+            if (hoveredCell) {
+                document.getElementById('hoveredCode').textContent = hoveredCell.zCode;
+                document.getElementById('highlightedCount').textContent = highlightedCells.size;
+            } else {
+                document.getElementById('hoveredCode').textContent = '-';
+                document.getElementById('highlightedCount').textContent = '0';
+            }
+
+            // Draw legend
+            drawLegend();
+        }
+
+        // Draw legend
+        function drawLegend() {
+            const padding = 20;
+            const lineHeight = 20;
+            let y = padding;
+
+            ctx.font = "12px 'Courier New', monospace";
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            // Title
+            ctx.fillStyle = '#00ff41';
+            ctx.fillText('SPATIAL QUERY', padding, y);
+            y += lineHeight * 1.5;
+
+            // Info
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.7)';
+            if (hoveredCell) {
+                ctx.fillText(`Hover Z-Code: ${hoveredCell.zCode}`, padding, y);
+                y += lineHeight;
+                ctx.fillText(`Grid Pos: (${hoveredCell.gridX}, ${hoveredCell.gridY})`, padding, y);
+                y += lineHeight;
+                ctx.fillText(`Query Range: [${hoveredCell.zCode + minOffset}, ${hoveredCell.zCode + maxOffset}]`, padding, y);
+                y += lineHeight;
+
+                // Count highlighted cells
+                let highlightedCount = 0;
+                const minZ = hoveredCell.zCode + minOffset;
+                const maxZ = hoveredCell.zCode + maxOffset;
+                for (let cell of cells) {
+                    if (cell.zCode >= minZ && cell.zCode <= maxZ && cell !== hoveredCell) {
+                        highlightedCount++;
+                    }
+                }
+                ctx.fillText(`Highlighted Cells: ${highlightedCount}`, padding, y);
+            } else {
+                ctx.fillText('Hover over a cell to query', padding, y);
+            }
+        }
+
+        // Mouse move handler
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            hoveredCell = null;
+            for (let cell of cells) {
+                if (cell.contains(mouseX, mouseY)) {
+                    hoveredCell = cell;
+                    break;
+                }
+            }
+
+            draw();
+        });
+
+        // Mouse leave handler
+        canvas.addEventListener('mouseleave', () => {
+            hoveredCell = null;
+            draw();
+        });
+
+        // Event listeners
+        document.getElementById('depth').addEventListener('input', (e) => {
+            depth = parseInt(e.target.value);
+            document.getElementById('depthDisplay').textContent = depth;
+            generateGrid();
+            draw();
+        });
+
+        document.getElementById('minOffset').addEventListener('input', (e) => {
+            minOffset = parseInt(e.target.value);
+            // Ensure min doesn't exceed max
+            if (minOffset > maxOffset) {
+                maxOffset = minOffset;
+                document.getElementById('maxOffset').value = maxOffset;
+            }
+            document.getElementById('rangeDisplay').textContent = `${minOffset} to +${maxOffset}`;
+            draw();
+        });
+
+        document.getElementById('maxOffset').addEventListener('input', (e) => {
+            maxOffset = parseInt(e.target.value);
+            // Ensure max doesn't go below min
+            if (maxOffset < minOffset) {
+                minOffset = maxOffset;
+                document.getElementById('minOffset').value = minOffset;
+            }
+            document.getElementById('rangeDisplay').textContent = `${minOffset} to +${maxOffset}`;
+            draw();
+        });
+
+        document.getElementById('showCodes').addEventListener('change', (e) => {
+            showCodes = e.target.checked;
+            draw();
+        });
+
+        document.getElementById('showCoords').addEventListener('change', (e) => {
+            showCoords = e.target.checked;
+            draw();
+        });
+    </script>
+</body>
+</html>
