@@ -68,7 +68,7 @@
             padding: 20px;
             box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) minmax(150px, 15%);
             gap: 15px;
             max-height: 200px;
             overflow-y: auto;
@@ -235,7 +235,35 @@
         .button-group button {
             flex: 1;
         }
-        
+
+        .help-panel {
+            grid-column: -2 / -1;
+            grid-row: 1 / -1;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            padding: 10px;
+            font-size: 9px;
+            line-height: 1.4;
+            color: #00ff4199;
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .help-panel h3 {
+            color: #00ff41;
+            font-size: 10px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        .help-panel p {
+            margin: 5px 0;
+        }
+
         body::before {
             content: "";
             position: fixed;
@@ -332,9 +360,30 @@
             <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.05">
         </div>
 
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="showSearchRange">
+                <span>Show Search Range</span>
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="useZOrder" checked>
+                <span>Use Z-Order Optimization</span>
+            </label>
+        </div>
+
         <div class="button-group">
             <button onclick="resetParticles()">Reset</button>
             <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+
+        <div class="help-panel" id="helpPanel">
+            <h3>About</h3>
+            <p>Emergent flocking behavior simulation using three boids rules: separation, alignment, and cohesion.</p>
+            <p>Uses Z-order spatial partitioning for efficient neighbor detection in O(n log n) instead of O(n²).</p>
+            <p>Rendered with classic arcade vector graphics aesthetic.</p>
         </div>
     </div>
 
@@ -393,10 +442,19 @@
                 this.steerY = 0;
                 this.neighborCount = 0;
 
-                // Random unique color
-                this.r = Math.random() * 255;
-                this.g = Math.random() * 255;
-                this.b = Math.random() * 255;
+                // Arcade vector graphics color palette (bright, saturated phosphor colors)
+                const vectorColors = [
+                    { r: 0, g: 255, b: 255 },     // Cyan
+                    { r: 0, g: 255, b: 0 },       // Green
+                    { r: 255, g: 0, b: 0 },       // Red
+                    { r: 255, g: 255, b: 0 },     // Yellow
+                    { r: 255, g: 0, b: 255 },     // Magenta
+                    { r: 255, g: 255, b: 255 }    // White
+                ];
+                const color = vectorColors[Math.floor(Math.random() * vectorColors.length)];
+                this.r = color.r;
+                this.g = color.g;
+                this.b = color.b;
 
                 // Birth color (permanent identity - never changes)
                 this.birthR = this.r;
@@ -437,27 +495,47 @@
                 if (this.y < 0) this.y += canvas.height;
                 if (this.y > canvas.height) this.y -= canvas.height;
 
-                // Update z-order code for spatial partitioning
-                const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
-                const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
-                this.zCode = ZOrder.encode(gridX, gridY);
+                // Update z-order code for spatial partitioning (only if enabled)
+                if (useZOrder) {
+                    const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
+                    const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
+                    this.zCode = ZOrder.encode(gridX, gridY);
+                }
             }
             
             draw(ctx) {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = `rgb(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)})`;
-                ctx.fill();
+                // Optionally draw search range
+                if (showSearchRange) {
+                    const avgSize = (minSize + maxSize) / 2;
+                    const searchDist = searchRange * avgSize * 2;
 
-                // Draw direction indicator
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, searchDist, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)}, 0.2)`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                // Draw as vector triangle (like Asteroids ship)
                 const angle = Math.atan2(this.vy, this.vx);
-                const lineLength = this.radius * 2;
+                const size = this.radius;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(angle);
+
+                // Draw triangle outline
                 ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x + Math.cos(angle) * lineLength, this.y + Math.sin(angle) * lineLength);
-                ctx.strokeStyle = `rgba(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)}, 0.5)`;
-                ctx.lineWidth = 1;
+                ctx.moveTo(size * 2, 0);              // Nose (pointing right)
+                ctx.lineTo(-size, -size);             // Back left
+                ctx.lineTo(-size, size);              // Back right
+                ctx.closePath();
+
+                ctx.strokeStyle = `rgb(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)})`;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
+
+                ctx.restore();
             }
         }
         
@@ -471,6 +549,8 @@
         let cohesion = 1.0;
         let searchRange = 3;
         let trailFade = 0.15;
+        let showSearchRange = false;
+        let useZOrder = true;
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
@@ -485,7 +565,9 @@
                 alignment,
                 cohesion,
                 searchRange,
-                trailFade
+                trailFade,
+                showSearchRange,
+                useZOrder
             };
             localStorage.setItem('boidsSettings', JSON.stringify(settings));
         }
@@ -504,6 +586,8 @@
                 cohesion = settings.cohesion ?? cohesion;
                 searchRange = settings.searchRange ?? searchRange;
                 trailFade = settings.trailFade ?? trailFade;
+                showSearchRange = settings.showSearchRange ?? showSearchRange;
+                useZOrder = settings.useZOrder ?? useZOrder;
 
                 // Update UI elements
                 document.getElementById('particleCount').value = particleCount;
@@ -530,6 +614,9 @@
 
                 document.getElementById('trailFade').value = trailFade;
                 document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+
+                document.getElementById('showSearchRange').checked = showSearchRange;
+                document.getElementById('useZOrder').checked = useZOrder;
             }
         }
 
@@ -553,8 +640,10 @@
             let totalNeighbors = 0;
             let checkCount = 0;
 
-            // Sort particles by z-order code for efficient neighbor search
-            particles.sort((a, b) => a.zCode - b.zCode);
+            // Sort particles by z-order code for efficient neighbor search (only if enabled)
+            if (useZOrder) {
+                particles.sort((a, b) => a.zCode - b.zCode);
+            }
 
             // Reset steering forces
             for (let particle of particles) {
@@ -566,155 +655,253 @@
             const avgSize = (minSize + maxSize) / 2;
             const searchDist = searchRange * avgSize * 2;
 
-            // Calculate boids forces for each particle
-            for (let i = 0; i < particles.length; i++) {
-                const boid = particles[i];
+            if (useZOrder) {
+                // Z-ORDER OPTIMIZED PATH
+                // Calculate boids forces for each particle
+                for (let i = 0; i < particles.length; i++) {
+                    const boid = particles[i];
 
-                // Accumulators for the three boids rules
-                let separationX = 0, separationY = 0;
-                let alignmentX = 0, alignmentY = 0;
-                let cohesionX = 0, cohesionY = 0;
-                let neighborCount = 0;
+                    // Accumulators for the three boids rules
+                    let separationX = 0, separationY = 0;
+                    let alignmentX = 0, alignmentY = 0;
+                    let cohesionX = 0, cohesionY = 0;
+                    let neighborCount = 0;
 
-                // Accumulators for color averaging
-                let avgR = 0, avgG = 0, avgB = 0;
+                    // Accumulators for color averaging
+                    let avgR = 0, avgG = 0, avgB = 0;
 
-                // Find neighbors using z-order spatial partitioning
-                // Search forward in the sorted array
-                for (let j = i + 1; j < particles.length; j++) {
-                    const other = particles[j];
+                    // Find neighbors using z-order spatial partitioning
+                    // Search forward in the sorted array
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const other = particles[j];
 
-                    const zDiff = other.zCode - boid.zCode;
-                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
-                    if (zDiff > zThreshold) {
-                        break;
-                    }
-
-                    checkCount++;
-
-                    // Calculate distance (accounting for wrapping)
-                    let dx = other.x - boid.x;
-                    let dy = other.y - boid.y;
-
-                    // Handle toroidal wrapping
-                    if (Math.abs(dx) > canvas.width / 2) {
-                        dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
-                    }
-                    if (Math.abs(dy) > canvas.height / 2) {
-                        dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
-                    }
-
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < searchDist && dist > 0) {
-                        neighborCount++;
-
-                        // Separation: steer away from nearby boids
-                        const separationDist = avgSize * 1.5;
-                        if (dist < separationDist) {
-                            separationX -= dx / dist;
-                            separationY -= dy / dist;
+                        const zDiff = other.zCode - boid.zCode;
+                        const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                        if (zDiff > zThreshold) {
+                            break;
                         }
 
-                        // Alignment: match velocity of neighbors
-                        alignmentX += other.vx;
-                        alignmentY += other.vy;
+                        checkCount++;
 
-                        // Cohesion: move towards center of mass of neighbors
-                        cohesionX += dx;
-                        cohesionY += dy;
+                        // Calculate distance (accounting for wrapping)
+                        let dx = other.x - boid.x;
+                        let dy = other.y - boid.y;
 
-                        // Color: accumulate neighbor colors
-                        avgR += other.r;
-                        avgG += other.g;
-                        avgB += other.b;
-                    }
-                }
-
-                // Search backward in the sorted array
-                for (let j = i - 1; j >= 0; j--) {
-                    const other = particles[j];
-
-                    const zDiff = boid.zCode - other.zCode;
-                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
-                    if (zDiff > zThreshold) {
-                        break;
-                    }
-
-                    checkCount++;
-
-                    // Calculate distance (accounting for wrapping)
-                    let dx = other.x - boid.x;
-                    let dy = other.y - boid.y;
-
-                    // Handle toroidal wrapping
-                    if (Math.abs(dx) > canvas.width / 2) {
-                        dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
-                    }
-                    if (Math.abs(dy) > canvas.height / 2) {
-                        dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
-                    }
-
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < searchDist && dist > 0) {
-                        neighborCount++;
-
-                        // Separation: steer away from nearby boids
-                        const separationDist = avgSize * 1.5;
-                        if (dist < separationDist) {
-                            separationX -= dx / dist;
-                            separationY -= dy / dist;
+                        // Handle toroidal wrapping
+                        if (Math.abs(dx) > canvas.width / 2) {
+                            dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
+                        }
+                        if (Math.abs(dy) > canvas.height / 2) {
+                            dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
                         }
 
-                        // Alignment: match velocity of neighbors
-                        alignmentX += other.vx;
-                        alignmentY += other.vy;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        // Cohesion: move towards center of mass of neighbors
-                        cohesionX += dx;
-                        cohesionY += dy;
+                        if (dist < searchDist && dist > 0) {
+                            neighborCount++;
 
-                        // Color: accumulate neighbor colors
-                        avgR += other.r;
-                        avgG += other.g;
-                        avgB += other.b;
+                            // Separation: steer away from nearby boids
+                            const separationDist = avgSize * 1.5;
+                            if (dist < separationDist) {
+                                separationX -= dx / dist;
+                                separationY -= dy / dist;
+                            }
+
+                            // Alignment: match velocity of neighbors
+                            alignmentX += other.vx;
+                            alignmentY += other.vy;
+
+                            // Cohesion: move towards center of mass of neighbors
+                            cohesionX += dx;
+                            cohesionY += dy;
+
+                            // Color: accumulate neighbor colors
+                            avgR += other.r;
+                            avgG += other.g;
+                            avgB += other.b;
+                        }
+                    }
+
+                    // Search backward in the sorted array
+                    for (let j = i - 1; j >= 0; j--) {
+                        const other = particles[j];
+
+                        const zDiff = boid.zCode - other.zCode;
+                        const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                        if (zDiff > zThreshold) {
+                            break;
+                        }
+
+                        checkCount++;
+
+                        // Calculate distance (accounting for wrapping)
+                        let dx = other.x - boid.x;
+                        let dy = other.y - boid.y;
+
+                        // Handle toroidal wrapping
+                        if (Math.abs(dx) > canvas.width / 2) {
+                            dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
+                        }
+                        if (Math.abs(dy) > canvas.height / 2) {
+                            dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
+                        }
+
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < searchDist && dist > 0) {
+                            neighborCount++;
+
+                            // Separation: steer away from nearby boids
+                            const separationDist = avgSize * 1.5;
+                            if (dist < separationDist) {
+                                separationX -= dx / dist;
+                                separationY -= dy / dist;
+                            }
+
+                            // Alignment: match velocity of neighbors
+                            alignmentX += other.vx;
+                            alignmentY += other.vy;
+
+                            // Cohesion: move towards center of mass of neighbors
+                            cohesionX += dx;
+                            cohesionY += dy;
+
+                            // Color: accumulate neighbor colors
+                            avgR += other.r;
+                            avgG += other.g;
+                            avgB += other.b;
+                        }
+                    }
+
+                    if (neighborCount > 0) {
+                        // Average the alignment and cohesion vectors
+                        alignmentX /= neighborCount;
+                        alignmentY /= neighborCount;
+                        cohesionX /= neighborCount;
+                        cohesionY /= neighborCount;
+
+                        // Average the colors
+                        avgR /= neighborCount;
+                        avgG /= neighborCount;
+                        avgB /= neighborCount;
+
+                        // Set target color: blend birth color (50%), neighbor average (50%)
+                        // This maintains permanent color identity while allowing neighbor influence
+                        boid.targetR = boid.birthR * 0.5 + avgR * 0.5;
+                        boid.targetG = boid.birthG * 0.5 + avgG * 0.5;
+                        boid.targetB = boid.birthB * 0.5 + avgB * 0.5;
+
+                        // Apply weights and combine forces
+                        boid.steerX = (separationX * separation * 1.5) +
+                                      ((alignmentX - boid.vx) * alignment * 0.05) +
+                                      (cohesionX * cohesion * 0.01);
+                        boid.steerY = (separationY * separation * 1.5) +
+                                      ((alignmentY - boid.vy) * alignment * 0.05) +
+                                      (cohesionY * cohesion * 0.01);
+
+                        boid.neighborCount = neighborCount;
+                        totalNeighbors += neighborCount;
+                    } else {
+                        // No neighbors - drift back to birth color
+                        boid.targetR = boid.birthR;
+                        boid.targetG = boid.birthG;
+                        boid.targetB = boid.birthB;
                     }
                 }
+            } else {
+                // BRUTE FORCE PATH
+                // Check every pair of particles
+                for (let i = 0; i < particles.length; i++) {
+                    const boid = particles[i];
 
-                if (neighborCount > 0) {
-                    // Average the alignment and cohesion vectors
-                    alignmentX /= neighborCount;
-                    alignmentY /= neighborCount;
-                    cohesionX /= neighborCount;
-                    cohesionY /= neighborCount;
+                    // Accumulators for the three boids rules
+                    let separationX = 0, separationY = 0;
+                    let alignmentX = 0, alignmentY = 0;
+                    let cohesionX = 0, cohesionY = 0;
+                    let neighborCount = 0;
 
-                    // Average the colors
-                    avgR /= neighborCount;
-                    avgG /= neighborCount;
-                    avgB /= neighborCount;
+                    // Accumulators for color averaging
+                    let avgR = 0, avgG = 0, avgB = 0;
 
-                    // Set target color: blend birth color (50%), neighbor average (50%)
-                    // This maintains permanent color identity while allowing neighbor influence
-                    boid.targetR = boid.birthR * 0.5 + avgR * 0.5;
-                    boid.targetG = boid.birthG * 0.5 + avgG * 0.5;
-                    boid.targetB = boid.birthB * 0.5 + avgB * 0.5;
+                    // Check all other particles
+                    for (let j = 0; j < particles.length; j++) {
+                        if (i === j) continue;
 
-                    // Apply weights and combine forces
-                    boid.steerX = (separationX * separation * 1.5) +
-                                  ((alignmentX - boid.vx) * alignment * 0.05) +
-                                  (cohesionX * cohesion * 0.01);
-                    boid.steerY = (separationY * separation * 1.5) +
-                                  ((alignmentY - boid.vy) * alignment * 0.05) +
-                                  (cohesionY * cohesion * 0.01);
+                        const other = particles[j];
+                        checkCount++;
 
-                    boid.neighborCount = neighborCount;
-                    totalNeighbors += neighborCount;
-                } else {
-                    // No neighbors - drift back to birth color
-                    boid.targetR = boid.birthR;
-                    boid.targetG = boid.birthG;
-                    boid.targetB = boid.birthB;
+                        // Calculate distance (accounting for wrapping)
+                        let dx = other.x - boid.x;
+                        let dy = other.y - boid.y;
+
+                        // Handle toroidal wrapping
+                        if (Math.abs(dx) > canvas.width / 2) {
+                            dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
+                        }
+                        if (Math.abs(dy) > canvas.height / 2) {
+                            dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
+                        }
+
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < searchDist && dist > 0) {
+                            neighborCount++;
+
+                            // Separation: steer away from nearby boids
+                            const separationDist = avgSize * 1.5;
+                            if (dist < separationDist) {
+                                separationX -= dx / dist;
+                                separationY -= dy / dist;
+                            }
+
+                            // Alignment: match velocity of neighbors
+                            alignmentX += other.vx;
+                            alignmentY += other.vy;
+
+                            // Cohesion: move towards center of mass of neighbors
+                            cohesionX += dx;
+                            cohesionY += dy;
+
+                            // Color: accumulate neighbor colors
+                            avgR += other.r;
+                            avgG += other.g;
+                            avgB += other.b;
+                        }
+                    }
+
+                    if (neighborCount > 0) {
+                        // Average the alignment and cohesion vectors
+                        alignmentX /= neighborCount;
+                        alignmentY /= neighborCount;
+                        cohesionX /= neighborCount;
+                        cohesionY /= neighborCount;
+
+                        // Average the colors
+                        avgR /= neighborCount;
+                        avgG /= neighborCount;
+                        avgB /= neighborCount;
+
+                        // Set target color: blend birth color (50%), neighbor average (50%)
+                        boid.targetR = boid.birthR * 0.5 + avgR * 0.5;
+                        boid.targetG = boid.birthG * 0.5 + avgG * 0.5;
+                        boid.targetB = boid.birthB * 0.5 + avgB * 0.5;
+
+                        // Apply weights and combine forces
+                        boid.steerX = (separationX * separation * 1.5) +
+                                      ((alignmentX - boid.vx) * alignment * 0.05) +
+                                      (cohesionX * cohesion * 0.01);
+                        boid.steerY = (separationY * separation * 1.5) +
+                                      ((alignmentY - boid.vy) * alignment * 0.05) +
+                                      (cohesionY * cohesion * 0.01);
+
+                        boid.neighborCount = neighborCount;
+                        totalNeighbors += neighborCount;
+                    } else {
+                        // No neighbors - drift back to birth color
+                        boid.targetR = boid.birthR;
+                        boid.targetG = boid.birthG;
+                        boid.targetB = boid.birthB;
+                    }
                 }
             }
 
@@ -828,6 +1015,34 @@
             trailFade = parseFloat(e.target.value);
             document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
             saveSettings();
+        });
+
+        document.getElementById('showSearchRange').addEventListener('change', (e) => {
+            showSearchRange = e.target.checked;
+            saveSettings();
+        });
+
+        document.getElementById('useZOrder').addEventListener('change', (e) => {
+            useZOrder = e.target.checked;
+            saveSettings();
+        });
+
+        // Help panel contextual text
+        const helpPanel = document.getElementById('helpPanel');
+        const defaultHelpText = `<h3>About</h3>
+            <p>Emergent flocking behavior simulation using three boids rules: separation, alignment, and cohesion.</p>
+            <p>Uses Z-order spatial partitioning for efficient neighbor detection in O(n log n) instead of O(n²).</p>
+            <p>Rendered with classic arcade vector graphics aesthetic.</p>`;
+
+        document.getElementById('useZOrder').parentElement.addEventListener('mouseenter', () => {
+            helpPanel.innerHTML = `<h3>Z-Order Optimization</h3>
+                <p>When enabled, uses Morton curve (Z-order) spatial partitioning to reduce neighbor search complexity.</p>
+                <p>Particles are sorted by their Z-code and search terminates early when codes diverge too far.</p>
+                <p>Toggle off to compare brute force O(n²) performance. Watch the "Checks" stat!</p>`;
+        });
+
+        document.getElementById('useZOrder').parentElement.addEventListener('mouseleave', () => {
+            helpPanel.innerHTML = defaultHelpText;
         });
 
         canvas.addEventListener('click', (e) => {
