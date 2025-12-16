@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boids Flocking Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+        }
+        
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow: 
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+        
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+        
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+        
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        .dual-range {
+            position: relative;
+            height: 4px;
+            width: 100%;
+        }
+        
+        .dual-range input[type="range"] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .dual-range input[type="range"]::-webkit-slider-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range input[type="range"]::-moz-range-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range::before {
+            content: "";
+            position: absolute;
+            height: 4px;
+            width: 100%;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            top: 0;
+        }
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #00ff41;
+            filter: brightness(1.2);
+        }
+        
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+        
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title-text">BOIDS</div>
+        <div class="title-subtitle">EMERGENT FLOCKING BEHAVIOR SIMULATION</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="neighborCount">0</div>
+                <div class="stat-label">Avg Neighbors</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="checkCount">0</div>
+                <div class="stat-label">Checks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Particles: <span class="value-display" id="countValue">200</span></label>
+            <input type="range" id="particleCount" min="0" max="5000" value="200" step="10">
+        </div>
+        
+        <div class="control-group">
+            <label>Size Range: <span class="value-display" id="sizeRangeValue">4.0 - 12.0</span></label>
+            <div class="dual-range">
+                <input type="range" id="minSize" min="0.1" max="20" value="4" step="0.1" class="range-min">
+                <input type="range" id="maxSize" min="0.1" max="20" value="12" step="0.1" class="range-max">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Speed: <span class="value-display" id="speedValue">4</span></label>
+            <input type="range" id="maxSpeed" min="1" max="10" value="4" step="0.5">
+        </div>
+        
+        <div class="control-group">
+            <label>Separation: <span class="value-display" id="separationValue">1.50</span></label>
+            <input type="range" id="separation" min="0" max="3" value="1.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Alignment: <span class="value-display" id="alignmentValue">1.00</span></label>
+            <input type="range" id="alignment" min="0" max="3" value="1.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Cohesion: <span class="value-display" id="cohesionValue">1.00</span></label>
+            <input type="range" id="cohesion" min="0" max="3" value="1.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
+            <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
+            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.05">
+        </div>
+
+        <div class="button-group">
+            <button onclick="resetParticles()">Reset</button>
+            <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        class ZOrder {
+            static encode(x, y) {
+                return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
+            }
+            
+            static interleave(n) {
+                n = (n | (n << 8)) & 0x00FF00FF;
+                n = (n | (n << 4)) & 0x0F0F0F0F;
+                n = (n | (n << 2)) & 0x33333333;
+                n = (n | (n << 1)) & 0x55555555;
+                return n;
+            }
+            
+            static decode(code) {
+                return {
+                    x: ZOrder.deinterleave(code),
+                    y: ZOrder.deinterleave(code >> 1)
+                };
+            }
+            
+            static deinterleave(n) {
+                n = n & 0x55555555;
+                n = (n | (n >> 1)) & 0x33333333;
+                n = (n | (n >> 2)) & 0x0F0F0F0F;
+                n = (n | (n >> 4)) & 0x00FF00FF;
+                n = (n | (n >> 8)) & 0x0000FFFF;
+                return n;
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.vx = (Math.random() - 0.5) * maxSpeed;
+                this.vy = (Math.random() - 0.5) * maxSpeed;
+                this.zCode = 0;
+                this.steerX = 0;
+                this.steerY = 0;
+                this.neighborCount = 0;
+
+                // Random unique color
+                this.r = Math.random() * 255;
+                this.g = Math.random() * 255;
+                this.b = Math.random() * 255;
+
+                // Birth color (permanent identity - never changes)
+                this.birthR = this.r;
+                this.birthG = this.g;
+                this.birthB = this.b;
+
+                // Target color (for blending towards neighbors)
+                this.targetR = this.r;
+                this.targetG = this.g;
+                this.targetB = this.b;
+            }
+            
+            update() {
+                // Apply steering forces
+                this.vx += this.steerX;
+                this.vy += this.steerY;
+
+                // Limit speed
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > maxSpeed) {
+                    this.vx = (this.vx / speed) * maxSpeed;
+                    this.vy = (this.vy / speed) * maxSpeed;
+                }
+
+                // Slowly blend color towards target (neighbor average)
+                const colorBlendRate = 0.05;
+                this.r += (this.targetR - this.r) * colorBlendRate;
+                this.g += (this.targetG - this.g) * colorBlendRate;
+                this.b += (this.targetB - this.b) * colorBlendRate;
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap around edges
+                if (this.x < 0) this.x += canvas.width;
+                if (this.x > canvas.width) this.x -= canvas.width;
+                if (this.y < 0) this.y += canvas.height;
+                if (this.y > canvas.height) this.y -= canvas.height;
+
+                // Update z-order code for spatial partitioning
+                const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
+                const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
+                this.zCode = ZOrder.encode(gridX, gridY);
+            }
+            
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgb(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)})`;
+                ctx.fill();
+
+                // Draw direction indicator
+                const angle = Math.atan2(this.vy, this.vx);
+                const lineLength = this.radius * 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + Math.cos(angle) * lineLength, this.y + Math.sin(angle) * lineLength);
+                ctx.strokeStyle = `rgba(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)}, 0.5)`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+        
+        let particles = [];
+        let particleCount = 200;
+        let minSize = 4;
+        let maxSize = 12;
+        let maxSpeed = 4;
+        let separation = 1.5;
+        let alignment = 1.0;
+        let cohesion = 1.0;
+        let searchRange = 3;
+        let trailFade = 0.15;
+        let animating = true;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        function saveSettings() {
+            const settings = {
+                particleCount,
+                minSize,
+                maxSize,
+                maxSpeed,
+                separation,
+                alignment,
+                cohesion,
+                searchRange,
+                trailFade
+            };
+            localStorage.setItem('boidsSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('boidsSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+
+                particleCount = settings.particleCount ?? particleCount;
+                minSize = settings.minSize ?? minSize;
+                maxSize = settings.maxSize ?? maxSize;
+                maxSpeed = settings.maxSpeed ?? maxSpeed;
+                separation = settings.separation ?? separation;
+                alignment = settings.alignment ?? alignment;
+                cohesion = settings.cohesion ?? cohesion;
+                searchRange = settings.searchRange ?? searchRange;
+                trailFade = settings.trailFade ?? trailFade;
+
+                // Update UI elements
+                document.getElementById('particleCount').value = particleCount;
+                document.getElementById('countValue').textContent = particleCount;
+
+                document.getElementById('minSize').value = minSize;
+                document.getElementById('maxSize').value = maxSize;
+                document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+
+                document.getElementById('maxSpeed').value = maxSpeed;
+                document.getElementById('speedValue').textContent = maxSpeed;
+
+                document.getElementById('separation').value = separation;
+                document.getElementById('separationValue').textContent = separation.toFixed(2);
+
+                document.getElementById('alignment').value = alignment;
+                document.getElementById('alignmentValue').textContent = alignment.toFixed(2);
+
+                document.getElementById('cohesion').value = cohesion;
+                document.getElementById('cohesionValue').textContent = cohesion.toFixed(2);
+
+                document.getElementById('searchRange').value = searchRange;
+                document.getElementById('rangeValue').textContent = searchRange;
+
+                document.getElementById('trailFade').value = trailFade;
+                document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            }
+        }
+
+        function resetParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                // Random size between minSize and maxSize
+                const radius = minSize + Math.random() * (maxSize - minSize);
+                
+                const p = new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    radius
+                );
+                p.update();
+                particles.push(p);
+            }
+        }
+        
+        function calculateBoidsForces() {
+            let totalNeighbors = 0;
+            let checkCount = 0;
+
+            // Sort particles by z-order code for efficient neighbor search
+            particles.sort((a, b) => a.zCode - b.zCode);
+
+            // Reset steering forces
+            for (let particle of particles) {
+                particle.steerX = 0;
+                particle.steerY = 0;
+                particle.neighborCount = 0;
+            }
+
+            const avgSize = (minSize + maxSize) / 2;
+            const searchDist = searchRange * avgSize * 2;
+
+            // Calculate boids forces for each particle
+            for (let i = 0; i < particles.length; i++) {
+                const boid = particles[i];
+
+                // Accumulators for the three boids rules
+                let separationX = 0, separationY = 0;
+                let alignmentX = 0, alignmentY = 0;
+                let cohesionX = 0, cohesionY = 0;
+                let neighborCount = 0;
+
+                // Accumulators for color averaging
+                let avgR = 0, avgG = 0, avgB = 0;
+
+                // Find neighbors using z-order spatial partitioning
+                // Search forward in the sorted array
+                for (let j = i + 1; j < particles.length; j++) {
+                    const other = particles[j];
+
+                    const zDiff = other.zCode - boid.zCode;
+                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                    if (zDiff > zThreshold) {
+                        break;
+                    }
+
+                    checkCount++;
+
+                    // Calculate distance (accounting for wrapping)
+                    let dx = other.x - boid.x;
+                    let dy = other.y - boid.y;
+
+                    // Handle toroidal wrapping
+                    if (Math.abs(dx) > canvas.width / 2) {
+                        dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
+                    }
+                    if (Math.abs(dy) > canvas.height / 2) {
+                        dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
+                    }
+
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < searchDist && dist > 0) {
+                        neighborCount++;
+
+                        // Separation: steer away from nearby boids
+                        const separationDist = avgSize * 1.5;
+                        if (dist < separationDist) {
+                            separationX -= dx / dist;
+                            separationY -= dy / dist;
+                        }
+
+                        // Alignment: match velocity of neighbors
+                        alignmentX += other.vx;
+                        alignmentY += other.vy;
+
+                        // Cohesion: move towards center of mass of neighbors
+                        cohesionX += dx;
+                        cohesionY += dy;
+
+                        // Color: accumulate neighbor colors
+                        avgR += other.r;
+                        avgG += other.g;
+                        avgB += other.b;
+                    }
+                }
+
+                // Search backward in the sorted array
+                for (let j = i - 1; j >= 0; j--) {
+                    const other = particles[j];
+
+                    const zDiff = boid.zCode - other.zCode;
+                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                    if (zDiff > zThreshold) {
+                        break;
+                    }
+
+                    checkCount++;
+
+                    // Calculate distance (accounting for wrapping)
+                    let dx = other.x - boid.x;
+                    let dy = other.y - boid.y;
+
+                    // Handle toroidal wrapping
+                    if (Math.abs(dx) > canvas.width / 2) {
+                        dx = dx > 0 ? dx - canvas.width : dx + canvas.width;
+                    }
+                    if (Math.abs(dy) > canvas.height / 2) {
+                        dy = dy > 0 ? dy - canvas.height : dy + canvas.height;
+                    }
+
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < searchDist && dist > 0) {
+                        neighborCount++;
+
+                        // Separation: steer away from nearby boids
+                        const separationDist = avgSize * 1.5;
+                        if (dist < separationDist) {
+                            separationX -= dx / dist;
+                            separationY -= dy / dist;
+                        }
+
+                        // Alignment: match velocity of neighbors
+                        alignmentX += other.vx;
+                        alignmentY += other.vy;
+
+                        // Cohesion: move towards center of mass of neighbors
+                        cohesionX += dx;
+                        cohesionY += dy;
+
+                        // Color: accumulate neighbor colors
+                        avgR += other.r;
+                        avgG += other.g;
+                        avgB += other.b;
+                    }
+                }
+
+                if (neighborCount > 0) {
+                    // Average the alignment and cohesion vectors
+                    alignmentX /= neighborCount;
+                    alignmentY /= neighborCount;
+                    cohesionX /= neighborCount;
+                    cohesionY /= neighborCount;
+
+                    // Average the colors
+                    avgR /= neighborCount;
+                    avgG /= neighborCount;
+                    avgB /= neighborCount;
+
+                    // Set target color: blend birth color (50%), neighbor average (50%)
+                    // This maintains permanent color identity while allowing neighbor influence
+                    boid.targetR = boid.birthR * 0.5 + avgR * 0.5;
+                    boid.targetG = boid.birthG * 0.5 + avgG * 0.5;
+                    boid.targetB = boid.birthB * 0.5 + avgB * 0.5;
+
+                    // Apply weights and combine forces
+                    boid.steerX = (separationX * separation * 1.5) +
+                                  ((alignmentX - boid.vx) * alignment * 0.05) +
+                                  (cohesionX * cohesion * 0.01);
+                    boid.steerY = (separationY * separation * 1.5) +
+                                  ((alignmentY - boid.vy) * alignment * 0.05) +
+                                  (cohesionY * cohesion * 0.01);
+
+                    boid.neighborCount = neighborCount;
+                    totalNeighbors += neighborCount;
+                } else {
+                    // No neighbors - drift back to birth color
+                    boid.targetR = boid.birthR;
+                    boid.targetG = boid.birthG;
+                    boid.targetB = boid.birthB;
+                }
+            }
+
+            const avgNeighbors = particles.length > 0 ? Math.round(totalNeighbors / particles.length) : 0;
+            return { avgNeighbors, checkCount };
+        }
+
+        function animate(currentTime) {
+            if (!animating) {
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+            
+            // Create trails by drawing semi-transparent black instead of clearing
+            // trailFade = 0: no fade (infinite trails)
+            // trailFade = 1: full fade (no trails)
+            ctx.fillStyle = `rgba(0, 0, 0, ${trailFade})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Calculate boids steering forces
+            const { avgNeighbors, checkCount } = calculateBoidsForces();
+
+            // Update and draw particles
+            for (let particle of particles) {
+                particle.update();
+                particle.draw(ctx);
+            }
+
+            // Update stats
+            document.getElementById('neighborCount').textContent = avgNeighbors;
+            document.getElementById('checkCount').textContent = checkCount;
+            document.getElementById('fps').textContent = fps;
+            
+            requestAnimationFrame(animate);
+        }
+        
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            particleCount = parseInt(e.target.value);
+            document.getElementById('countValue').textContent = particleCount;
+            saveSettings();
+            resetParticles();
+        });
+        
+        document.getElementById('minSize').addEventListener('input', (e) => {
+            minSize = parseFloat(e.target.value);
+            // Ensure min doesn't exceed max
+            if (minSize > maxSize) {
+                maxSize = minSize;
+                document.getElementById('maxSize').value = maxSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            saveSettings();
+            resetParticles();
+        });
+
+        document.getElementById('maxSize').addEventListener('input', (e) => {
+            maxSize = parseFloat(e.target.value);
+            // Ensure max doesn't go below min
+            if (maxSize < minSize) {
+                minSize = maxSize;
+                document.getElementById('minSize').value = minSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            saveSettings();
+            resetParticles();
+        });
+        
+        document.getElementById('maxSpeed').addEventListener('input', (e) => {
+            maxSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = maxSpeed;
+            saveSettings();
+            for (let particle of particles) {
+                const currentSpeed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                if (currentSpeed > 0) {
+                    const scale = (Math.random() * maxSpeed) / currentSpeed;
+                    particle.vx *= scale;
+                    particle.vy *= scale;
+                }
+            }
+        });
+        
+        document.getElementById('separation').addEventListener('input', (e) => {
+            separation = parseFloat(e.target.value);
+            document.getElementById('separationValue').textContent = separation.toFixed(2);
+            saveSettings();
+        });
+
+        document.getElementById('alignment').addEventListener('input', (e) => {
+            alignment = parseFloat(e.target.value);
+            document.getElementById('alignmentValue').textContent = alignment.toFixed(2);
+            saveSettings();
+        });
+
+        document.getElementById('cohesion').addEventListener('input', (e) => {
+            cohesion = parseFloat(e.target.value);
+            document.getElementById('cohesionValue').textContent = cohesion.toFixed(2);
+            saveSettings();
+        });
+
+        document.getElementById('searchRange').addEventListener('input', (e) => {
+            searchRange = parseInt(e.target.value);
+            document.getElementById('rangeValue').textContent = searchRange;
+            saveSettings();
+        });
+
+        document.getElementById('trailFade').addEventListener('input', (e) => {
+            trailFade = parseFloat(e.target.value);
+            document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            saveSettings();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const radius = minSize + Math.random() * (maxSize - minSize);
+            const p = new Particle(x, y, radius);
+            p.vx = 0;
+            p.vy = 0;
+            p.update();
+            particles.push(p);
+        });
+        
+        function toggleAnimation() {
+            animating = !animating;
+        }
+
+        loadSettings();
+        resetParticles();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
