@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Order Curve Collision Detection</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 28px;
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto 20px;
+            background: #f8f9fa;
+            cursor: crosshair;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f5576c;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Z-Order Curve Collision Detection</h1>
+        <p class="description">
+            Morton Z-order encoding maps 2D coordinates to 1D space while preserving spatial locality. 
+            Particles are sorted by Z-order, then collisions checked only within nearby ranges. 
+            Click to add particles. Colliding particles turn red!
+        </p>
+        
+        <canvas id="canvas" width="800" height="600"></canvas>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Particle Count: <span id="countValue">50</span></label>
+                <input type="range" id="particleCount" min="10" max="10000" value="50" step="10">
+            </div>
+            
+            <div class="control-group">
+                <label>Particle Size: <span id="sizeValue">8</span></label>
+                <input type="range" id="particleSize" min="4" max="20" value="8" step="2">
+            </div>
+            
+            <div class="control-group">
+                <label>Max Speed: <span id="speedValue">4</span></label>
+                <input type="range" id="maxSpeed" min="1" max="10" value="4" step="0.5">
+            </div>
+            
+            <div class="control-group">
+                <label>Search Range: <span id="rangeValue">50</span></label>
+                <input type="range" id="searchRange" min="10" max="200" value="50" step="10">
+            </div>
+            
+            <div class="control-group checkbox-group">
+                <input type="checkbox" id="showZOrder" checked>
+                <label for="showZOrder">Show Z-Order Curve</label>
+            </div>
+            
+            <button onclick="resetParticles()">Reset Particles</button>
+            <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="collisionCount">0</div>
+                <div class="stat-label">Collisions</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="checkCount">0</div>
+                <div class="stat-label">Checks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="sortTime">0</div>
+                <div class="stat-label">Sort Time (ms)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Morton Z-order encoding functions
+        class ZOrder {
+            // Interleave bits of x and y coordinates to create Morton code
+            static encode(x, y) {
+                return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
+            }
+            
+            // Interleave bits: spread bits of a number
+            static interleave(n) {
+                n = (n | (n << 8)) & 0x00FF00FF;
+                n = (n | (n << 4)) & 0x0F0F0F0F;
+                n = (n | (n << 2)) & 0x33333333;
+                n = (n | (n << 1)) & 0x55555555;
+                return n;
+            }
+            
+            // Decode Morton code back to x, y coordinates
+            static decode(code) {
+                return {
+                    x: ZOrder.deinterleave(code),
+                    y: ZOrder.deinterleave(code >> 1)
+                };
+            }
+            
+            // Deinterleave bits
+            static deinterleave(n) {
+                n = n & 0x55555555;
+                n = (n | (n >> 1)) & 0x33333333;
+                n = (n | (n >> 2)) & 0x0F0F0F0F;
+                n = (n | (n >> 4)) & 0x00FF00FF;
+                n = (n | (n >> 8)) & 0x0000FFFF;
+                return n;
+            }
+            
+            // Generate Z-order curve points for visualization
+            static generateCurve(depth, width, height) {
+                const points = [];
+                const cellsPerSide = 1 << depth; // 2^depth
+                const cellWidth = width / cellsPerSide;
+                const cellHeight = height / cellsPerSide;
+                
+                for (let i = 0; i < cellsPerSide * cellsPerSide; i++) {
+                    const x = i % cellsPerSide;
+                    const y = Math.floor(i / cellsPerSide);
+                    const code = ZOrder.encode(x, y);
+                    points.push({
+                        code: code,
+                        x: x * cellWidth + cellWidth / 2,
+                        y: y * cellHeight + cellHeight / 2
+                    });
+                }
+                
+                // Sort by Z-order code
+                points.sort((a, b) => a.code - b.code);
+                return points;
+            }
+        }
+        
+        // Particle class
+        class Particle {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.vx = (Math.random() - 0.5) * maxSpeed;
+                this.vy = (Math.random() - 0.5) * maxSpeed;
+                this.colliding = false;
+                this.zCode = 0;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Bounce off walls
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.vx *= -1;
+                    this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                }
+                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
+                    this.vy *= -1;
+                    this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+                }
+                
+                // Update Z-order code (normalize to grid coordinates)
+                // Use 16-bit coordinates (0-65535) for better distribution
+                const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
+                const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
+                this.zCode = ZOrder.encode(gridX, gridY);
+            }
+            
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.colliding ? '#ff4757' : '#4a69ff';
+                ctx.fill();
+                ctx.strokeStyle = this.colliding ? '#ff3838' : '#3451db';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            intersects(other) {
+                let dx = this.x - other.x;
+                let dy = this.y - other.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                return distance < this.radius + other.radius;
+            }
+        }
+        
+        // Game state
+        let particles = [];
+        let particleCount = 50;
+        let particleSize = 8;
+        let maxSpeed = 4;
+        let searchRange = 50;
+        let showZOrder = true;
+        let animating = true;
+        let lastTime = performance.now();
+        let fps = 60;
+        let zOrderCurve = [];
+        
+        // Initialize particles
+        function resetParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                const p = new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    particleSize
+                );
+                p.update(); // Set initial Z-order code
+                particles.push(p);
+            }
+        }
+        
+        // Collision detection using Z-order sorting
+        function detectCollisions() {
+            let collisionCount = 0;
+            let checkCount = 0;
+            
+            // Sort particles by Z-order code
+            const sortStart = performance.now();
+            particles.sort((a, b) => a.zCode - b.zCode);
+            const sortTime = (performance.now() - sortStart).toFixed(2);
+            
+            // Reset all collision flags
+            for (let particle of particles) {
+                particle.colliding = false;
+            }
+            
+            // Check collisions using sorted order
+            // The key insight: particles with similar Z-codes are spatially close
+            for (let i = 0; i < particles.length; i++) {
+                const particle = particles[i];
+                
+                // Look ahead in the sorted list
+                for (let j = i + 1; j < particles.length; j++) {
+                    const other = particles[j];
+                    
+                    // Calculate actual spatial distance first
+                    const dx = particle.x - other.x;
+                    const dy = particle.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // If distance is greater than search range, check Z-order gap
+                    if (dist > searchRange) {
+                        checkCount++;
+                        
+                        // If the Z-order codes are getting far apart, we can stop
+                        // This is an approximation - not perfect but speeds things up
+                        const zDiff = other.zCode - particle.zCode;
+                        
+                        // Heuristic: if Z-codes differ by a lot and we're already beyond
+                        // search range, unlikely to find closer particles further on
+                        if (zDiff > searchRange * searchRange * 10) {
+                            break;
+                        }
+                        continue;
+                    }
+                    
+                    // Within search range, do actual collision check
+                    checkCount++;
+                    if (particle.intersects(other)) {
+                        particle.colliding = true;
+                        other.colliding = true;
+                        collisionCount++;
+                    }
+                }
+            }
+            
+            return { collisionCount, checkCount, sortTime };
+        }
+        
+        // Draw Z-order curve visualization
+        function drawZOrderCurve() {
+            if (zOrderCurve.length < 2) return;
+            
+            ctx.strokeStyle = 'rgba(245, 87, 108, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(zOrderCurve[0].x, zOrderCurve[0].y);
+            
+            for (let i = 1; i < zOrderCurve.length; i++) {
+                ctx.lineTo(zOrderCurve[i].x, zOrderCurve[i].y);
+            }
+            
+            ctx.stroke();
+            
+            // Draw grid cells
+            const depth = Math.log2(Math.sqrt(zOrderCurve.length));
+            const cellsPerSide = 1 << Math.floor(depth);
+            const cellWidth = canvas.width / cellsPerSide;
+            const cellHeight = canvas.height / cellsPerSide;
+            
+            ctx.strokeStyle = 'rgba(245, 87, 108, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= cellsPerSide; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellWidth, 0);
+                ctx.lineTo(i * cellWidth, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellHeight);
+                ctx.lineTo(canvas.width, i * cellHeight);
+                ctx.stroke();
+            }
+        }
+        
+        // Animation loop
+        function animate(currentTime) {
+            if (!animating) {
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            // Calculate FPS
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Z-order curve
+            if (showZOrder) {
+                drawZOrderCurve();
+            }
+            
+            // Update particles
+            for (let particle of particles) {
+                particle.update();
+            }
+            
+            // Detect collisions
+            const { collisionCount, checkCount, sortTime } = detectCollisions();
+            
+            // Draw particles
+            for (let particle of particles) {
+                particle.draw(ctx);
+            }
+            
+            // Update stats
+            document.getElementById('collisionCount').textContent = collisionCount;
+            document.getElementById('checkCount').textContent = checkCount;
+            document.getElementById('sortTime').textContent = sortTime;
+            document.getElementById('fps').textContent = fps;
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            particleCount = parseInt(e.target.value);
+            document.getElementById('countValue').textContent = particleCount;
+            resetParticles();
+        });
+        
+        document.getElementById('particleSize').addEventListener('input', (e) => {
+            particleSize = parseInt(e.target.value);
+            document.getElementById('sizeValue').textContent = particleSize;
+            resetParticles();
+        });
+        
+        document.getElementById('maxSpeed').addEventListener('input', (e) => {
+            maxSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = maxSpeed;
+            // Update existing particles' velocities
+            for (let particle of particles) {
+                const currentSpeed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                if (currentSpeed > 0) {
+                    const scale = (Math.random() * maxSpeed) / currentSpeed;
+                    particle.vx *= scale;
+                    particle.vy *= scale;
+                }
+            }
+        });
+        
+        document.getElementById('searchRange').addEventListener('input', (e) => {
+            searchRange = parseInt(e.target.value);
+            document.getElementById('rangeValue').textContent = searchRange;
+        });
+        
+        document.getElementById('showZOrder').addEventListener('change', (e) => {
+            showZOrder = e.target.checked;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const p = new Particle(x, y, particleSize);
+            p.update(); // Set Z-order code
+            particles.push(p);
+        });
+        
+        function toggleAnimation() {
+            animating = !animating;
+        }
+        
+        // Initialize Z-order curve for visualization (depth 4 = 16x16 grid)
+        zOrderCurve = ZOrder.generateCurve(4, canvas.width, canvas.height);
+        
+        // Initialize and start
+        resetParticles();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
