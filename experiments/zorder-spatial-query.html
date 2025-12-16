@@ -126,44 +126,6 @@
             box-shadow: 0 0 10px #00ff41;
         }
 
-        .dual-range {
-            position: relative;
-            height: 4px;
-            width: 100%;
-        }
-
-        .dual-range input[type="range"] {
-            position: absolute;
-            width: 100%;
-            pointer-events: none;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-        }
-
-        .dual-range input[type="range"]::-webkit-slider-thumb {
-            pointer-events: all;
-            position: relative;
-            z-index: 1;
-        }
-
-        .dual-range input[type="range"]::-moz-range-thumb {
-            pointer-events: all;
-            position: relative;
-            z-index: 1;
-        }
-
-        .dual-range::before {
-            content: "";
-            position: absolute;
-            height: 4px;
-            width: 100%;
-            background: #001a00;
-            border: 1px solid #00ff41;
-            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
-            top: 0;
-        }
-
         input[type="checkbox"] {
             width: 16px;
             height: 16px;
@@ -242,6 +204,61 @@
             gap: 8px;
         }
 
+        .help-panel {
+            grid-column: span 1;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            padding: 10px;
+            font-size: 9px;
+            line-height: 1.4;
+            color: #00ff4199;
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .help-panel h3 {
+            color: #00ff41;
+            font-size: 10px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        .help-panel p {
+            margin: 5px 0;
+        }
+
+        .info-panel {
+            grid-column: span 1;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            padding: 10px;
+            font-size: 9px;
+            line-height: 1.4;
+            color: #00ff4199;
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .info-panel h3 {
+            color: #00ff41;
+            font-size: 10px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        .info-panel .info-line {
+            margin: 2px 0;
+            color: rgba(0, 255, 65, 0.7);
+        }
+
         body::before {
             content: "";
             position: fixed;
@@ -297,15 +314,12 @@
 
         <div class="control-group">
             <label>Grid Depth: <span class="value-display" id="depthDisplay">4</span></label>
-            <input type="range" id="depth" min="1" max="6" value="4" step="1">
+            <input type="range" id="depth" min="1" max="8" value="4" step="1">
         </div>
 
         <div class="control-group">
-            <label>Z-Code Range: <span class="value-display" id="rangeDisplay">-10 to +20</span></label>
-            <div class="dual-range">
-                <input type="range" id="minOffset" min="-100" max="0" value="-10" step="1" class="range-min">
-                <input type="range" id="maxOffset" min="0" max="100" value="20" step="1" class="range-max">
-            </div>
+            <label>Z-Code Range: <span class="value-display" id="rangeDisplay">±20</span></label>
+            <input type="range" id="rangeSlider" min="0" max="100" value="20" step="1">
         </div>
 
         <div class="control-group">
@@ -320,6 +334,18 @@
                 <input type="checkbox" id="showCoords">
                 Show Coordinates
             </label>
+        </div>
+
+        <div class="help-panel">
+            <h3>About</h3>
+            <p>Interactive Z-order spatial query visualization demonstrating spatial locality in Morton curves.</p>
+            <p>Hover over grid cells to query their Z-code neighbors. The Z-order column shows the 1D array mapping.</p>
+            <p>Z-order encoding preserves 2D spatial proximity in 1D space for efficient neighbor searches.</p>
+        </div>
+
+        <div class="info-panel" id="infoPanel">
+            <h3>Spatial Query</h3>
+            <div class="info-line" id="queryInfo">Hover over a cell to query</div>
         </div>
     </div>
 
@@ -400,7 +426,7 @@
                 ctx.fillRect(x, y, size, size);
 
                 // Draw cell border
-                ctx.strokeStyle = isHovered ? '#00ff41' : 'rgba(0, 255, 65, 0.3)';
+                ctx.strokeStyle = isHovered ? '#00ff41' : 'rgba(0, 255, 65, 0.6)';
                 ctx.lineWidth = isHovered ? 2 : 1;
                 ctx.strokeRect(x, y, size, size);
 
@@ -444,21 +470,28 @@
 
         // State
         let depth = 4;
-        let minOffset = -10;
-        let maxOffset = 20;
+        let range = 20;
         let showCodes = true;
         let showCoords = false;
         let cells = [];
         let hoveredCell = null;
+        let zColumnWidth = 60; // Width of the Z-code column on the right
+        let gridToColumnGap = 15; // Gap between grid and column
+        let axisLabelSpace = 20; // Space for axis labels
 
         // Generate grid cells
         function generateGrid() {
             cells = [];
 
             const cellsPerSide = 1 << depth; // 2^depth
-            const gridSize = Math.min(canvas.width, canvas.height) * 0.8;
+            const totalWidth = canvas.width - axisLabelSpace - 40; // Leave space for y-axis labels
+            const totalHeight = canvas.height - axisLabelSpace - 40; // Leave space for x-axis labels
+            const gridSize = Math.min(totalWidth - zColumnWidth - gridToColumnGap, totalHeight);
             const cellSize = gridSize / cellsPerSide;
-            const offsetX = (canvas.width - gridSize) / 2;
+
+            // Center the combined grid + gap + column
+            const combinedWidth = gridSize + gridToColumnGap + zColumnWidth;
+            const offsetX = (canvas.width - combinedWidth) / 2 + axisLabelSpace;
             const offsetY = (canvas.height - gridSize) / 2;
 
             // Generate all cells with their Z-codes
@@ -490,8 +523,8 @@
             // Determine which cells to highlight
             let highlightedCells = new Set();
             if (hoveredCell) {
-                const minZ = hoveredCell.zCode + minOffset;
-                const maxZ = hoveredCell.zCode + maxOffset;
+                const minZ = hoveredCell.zCode - range;
+                const maxZ = hoveredCell.zCode + range;
 
                 for (let cell of cells) {
                     if (cell.zCode >= minZ && cell.zCode <= maxZ && cell !== hoveredCell) {
@@ -507,6 +540,12 @@
                 cell.draw(ctx, showCodes, showCoords, isHighlighted, isHovered);
             }
 
+            // Draw Z-code column
+            drawZCodeColumn(highlightedCells);
+
+            // Draw axis labels
+            drawAxisLabels();
+
             // Update stats
             if (hoveredCell) {
                 document.getElementById('hoveredCode').textContent = hoveredCell.zCode;
@@ -518,6 +557,121 @@
 
             // Draw legend
             drawLegend();
+        }
+
+        // Draw axis labels
+        function drawAxisLabels() {
+            if (cells.length === 0) return;
+
+            const cellsPerSide = 1 << depth;
+            const totalWidth = canvas.width - axisLabelSpace - 40;
+            const totalHeight = canvas.height - axisLabelSpace - 40;
+            const gridSize = Math.min(totalWidth - zColumnWidth - gridToColumnGap, totalHeight);
+            const cellSize = gridSize / cellsPerSide;
+
+            const combinedWidth = gridSize + gridToColumnGap + zColumnWidth;
+            const offsetX = (canvas.width - combinedWidth) / 2 + axisLabelSpace;
+            const offsetY = (canvas.height - gridSize) / 2;
+
+            // Determine label skip interval based on depth
+            let skipInterval = 1;
+            if (depth >= 8) {
+                skipInterval = 32;
+            } else if (depth >= 7) {
+                skipInterval = 16;
+            }
+
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.6)';
+            ctx.font = "10px 'Courier New', monospace";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // X-axis labels (top of grid)
+            for (let x = 0; x < cellsPerSide; x++) {
+                if (x % skipInterval === 0) {
+                    const labelX = offsetX + x * cellSize + cellSize / 2;
+                    const labelY = offsetY - 8;
+                    ctx.fillText(x.toString(), labelX, labelY);
+                }
+            }
+
+            // Y-axis labels (left of grid)
+            ctx.textAlign = 'right';
+            for (let y = 0; y < cellsPerSide; y++) {
+                if (y % skipInterval === 0) {
+                    const labelX = offsetX - 8;
+                    const labelY = offsetY + y * cellSize + cellSize / 2;
+                    ctx.fillText(y.toString(), labelX, labelY);
+                }
+            }
+        }
+
+        // Draw the Z-code column visualization
+        function drawZCodeColumn(highlightedCells) {
+            if (cells.length === 0) return;
+
+            const cellsPerSide = 1 << depth;
+            const totalWidth = canvas.width - axisLabelSpace - 40;
+            const totalHeight = canvas.height - axisLabelSpace - 40;
+            const gridSize = Math.min(totalWidth - zColumnWidth - gridToColumnGap, totalHeight);
+
+            // Center the combined grid + gap + column
+            const combinedWidth = gridSize + gridToColumnGap + zColumnWidth;
+            const offsetX = (canvas.width - combinedWidth) / 2 + axisLabelSpace;
+            const offsetY = (canvas.height - gridSize) / 2;
+
+            const columnX = offsetX + gridSize + gridToColumnGap;
+            const columnY = offsetY;
+            const columnHeight = gridSize;
+            const cellHeight = columnHeight / cells.length;
+
+            // Draw column background
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.05)';
+            ctx.fillRect(columnX, columnY, zColumnWidth, columnHeight);
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(columnX, columnY, zColumnWidth, columnHeight);
+
+            // Draw each Z-code as a small box
+            for (let i = 0; i < cells.length; i++) {
+                const cell = cells[i];
+                const y = columnY + i * cellHeight;
+                const isHovered = cell === hoveredCell;
+                const isHighlighted = highlightedCells.has(cell);
+
+                // Draw cell background
+                if (isHovered) {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.8)';
+                } else if (isHighlighted) {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.4)';
+                } else {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.1)';
+                }
+                ctx.fillRect(columnX, y, zColumnWidth, cellHeight);
+
+                // Draw separator line
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(columnX, y);
+                ctx.lineTo(columnX + zColumnWidth, y);
+                ctx.stroke();
+
+                // Draw Z-code text for hovered or if cell is large enough
+                if (isHovered || cellHeight > 12) {
+                    ctx.fillStyle = isHovered ? '#00ff41' : 'rgba(0, 255, 65, 0.6)';
+                    ctx.font = `${Math.min(10, cellHeight - 2)}px 'Courier New', monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(cell.zCode.toString(), columnX + zColumnWidth / 2, y + cellHeight / 2);
+                }
+            }
+
+            // Draw label
+            ctx.fillStyle = '#00ff41';
+            ctx.font = "10px 'Courier New', monospace";
+            ctx.textAlign = 'center';
+            ctx.fillText('Z-ORDER', columnX + zColumnWidth / 2, columnY - 10);
         }
 
         // Draw legend
@@ -542,13 +696,13 @@
                 y += lineHeight;
                 ctx.fillText(`Grid Pos: (${hoveredCell.gridX}, ${hoveredCell.gridY})`, padding, y);
                 y += lineHeight;
-                ctx.fillText(`Query Range: [${hoveredCell.zCode + minOffset}, ${hoveredCell.zCode + maxOffset}]`, padding, y);
+                ctx.fillText(`Query Range: [${hoveredCell.zCode - range}, ${hoveredCell.zCode + range}]`, padding, y);
                 y += lineHeight;
 
                 // Count highlighted cells
                 let highlightedCount = 0;
-                const minZ = hoveredCell.zCode + minOffset;
-                const maxZ = hoveredCell.zCode + maxOffset;
+                const minZ = hoveredCell.zCode - range;
+                const maxZ = hoveredCell.zCode + range;
                 for (let cell of cells) {
                     if (cell.zCode >= minZ && cell.zCode <= maxZ && cell !== hoveredCell) {
                         highlightedCount++;
@@ -587,29 +741,20 @@
         document.getElementById('depth').addEventListener('input', (e) => {
             depth = parseInt(e.target.value);
             document.getElementById('depthDisplay').textContent = depth;
+
+            // Auto-disable Z-codes display for depth >= 6 (too many cells)
+            if (depth >= 6 && showCodes) {
+                showCodes = false;
+                document.getElementById('showCodes').checked = false;
+            }
+
             generateGrid();
             draw();
         });
 
-        document.getElementById('minOffset').addEventListener('input', (e) => {
-            minOffset = parseInt(e.target.value);
-            // Ensure min doesn't exceed max
-            if (minOffset > maxOffset) {
-                maxOffset = minOffset;
-                document.getElementById('maxOffset').value = maxOffset;
-            }
-            document.getElementById('rangeDisplay').textContent = `${minOffset} to +${maxOffset}`;
-            draw();
-        });
-
-        document.getElementById('maxOffset').addEventListener('input', (e) => {
-            maxOffset = parseInt(e.target.value);
-            // Ensure max doesn't go below min
-            if (maxOffset < minOffset) {
-                minOffset = maxOffset;
-                document.getElementById('minOffset').value = minOffset;
-            }
-            document.getElementById('rangeDisplay').textContent = `${minOffset} to +${maxOffset}`;
+        document.getElementById('rangeSlider').addEventListener('input', (e) => {
+            range = parseInt(e.target.value);
+            document.getElementById('rangeDisplay').textContent = `±${range}`;
             draw();
         });
 
