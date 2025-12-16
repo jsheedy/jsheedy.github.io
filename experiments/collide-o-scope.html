@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Order Collision Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+        }
+        
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow: 
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+        
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+        
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+        
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        .dual-range {
+            position: relative;
+            height: 4px;
+            width: 100%;
+        }
+        
+        .dual-range input[type="range"] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .dual-range input[type="range"]::-webkit-slider-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range input[type="range"]::-moz-range-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range::before {
+            content: "";
+            position: absolute;
+            height: 4px;
+            width: 100%;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            top: 0;
+        }
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #00ff41;
+            filter: brightness(1.2);
+        }
+        
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+        
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title-text">COLLIDE-O-SCOPE</div>
+        <div class="title-subtitle">Z-ORDER SPATIAL PARTITIONING SYSTEM</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="collisionCount">0</div>
+                <div class="stat-label">Collisions</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="checkCount">0</div>
+                <div class="stat-label">Checks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Particles: <span class="value-display" id="countValue">200</span></label>
+            <input type="range" id="particleCount" min="0" max="5000" value="200" step="10">
+        </div>
+        
+        <div class="control-group">
+            <label>Size Range: <span class="value-display" id="sizeRangeValue">4.0 - 12.0</span></label>
+            <div class="dual-range">
+                <input type="range" id="minSize" min="0.1" max="20" value="4" step="0.1" class="range-min">
+                <input type="range" id="maxSize" min="0.1" max="20" value="12" step="0.1" class="range-max">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Speed: <span class="value-display" id="speedValue">4</span></label>
+            <input type="range" id="maxSpeed" min="1" max="10" value="4" step="0.5">
+        </div>
+        
+        <div class="control-group">
+            <label>Gravity: <span class="value-display" id="gravityValue">0.00</span></label>
+            <input type="range" id="gravity" min="0" max="1" value="0" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Elasticity: <span class="value-display" id="elasticityValue">0.70</span></label>
+            <input type="range" id="elasticity" min="0" max="1" value="0.7" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Fan Speed: <span class="value-display" id="fanSpeedValue">0.50</span></label>
+            <input type="range" id="fanSpeed" min="0" max="1" value="0.5" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
+            <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
+            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showCollisions" style="width: auto; height: auto; margin-right: 5px;">
+                Show Collisions
+            </label>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="resetParticles()">Reset</button>
+            <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        class ZOrder {
+            static encode(x, y) {
+                return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
+            }
+            
+            static interleave(n) {
+                n = (n | (n << 8)) & 0x00FF00FF;
+                n = (n | (n << 4)) & 0x0F0F0F0F;
+                n = (n | (n << 2)) & 0x33333333;
+                n = (n | (n << 1)) & 0x55555555;
+                return n;
+            }
+            
+            static decode(code) {
+                return {
+                    x: ZOrder.deinterleave(code),
+                    y: ZOrder.deinterleave(code >> 1)
+                };
+            }
+            
+            static deinterleave(n) {
+                n = n & 0x55555555;
+                n = (n | (n >> 1)) & 0x33333333;
+                n = (n | (n >> 2)) & 0x0F0F0F0F;
+                n = (n | (n >> 4)) & 0x00FF00FF;
+                n = (n | (n >> 8)) & 0x0000FFFF;
+                return n;
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.mass = Math.PI * radius * radius;
+                this.vx = (Math.random() - 0.5) * maxSpeed;
+                this.vy = (Math.random() - 0.5) * maxSpeed;
+                this.colliding = false;
+                this.zCode = 0;
+                this.impulseX = 0;
+                this.impulseY = 0;
+            }
+            
+            update() {
+                this.vy += gravity;
+                
+                if (fanSpeed > 0) {
+                    const avgSize = (minSize + maxSize) / 2;
+                    const fanWidth = avgSize * 4;
+                    const fanCenterX = canvas.width / 2;
+                    const fanBottom = canvas.height;
+                    const fanTop = canvas.height / 2;
+                    
+                    const dx = this.x - fanCenterX;
+                    if (Math.abs(dx) < fanWidth / 2) {
+                        if (this.y > fanTop) {
+                            const distanceFromBottom = (this.y - fanTop) / (fanBottom - fanTop);
+                            const baseFanForce = 1.5 * distanceFromBottom;
+                            const horizontalFactor = 1 - Math.abs(dx) / (fanWidth / 2);
+                            this.vy -= baseFanForce * horizontalFactor * fanSpeed;
+                        }
+                    }
+                }
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.vx *= -elasticity;
+                    this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                }
+                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
+                    this.vy *= -elasticity;
+                    this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+                }
+                
+                const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
+                const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
+                this.zCode = ZOrder.encode(gridX, gridY);
+            }
+            
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                
+                if (showCollisions && this.colliding) {
+                    ctx.fillStyle = '#ff0000';
+                } else {
+                    ctx.fillStyle = '#00ff41';
+                }
+                
+                ctx.fill();
+            }
+            
+            intersects(other) {
+                let dx = this.x - other.x;
+                let dy = this.y - other.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                return distance < this.radius + other.radius;
+            }
+        }
+        
+        let particles = [];
+        let particleCount = 200;
+        let minSize = 4;
+        let maxSize = 12;
+        let maxSpeed = 4;
+        let gravity = 0;
+        let elasticity = 0.7;
+        let fanSpeed = 0.5;
+        let searchRange = 3;
+        let trailFade = 0.15;
+        let showCollisions = false;
+        let animating = true;
+        let lastTime = performance.now();
+        let fps = 60;
+        
+        function resetParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                // Random size between minSize and maxSize
+                const radius = minSize + Math.random() * (maxSize - minSize);
+                
+                const p = new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    radius
+                );
+                p.update();
+                particles.push(p);
+            }
+        }
+        
+        function detectCollisions() {
+            let collisionCount = 0;
+            let checkCount = 0;
+            
+            const sortStart = performance.now();
+            particles.sort((a, b) => a.zCode - b.zCode);
+            const sortTime = (performance.now() - sortStart).toFixed(2);
+            
+            for (let particle of particles) {
+                particle.colliding = false;
+                particle.impulseX = 0;
+                particle.impulseY = 0;
+            }
+            
+            const avgSize = (minSize + maxSize) / 2;
+            const searchDist = searchRange * avgSize * 2;
+            
+            for (let i = 0; i < particles.length; i++) {
+                const particle = particles[i];
+                
+                for (let j = i + 1; j < particles.length; j++) {
+                    const other = particles[j];
+                    
+                    const zDiff = other.zCode - particle.zCode;
+                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                    if (zDiff > zThreshold) {
+                        break;
+                    }
+                    
+                    checkCount++;
+                    const dx = particle.x - other.x;
+                    const dy = particle.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < particle.radius + other.radius) {
+                        particle.colliding = true;
+                        other.colliding = true;
+                        collisionCount++;
+                        
+                        accumulateCollisionImpulse(particle, other, dx, dy, dist);
+                    }
+                }
+            }
+            
+            for (let particle of particles) {
+                particle.vx += particle.impulseX;
+                particle.vy += particle.impulseY;
+            }
+            
+            return { collisionCount, checkCount, sortTime };
+        }
+        
+        function accumulateCollisionImpulse(p1, p2, dx, dy, dist) {
+            if (dist === 0) return;
+            
+            const nx = dx / dist;
+            const ny = dy / dist;
+            
+            const dvx = p1.vx - p2.vx;
+            const dvy = p1.vy - p2.vy;
+            
+            const dvn = dvx * nx + dvy * ny;
+            
+            if (dvn > 0) return;
+            
+            const restitution = elasticity;
+            const impulse = -(1 + restitution) * dvn / (1 / p1.mass + 1 / p2.mass);
+            
+            p1.impulseX += (impulse * nx) / p1.mass;
+            p1.impulseY += (impulse * ny) / p1.mass;
+            p2.impulseX -= (impulse * nx) / p2.mass;
+            p2.impulseY -= (impulse * ny) / p2.mass;
+            
+            const overlap = (p1.radius + p2.radius) - dist;
+            if (overlap > 0) {
+                const totalMass = p1.mass + p2.mass;
+                const p1Factor = p2.mass / totalMass;
+                const p2Factor = p1.mass / totalMass;
+                
+                const separation = overlap + 0.1;
+                p1.x += nx * separation * p1Factor;
+                p1.y += ny * separation * p1Factor;
+                p2.x -= nx * separation * p2Factor;
+                p2.y -= ny * separation * p2Factor;
+            }
+        }
+        
+        function animate(currentTime) {
+            if (!animating) {
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+            
+            // Create trails by drawing semi-transparent black instead of clearing
+            // trailFade = 0: no fade (infinite trails)
+            // trailFade = 1: full fade (no trails)
+            ctx.fillStyle = `rgba(0, 0, 0, ${trailFade})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (fanSpeed > 0) {
+                const avgSize = (minSize + maxSize) / 2;
+                const fanWidth = avgSize * 4;
+                const fanCenterX = canvas.width / 2;
+                const fanBottom = canvas.height;
+                
+                const gradient = ctx.createLinearGradient(fanCenterX, fanBottom, fanCenterX, canvas.height / 2);
+                gradient.addColorStop(0, `rgba(0, 255, 65, ${0.2 * fanSpeed})`);
+                gradient.addColorStop(1, 'rgba(0, 255, 65, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(fanCenterX - fanWidth / 2, fanBottom);
+                ctx.lineTo(fanCenterX + fanWidth / 2, fanBottom);
+                ctx.lineTo(fanCenterX, canvas.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = `rgba(0, 255, 65, ${0.3 * fanSpeed})`;
+                ctx.fillRect(fanCenterX - fanWidth / 2, fanBottom - 5, fanWidth, 5);
+            }
+            
+            for (let particle of particles) {
+                particle.update();
+            }
+            
+            const { collisionCount, checkCount, sortTime } = detectCollisions();
+            
+            for (let particle of particles) {
+                particle.draw(ctx);
+            }
+            
+            document.getElementById('collisionCount').textContent = collisionCount;
+            document.getElementById('checkCount').textContent = checkCount;
+            document.getElementById('fps').textContent = fps;
+            
+            requestAnimationFrame(animate);
+        }
+        
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            particleCount = parseInt(e.target.value);
+            document.getElementById('countValue').textContent = particleCount;
+            resetParticles();
+        });
+        
+        document.getElementById('minSize').addEventListener('input', (e) => {
+            minSize = parseFloat(e.target.value);
+            // Ensure min doesn't exceed max
+            if (minSize > maxSize) {
+                maxSize = minSize;
+                document.getElementById('maxSize').value = maxSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            resetParticles();
+        });
+        
+        document.getElementById('maxSize').addEventListener('input', (e) => {
+            maxSize = parseFloat(e.target.value);
+            // Ensure max doesn't go below min
+            if (maxSize < minSize) {
+                minSize = maxSize;
+                document.getElementById('minSize').value = minSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            resetParticles();
+        });
+        
+        document.getElementById('maxSpeed').addEventListener('input', (e) => {
+            maxSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = maxSpeed;
+            for (let particle of particles) {
+                const currentSpeed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                if (currentSpeed > 0) {
+                    const scale = (Math.random() * maxSpeed) / currentSpeed;
+                    particle.vx *= scale;
+                    particle.vy *= scale;
+                }
+            }
+        });
+        
+        document.getElementById('gravity').addEventListener('input', (e) => {
+            gravity = parseFloat(e.target.value);
+            document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+        });
+        
+        document.getElementById('elasticity').addEventListener('input', (e) => {
+            elasticity = parseFloat(e.target.value);
+            document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+        });
+        
+        document.getElementById('fanSpeed').addEventListener('input', (e) => {
+            fanSpeed = parseFloat(e.target.value);
+            document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+        });
+        
+        document.getElementById('searchRange').addEventListener('input', (e) => {
+            searchRange = parseInt(e.target.value);
+            document.getElementById('rangeValue').textContent = searchRange;
+        });
+        
+        document.getElementById('trailFade').addEventListener('input', (e) => {
+            trailFade = parseFloat(e.target.value);
+            document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+        });
+        
+        document.getElementById('showCollisions').addEventListener('change', (e) => {
+            showCollisions = e.target.checked;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const radius = minSize + Math.random() * (maxSize - minSize);
+            const p = new Particle(x, y, radius);
+            p.vx = 0;
+            p.vy = 0;
+            p.update();
+            particles.push(p);
+        });
+        
+        function toggleAnimation() {
+            animating = !animating;
+        }
+        
+        resetParticles();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
