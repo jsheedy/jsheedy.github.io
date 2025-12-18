@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Z-Order Collision Detection</title>
+    <script src="settings-persistence.js"></script>
     <style>
         * {
             margin: 0;
@@ -70,8 +71,6 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            max-height: 200px;
-            overflow-y: auto;
         }
         
         .control-group {
@@ -272,7 +271,7 @@
     </div>
     
     <canvas id="canvas"></canvas>
-    
+
     <div class="control-panel">
         <div class="stats">
             <div class="stat">
@@ -329,16 +328,9 @@
         
         <div class="control-group">
             <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
-            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.05">
+            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.01">
         </div>
-        
-        <div class="control-group">
-            <label>
-                <input type="checkbox" id="showCollisions" style="width: auto; height: auto; margin-right: 5px;">
-                Show Collisions
-            </label>
-        </div>
-        
+
         <div class="button-group">
             <button onclick="resetParticles()">Reset</button>
             <button onclick="toggleAnimation()">Pause/Resume</button>
@@ -388,6 +380,43 @@
             }
         }
         
+        // Ice Fire color palette (cold to hot)
+        const plasmaColors = [
+            [0, 255, 255],     // Bright cyan (ice cold)
+            [100, 220, 255],   // Light cyan
+            [180, 230, 255],   // Very light blue
+            [240, 240, 240],   // Near white
+            [255, 255, 200],   // Pale yellow
+            [255, 220, 100],   // Yellow
+            [255, 180, 0],     // Orange
+            [255, 100, 0],     // Red-orange
+            [255, 50, 0]       // Red (fire hot)
+        ];
+
+        // Interpolate between colors in the plasma palette
+        function getPlasmaColor(t) {
+            // t ranges from 0 (cold) to 1 (hot)
+            t = Math.max(0, Math.min(1, t));
+
+            const scaledT = t * (plasmaColors.length - 1);
+            const index = Math.floor(scaledT);
+            const fraction = scaledT - index;
+
+            if (index >= plasmaColors.length - 1) {
+                const c = plasmaColors[plasmaColors.length - 1];
+                return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+            }
+
+            const c1 = plasmaColors[index];
+            const c2 = plasmaColors[index + 1];
+
+            const r = Math.round(c1[0] + (c2[0] - c1[0]) * fraction);
+            const g = Math.round(c1[1] + (c2[1] - c1[1]) * fraction);
+            const b = Math.round(c1[2] + (c2[2] - c1[2]) * fraction);
+
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
         class Particle {
             constructor(x, y, radius) {
                 this.x = x;
@@ -400,18 +429,19 @@
                 this.zCode = 0;
                 this.impulseX = 0;
                 this.impulseY = 0;
+                this.colorTemp = Math.random(); // Temperature: 0 (cold) to 1 (hot)
             }
             
             update() {
                 this.vy += gravity;
-                
+
                 if (fanSpeed > 0) {
                     const avgSize = (minSize + maxSize) / 2;
                     const fanWidth = avgSize * 4;
                     const fanCenterX = canvas.width / 2;
                     const fanBottom = canvas.height;
                     const fanTop = canvas.height / 2;
-                    
+
                     const dx = this.x - fanCenterX;
                     if (Math.abs(dx) < fanWidth / 2) {
                         if (this.y > fanTop) {
@@ -422,10 +452,16 @@
                         }
                     }
                 }
-                
+
+                // Cool down: move color temperature towards cold (0)
+                const coolingRate = 0.01; // Adjust cooling speed
+                if (this.colorTemp > 0) {
+                    this.colorTemp = Math.max(0, this.colorTemp - coolingRate);
+                }
+
                 this.x += this.vx;
                 this.y += this.vy;
-                
+
                 if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
                     this.vx *= -elasticity;
                     this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
@@ -434,7 +470,7 @@
                     this.vy *= -elasticity;
                     this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
                 }
-                
+
                 const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
                 const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
                 this.zCode = ZOrder.encode(gridX, gridY);
@@ -443,13 +479,9 @@
             draw(ctx) {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                
-                if (showCollisions && this.colliding) {
-                    ctx.fillStyle = '#ff0000';
-                } else {
-                    ctx.fillStyle = '#00ff41';
-                }
-                
+
+                // Use plasma color palette
+                ctx.fillStyle = getPlasmaColor(this.colorTemp);
                 ctx.fill();
             }
             
@@ -471,11 +503,68 @@
         let fanSpeed = 0.5;
         let searchRange = 3;
         let trailFade = 0.15;
-        let showCollisions = false;
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
-        
+
+        // Settings persistence
+        const persist = new SettingsPersistence('collideOScopeSettings');
+
+        function saveSettings() {
+            persist.save({
+                particleCount,
+                minSize,
+                maxSize,
+                maxSpeed,
+                gravity,
+                elasticity,
+                fanSpeed,
+                searchRange,
+                trailFade
+            });
+        }
+
+        function loadSettings() {
+            const settings = persist.load();
+            if (settings) {
+                particleCount = settings.particleCount ?? particleCount;
+                minSize = settings.minSize ?? minSize;
+                maxSize = settings.maxSize ?? maxSize;
+                maxSpeed = settings.maxSpeed ?? maxSpeed;
+                gravity = settings.gravity ?? gravity;
+                elasticity = settings.elasticity ?? elasticity;
+                fanSpeed = settings.fanSpeed ?? fanSpeed;
+                searchRange = settings.searchRange ?? searchRange;
+                trailFade = settings.trailFade ?? trailFade;
+
+                // Update UI elements
+                document.getElementById('particleCount').value = particleCount;
+                document.getElementById('countValue').textContent = particleCount;
+
+                document.getElementById('minSize').value = minSize;
+                document.getElementById('maxSize').value = maxSize;
+                document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+
+                document.getElementById('maxSpeed').value = maxSpeed;
+                document.getElementById('speedValue').textContent = maxSpeed;
+
+                document.getElementById('gravity').value = gravity;
+                document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+
+                document.getElementById('elasticity').value = elasticity;
+                document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+
+                document.getElementById('fanSpeed').value = fanSpeed;
+                document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+
+                document.getElementById('searchRange').value = searchRange;
+                document.getElementById('rangeValue').textContent = searchRange;
+
+                document.getElementById('trailFade').value = trailFade;
+                document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            }
+        }
+
         function resetParticles() {
             particles = [];
             for (let i = 0; i < particleCount; i++) {
@@ -530,7 +619,11 @@
                         particle.colliding = true;
                         other.colliding = true;
                         collisionCount++;
-                        
+
+                        // Heat up on collision (jump to hot end of plasma)
+                        particle.colorTemp = 1.0;
+                        other.colorTemp = 1.0;
+
                         accumulateCollisionImpulse(particle, other, dx, dy, dist);
                     }
                 }
@@ -638,6 +731,7 @@
             particleCount = parseInt(e.target.value);
             document.getElementById('countValue').textContent = particleCount;
             resetParticles();
+            saveSettings();
         });
         
         document.getElementById('minSize').addEventListener('input', (e) => {
@@ -649,8 +743,9 @@
             }
             document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
             resetParticles();
+            saveSettings();
         });
-        
+
         document.getElementById('maxSize').addEventListener('input', (e) => {
             maxSize = parseFloat(e.target.value);
             // Ensure max doesn't go below min
@@ -660,6 +755,7 @@
             }
             document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
             resetParticles();
+            saveSettings();
         });
         
         document.getElementById('maxSpeed').addEventListener('input', (e) => {
@@ -673,37 +769,39 @@
                     particle.vy *= scale;
                 }
             }
+            saveSettings();
         });
-        
+
         document.getElementById('gravity').addEventListener('input', (e) => {
             gravity = parseFloat(e.target.value);
             document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+            saveSettings();
         });
-        
+
         document.getElementById('elasticity').addEventListener('input', (e) => {
             elasticity = parseFloat(e.target.value);
             document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+            saveSettings();
         });
-        
+
         document.getElementById('fanSpeed').addEventListener('input', (e) => {
             fanSpeed = parseFloat(e.target.value);
             document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+            saveSettings();
         });
-        
+
         document.getElementById('searchRange').addEventListener('input', (e) => {
             searchRange = parseInt(e.target.value);
             document.getElementById('rangeValue').textContent = searchRange;
+            saveSettings();
         });
-        
+
         document.getElementById('trailFade').addEventListener('input', (e) => {
             trailFade = parseFloat(e.target.value);
             document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            saveSettings();
         });
-        
-        document.getElementById('showCollisions').addEventListener('change', (e) => {
-            showCollisions = e.target.checked;
-        });
-        
+
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -719,7 +817,8 @@
         function toggleAnimation() {
             animating = !animating;
         }
-        
+
+        loadSettings();
         resetParticles();
         requestAnimationFrame(animate);
     </script>

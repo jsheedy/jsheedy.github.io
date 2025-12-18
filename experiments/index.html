@@ -50,12 +50,14 @@
 		}
 
 		.experiment-grid {
-			display: grid;
+			display: flex;
+			flex-direction: column;
+			flex-wrap: wrap;
 			gap: 20px;
 			width: 100%;
 			max-width: 980px;
-			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-			align-items: stretch;
+			align-content: flex-start;
+			max-height: 70vh;
 		}
 
 		.exp-link {
@@ -76,6 +78,7 @@
 			transition: all 0.18s ease;
 			min-height: 96px;
 			text-align: center;
+			width: 280px;
 		}
 
 		.exp-link:hover, .exp-link:focus {
@@ -108,7 +111,6 @@
 			<a class="exp-link" href="collide-o-scope.html">collide-o-scope</a>
 			<a class="exp-link" href="quadtree.html">quadtree</a>
 			<a class="exp-link" href="zorder.html">zorder</a>
-			<a class="exp-link" href="zorder-grid.html">zorder-grid</a>
 			<a class="exp-link" href="zorder-spatial-query.html">zorder-spatial-query</a>
 		</div>
 	</main>
