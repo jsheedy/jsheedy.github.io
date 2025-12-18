@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boids Flocking Simulation</title>
+    <script src="settings-persistence.js"></script>
     <style>
         * {
             margin: 0;
@@ -70,8 +71,6 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) minmax(150px, 15%);
             gap: 15px;
-            max-height: 200px;
-            overflow-y: auto;
         }
         
         .control-group {
@@ -323,41 +322,41 @@
         </div>
         
         <div class="control-group">
-            <label>Size Range: <span class="value-display" id="sizeRangeValue">4.0 - 12.0</span></label>
+            <label>Size Range: <span class="value-display" id="sizeRangeValue">0.1 - 8.6</span></label>
             <div class="dual-range">
-                <input type="range" id="minSize" min="0.1" max="20" value="4" step="0.1" class="range-min">
-                <input type="range" id="maxSize" min="0.1" max="20" value="12" step="0.1" class="range-max">
+                <input type="range" id="minSize" min="0.1" max="20" value="0.1" step="0.1" class="range-min">
+                <input type="range" id="maxSize" min="0.1" max="20" value="8.6" step="0.1" class="range-max">
             </div>
         </div>
-        
+
         <div class="control-group">
-            <label>Speed: <span class="value-display" id="speedValue">4</span></label>
-            <input type="range" id="maxSpeed" min="1" max="10" value="4" step="0.5">
-        </div>
-        
-        <div class="control-group">
-            <label>Separation: <span class="value-display" id="separationValue">1.50</span></label>
-            <input type="range" id="separation" min="0" max="3" value="1.5" step="0.1">
+            <label>Speed: <span class="value-display" id="speedValue">8.5</span></label>
+            <input type="range" id="maxSpeed" min="1" max="10" value="8.5" step="0.5">
         </div>
 
         <div class="control-group">
-            <label>Alignment: <span class="value-display" id="alignmentValue">1.00</span></label>
-            <input type="range" id="alignment" min="0" max="3" value="1.0" step="0.1">
+            <label>Separation: <span class="value-display" id="separationValue">2.30</span></label>
+            <input type="range" id="separation" min="0" max="3" value="2.3" step="0.1">
         </div>
 
         <div class="control-group">
-            <label>Cohesion: <span class="value-display" id="cohesionValue">1.00</span></label>
-            <input type="range" id="cohesion" min="0" max="3" value="1.0" step="0.1">
+            <label>Alignment: <span class="value-display" id="alignmentValue">0.50</span></label>
+            <input type="range" id="alignment" min="0" max="3" value="0.5" step="0.1">
         </div>
 
         <div class="control-group">
-            <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
-            <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
+            <label>Cohesion: <span class="value-display" id="cohesionValue">0.10</span></label>
+            <input type="range" id="cohesion" min="0" max="3" value="0.10" step="0.1">
         </div>
-        
+
         <div class="control-group">
-            <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
-            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.05">
+            <label>Search Range: <span class="value-display" id="rangeValue">16</span>x</label>
+            <input type="range" id="searchRange" min="1" max="20" value="16" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.05</span></label>
+            <input type="range" id="trailFade" min="0" max="1" value="0.05" step="0.05">
         </div>
 
         <div class="control-group">
@@ -372,6 +371,15 @@
                 <input type="checkbox" id="useZOrder" checked>
                 <span>Use Z-Order Optimization</span>
             </label>
+        </div>
+
+        <div class="control-group">
+            <label>Glow Effect: <span class="value-display" id="glowValue">CSS Glow</span></label>
+            <select id="glowEffect" style="width: 100%; background: #001a00; color: #00ff41; border: 2px solid #00ff41; padding: 8px; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer;">
+                <option value="css">CSS Glow (Slow)</option>
+                <option value="cheap">Cheap Glow (Fast)</option>
+                <option value="none">No Glow</option>
+            </select>
         </div>
 
         <div class="button-group">
@@ -524,16 +532,66 @@
                 ctx.translate(this.x, this.y);
                 ctx.rotate(angle);
 
-                // Draw triangle outline
-                ctx.beginPath();
-                ctx.moveTo(size * 2, 0);              // Nose (pointing right)
-                ctx.lineTo(-size, -size);             // Back left
-                ctx.lineTo(-size, size);              // Back right
-                ctx.closePath();
+                const r = Math.floor(this.r);
+                const g = Math.floor(this.g);
+                const b = Math.floor(this.b);
 
-                ctx.strokeStyle = `rgb(${Math.floor(this.r)}, ${Math.floor(this.g)}, ${Math.floor(this.b)})`;
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
+                if (glowEffect === 'css') {
+                    // CSS Glow - Single-pass Gaussian blur (slow but beautiful)
+                    ctx.beginPath();
+                    ctx.moveTo(size * 2, 0);
+                    ctx.lineTo(-size, -size);
+                    ctx.lineTo(-size, size);
+                    ctx.closePath();
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = `rgb(${r}, ${g}, ${b})`;
+                    ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else if (glowEffect === 'cheap') {
+                    // Cheap glow - Scaled alpha layers (fast)
+                    // Outer glow (largest, most transparent)
+                    const outerScale = 1.8;
+                    ctx.beginPath();
+                    ctx.moveTo(size * 2 * outerScale, 0);
+                    ctx.lineTo(-size * outerScale, -size * outerScale);
+                    ctx.lineTo(-size * outerScale, size * outerScale);
+                    ctx.closePath();
+                    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+
+                    // Middle glow
+                    const midScale = 1.35;
+                    ctx.beginPath();
+                    ctx.moveTo(size * 2 * midScale, 0);
+                    ctx.lineTo(-size * midScale, -size * midScale);
+                    ctx.lineTo(-size * midScale, size * midScale);
+                    ctx.closePath();
+                    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // Core (actual size, bright)
+                    ctx.beginPath();
+                    ctx.moveTo(size * 2, 0);
+                    ctx.lineTo(-size, -size);
+                    ctx.lineTo(-size, size);
+                    ctx.closePath();
+                    ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    // No glow - Simple draw
+                    ctx.beginPath();
+                    ctx.moveTo(size * 2, 0);
+                    ctx.lineTo(-size, -size);
+                    ctx.lineTo(-size, size);
+                    ctx.closePath();
+                    ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
 
                 ctx.restore();
             }
@@ -541,22 +599,26 @@
         
         let particles = [];
         let particleCount = 200;
-        let minSize = 4;
-        let maxSize = 12;
-        let maxSpeed = 4;
-        let separation = 1.5;
-        let alignment = 1.0;
-        let cohesion = 1.0;
-        let searchRange = 3;
-        let trailFade = 0.15;
+        let minSize = 0.1;
+        let maxSize = 8.6;
+        let maxSpeed = 8.5;
+        let separation = 2.3;
+        let alignment = 0.5;
+        let cohesion = 0.10;
+        let searchRange = 16;
+        let trailFade = 0.05;
         let showSearchRange = false;
         let useZOrder = true;
+        let glowEffect = 'css'; // 'css', 'cheap', or 'none'
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
 
+        // Settings persistence
+        const persist = new SettingsPersistence('boidsSettings');
+
         function saveSettings() {
-            const settings = {
+            persist.save({
                 particleCount,
                 minSize,
                 maxSize,
@@ -567,15 +629,14 @@
                 searchRange,
                 trailFade,
                 showSearchRange,
-                useZOrder
-            };
-            localStorage.setItem('boidsSettings', JSON.stringify(settings));
+                useZOrder,
+                glowEffect
+            });
         }
 
         function loadSettings() {
-            const saved = localStorage.getItem('boidsSettings');
-            if (saved) {
-                const settings = JSON.parse(saved);
+            const settings = persist.load();
+            if (settings) {
 
                 particleCount = settings.particleCount ?? particleCount;
                 minSize = settings.minSize ?? minSize;
@@ -588,6 +649,13 @@
                 trailFade = settings.trailFade ?? trailFade;
                 showSearchRange = settings.showSearchRange ?? showSearchRange;
                 useZOrder = settings.useZOrder ?? useZOrder;
+
+                // Handle backward compatibility with old boolean glowEffect
+                if (typeof settings.glowEffect === 'boolean') {
+                    glowEffect = settings.glowEffect ? 'css' : 'none';
+                } else {
+                    glowEffect = settings.glowEffect ?? glowEffect;
+                }
 
                 // Update UI elements
                 document.getElementById('particleCount').value = particleCount;
@@ -617,6 +685,8 @@
 
                 document.getElementById('showSearchRange').checked = showSearchRange;
                 document.getElementById('useZOrder').checked = useZOrder;
+                document.getElementById('glowEffect').value = glowEffect;
+                updateGlowDisplay();
             }
         }
 
@@ -1027,6 +1097,21 @@
             saveSettings();
         });
 
+        function updateGlowDisplay() {
+            const glowLabels = {
+                'css': 'CSS Glow',
+                'cheap': 'Cheap Glow',
+                'none': 'No Glow'
+            };
+            document.getElementById('glowValue').textContent = glowLabels[glowEffect] || 'CSS Glow';
+        }
+
+        document.getElementById('glowEffect').addEventListener('change', (e) => {
+            glowEffect = e.target.value;
+            updateGlowDisplay();
+            saveSettings();
+        });
+
         // Help panel contextual text
         const helpPanel = document.getElementById('helpPanel');
         const defaultHelpText = `<h3>About</h3>
@@ -1062,6 +1147,7 @@
         }
 
         loadSettings();
+        updateGlowDisplay();
         resetParticles();
         requestAnimationFrame(animate);
     </script>

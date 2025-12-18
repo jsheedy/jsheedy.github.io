@@ -336,6 +336,10 @@
             </label>
         </div>
 
+        <div class="control-group">
+            <button onclick="togglePathAnimation()">Animate Z-Order Path</button>
+        </div>
+
         <div class="help-panel">
             <h3>About</h3>
             <p>Interactive Z-order spatial query visualization demonstrating spatial locality in Morton curves.</p>
@@ -479,9 +483,18 @@
         let gridToColumnGap = 15; // Gap between grid and column
         let axisLabelSpace = 20; // Space for axis labels
 
+        // Path animation state
+        let pathPoints = [];
+        let currentStep = 0;
+        let frameCounter = 0;
+        let isAnimating = false;
+        let animSpeed = 20; // Fixed speed
+
         // Generate grid cells
         function generateGrid() {
             cells = [];
+            pathPoints = [];
+            currentStep = 0;
 
             const cellsPerSide = 1 << depth; // 2^depth
             const totalWidth = canvas.width - axisLabelSpace - 40; // Leave space for y-axis labels
@@ -509,6 +522,16 @@
             // Sort by Z-order
             cellMap.sort((a, b) => a.zCode - b.zCode);
             cells = cellMap;
+
+            // Generate path points for animation
+            for (let i = 0; i < cells.length; i++) {
+                const cell = cells[i];
+                pathPoints.push({
+                    x: cell.screenX + cell.cellSize / 2,
+                    y: cell.screenY + cell.cellSize / 2,
+                    order: i
+                });
+            }
 
             // Update stats
             document.getElementById('gridSize').textContent = `${cellsPerSide}x${cellsPerSide}`;
@@ -540,6 +563,11 @@
                 cell.draw(ctx, showCodes, showCoords, isHighlighted, isHovered);
             }
 
+            // Draw animated path if active
+            if (isAnimating) {
+                drawPath(currentStep);
+            }
+
             // Draw Z-code column
             drawZCodeColumn(highlightedCells);
 
@@ -557,6 +585,64 @@
 
             // Draw legend
             drawLegend();
+        }
+
+        // Draw the Z-order path
+        function drawPath(upToStep = -1) {
+            if (pathPoints.length < 2) return;
+
+            const endStep = upToStep >= 0 ? Math.min(upToStep, pathPoints.length - 1) : pathPoints.length - 1;
+
+            // Draw path line
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+
+            for (let i = 1; i <= endStep; i++) {
+                ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+            }
+
+            ctx.stroke();
+
+            // Draw arrow at the current position
+            if (endStep > 0 && endStep < pathPoints.length - 1) {
+                const curr = pathPoints[endStep];
+                const prev = pathPoints[endStep - 1];
+                const angle = Math.atan2(curr.y - prev.y, curr.x - prev.x);
+                const arrowSize = 10;
+
+                ctx.fillStyle = '#00ff41';
+                ctx.beginPath();
+                ctx.moveTo(curr.x, curr.y);
+                ctx.lineTo(
+                    curr.x - arrowSize * Math.cos(angle - Math.PI / 6),
+                    curr.y - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    curr.x - arrowSize * Math.cos(angle + Math.PI / 6),
+                    curr.y - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draw start marker
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.8)';
+            ctx.beginPath();
+            ctx.arc(pathPoints[0].x, pathPoints[0].y, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw end marker if path is complete
+            if (endStep >= pathPoints.length - 1) {
+                ctx.fillStyle = '#00ff41';
+                ctx.beginPath();
+                ctx.arc(pathPoints[pathPoints.length - 1].x, pathPoints[pathPoints.length - 1].y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Draw axis labels
@@ -767,6 +853,36 @@
             showCoords = e.target.checked;
             draw();
         });
+
+        // Toggle path animation
+        function togglePathAnimation() {
+            isAnimating = !isAnimating;
+            if (isAnimating) {
+                // Reset animation to start
+                currentStep = 0;
+                frameCounter = 0;
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            if (isAnimating) {
+                frameCounter++;
+                if (frameCounter >= (21 - animSpeed)) {
+                    frameCounter = 0;
+                    currentStep++;
+                    if (currentStep >= cells.length) {
+                        currentStep = 0;
+                    }
+                }
+            }
+
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation loop
+        requestAnimationFrame(animate);
     </script>
 </body>
 </html>
