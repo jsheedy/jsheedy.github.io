@@ -35,22 +35,49 @@
         </div>
 
         <div class="control-group">
-            <label>Connection Distance: <span class="value-display" id="distanceValue">250</span>px</label>
-            <input type="range" id="connectionDistance" min="0" max="1000" value="250" step="10">
+            <label>Connection Distance: <span class="value-display" id="distanceValue"></span>px</label>
+            <input type="range" id="connectionDistance" min="0" max="1" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>Attraction Force: <span class="value-display" id="attractionValue"></span></label>
+            <input type="range" id="attractionForce" min="0" max="1" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>Repulsion Force: <span class="value-display" id="repulsionValue"></span></label>
+            <input type="range" id="repulsionForce" min="0" max="1" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>Damping: <span class="value-display" id="dampingValue"></span></label>
+            <input type="range" id="damping" min="0" max="1" step="0.01">
         </div>
 
         <div class="control-group">
             <label>
-                <input type="checkbox" id="showQuadtree" checked>
+                <input type="checkbox" id="showQuadtree">
                 Show Quadtree
             </label>
         </div>
 
         <div class="control-group">
             <label>
-                <input type="checkbox" id="showMouseQuadtree" checked>
+                <input type="checkbox" id="showMouseQuadtree">
                 Show Mouse Quadtree
             </label>
+        </div>
+
+        <div class="control-group">
+            <button id="add100Button">Add 100 Points</button>
+        </div>
+
+        <div class="control-group">
+            <button id="add1000Button">Add 1000 Points</button>
+        </div>
+
+        <div class="control-group">
+            <button id="add10000Button">Add 10000 Points</button>
         </div>
 
         <div class="control-group">
@@ -62,6 +89,25 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
+        // Universe class - canonical source for all physics parameters
+        class Universe {
+            constructor() {
+                this.connectionDistanceNormalized = 0.25; // 0-1 range
+                this.attractionForce = 0.15;
+                this.repulsionForce = 0.2;
+                this.damping = 0.5;
+                this.attractionScale = 0.02;
+                this.repulsionScale = 5000;
+            }
+
+            // Get actual connection distance in pixels based on canvas size
+            getConnectionDistance(canvasWidth, canvasHeight) {
+                return this.connectionDistanceNormalized * Math.min(canvasWidth, canvasHeight);
+            }
+        }
+
+        const universe = new Universe();
+
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
@@ -69,10 +115,8 @@
         let mouseY = 0;
         let quadtree = null;
         let mouseQuadtree = null;
-        let points = [];
-        let showQuadtree = true;
-        let showMouseQuadtree = true;
-        let connectionDistance = 250;
+        let showQuadtree = false;
+        let showMouseQuadtree = false;
 
         function resizeCanvas() {
             const titleBar = document.querySelector('.title-bar');
@@ -82,8 +126,12 @@
 
             // Recreate quadtree with new dimensions and re-insert all points
             if (quadtree) {
+                const allPoints = quadtree.getAllPoints();
                 quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
-                for (let point of points) {
+                for (let point of allPoints) {
+                    // Clamp points to new canvas bounds to prevent losing them
+                    point.x = Math.max(5, Math.min(canvas.width - 5, point.x));
+                    point.y = Math.max(5, Math.min(canvas.height - 5, point.y));
                     quadtree.insert(point);
                 }
             }
@@ -95,18 +143,36 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
+                this.vx = 0;
+                this.vy = 0;
             }
 
             draw(ctx) {
-                ctx.fillStyle = '#ff0000';
+                // Cheap glow effect for particles (20% smaller)
+                const size = 4.8;  // 6 * 0.8 = 20% smaller
+
+                // Outer glow (largest, most transparent)
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.15)';
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, size * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Middle glow
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size * 1.35, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core (brilliant yellow)
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
         class Quadtree {
-            constructor(x, y, width, height, capacity = 4) {
+            constructor(x, y, width, height, capacity = 2) {
                 this.x = x;
                 this.y = y;
                 this.width = width;
@@ -237,6 +303,21 @@
                 return found;
             }
 
+            getAllPoints(found = []) {
+                // Collect points from this node
+                found.push(...this.points);
+
+                // Recursively collect from children
+                if (this.divided) {
+                    this.nw.getAllPoints(found);
+                    this.ne.getAllPoints(found);
+                    this.sw.getAllPoints(found);
+                    this.se.getAllPoints(found);
+                }
+
+                return found;
+            }
+
             draw(ctx, color = '#00ff41') {
                 // Draw the boundary
                 ctx.strokeStyle = color;
@@ -291,13 +372,31 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            // Add point to points array
+            // Create point and insert into quadtree
             const point = new Point(x, y);
-            points.push(point);
-
-            // Insert point into the main quadtree
             quadtree.insert(point);
         });
+
+        // Initialize form values from Universe
+        function initializeControls() {
+            const distanceInput = document.getElementById('connectionDistance');
+            const attractionInput = document.getElementById('attractionForce');
+            const repulsionInput = document.getElementById('repulsionForce');
+            const dampingInput = document.getElementById('damping');
+
+            distanceInput.value = universe.connectionDistanceNormalized;
+            attractionInput.value = universe.attractionForce;
+            repulsionInput.value = universe.repulsionForce;
+            dampingInput.value = universe.damping;
+
+            const actualDistance = Math.round(universe.getConnectionDistance(canvas.width, canvas.height));
+            document.getElementById('distanceValue').textContent = actualDistance;
+            document.getElementById('attractionValue').textContent = universe.attractionForce.toFixed(2);
+            document.getElementById('repulsionValue').textContent = universe.repulsionForce.toFixed(2);
+            document.getElementById('dampingValue').textContent = universe.damping.toFixed(2);
+        }
+
+        initializeControls();
 
         document.getElementById('showQuadtree').addEventListener('change', (e) => {
             showQuadtree = e.target.checked;
@@ -308,12 +407,49 @@
         });
 
         document.getElementById('connectionDistance').addEventListener('input', (e) => {
-            connectionDistance = parseInt(e.target.value);
-            document.getElementById('distanceValue').textContent = connectionDistance;
+            universe.connectionDistanceNormalized = parseFloat(e.target.value);
+            const actualDistance = Math.round(universe.getConnectionDistance(canvas.width, canvas.height));
+            document.getElementById('distanceValue').textContent = actualDistance;
+        });
+
+        document.getElementById('attractionForce').addEventListener('input', (e) => {
+            universe.attractionForce = parseFloat(e.target.value);
+            document.getElementById('attractionValue').textContent = universe.attractionForce.toFixed(2);
+        });
+
+        document.getElementById('repulsionForce').addEventListener('input', (e) => {
+            universe.repulsionForce = parseFloat(e.target.value);
+            document.getElementById('repulsionValue').textContent = universe.repulsionForce.toFixed(2);
+        });
+
+        document.getElementById('damping').addEventListener('input', (e) => {
+            universe.damping = parseFloat(e.target.value);
+            document.getElementById('dampingValue').textContent = universe.damping.toFixed(2);
+        });
+
+        function addRandomPoints(count) {
+            const margin = 20;
+            for (let i = 0; i < count; i++) {
+                const x = margin + Math.random() * (canvas.width - 2 * margin);
+                const y = margin + Math.random() * (canvas.height - 2 * margin);
+                const point = new Point(x, y);
+                quadtree.insert(point);
+            }
+        }
+
+        document.getElementById('add100Button').addEventListener('click', () => {
+            addRandomPoints(100);
+        });
+
+        document.getElementById('add1000Button').addEventListener('click', () => {
+            addRandomPoints(1000);
+        });
+
+        document.getElementById('add10000Button').addEventListener('click', () => {
+            addRandomPoints(10000);
         });
 
         document.getElementById('clearButton').addEventListener('click', () => {
-            points = [];
             quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
         });
 
@@ -327,13 +463,84 @@
             lastTime = currentTime;
             fps = Math.round(1000 / deltaTime);
 
-            // Clear canvas
-            ctx.fillStyle = '#000';
+            // Apply physics forces and rebuild quadtree
+            if (quadtree && (universe.attractionForce > 0 || universe.repulsionForce > 0)) {
+                const allPoints = quadtree.getAllPoints();
+                const connectionDistance = universe.getConnectionDistance(canvas.width, canvas.height);
+
+                // Calculate forces for each point
+                for (let point of allPoints) {
+                    let fx = 0;
+                    let fy = 0;
+
+                    // Query neighbors once for both attraction and repulsion
+                    if (connectionDistance > 0) {
+                        const nearby = quadtree.queryRange(point.x, point.y, connectionDistance);
+
+                        for (let other of nearby) {
+                            if (other === point) continue;
+
+                            const dx = other.x - point.x;
+                            const dy = other.y - point.y;
+                            const distSq = dx * dx + dy * dy;
+                            const dist = Math.sqrt(distSq);
+
+                            if (dist > 0) {
+                                // Attraction force proportional to distance (Hooke's law)
+                                if (universe.attractionForce > 0) {
+                                    const force = universe.attractionForce * universe.attractionScale * dist;
+                                    fx += (dx / dist) * force;
+                                    fy += (dy / dist) * force;
+                                }
+
+                                // Repulsion force inversely proportional to distance squared (only when very close)
+                                if (universe.repulsionForce > 0 && dist < 100) {
+                                    const force = universe.repulsionForce * universe.repulsionScale / (distSq + 1);
+                                    fx -= (dx / dist) * force;
+                                    fy -= (dy / dist) * force;
+                                }
+                            }
+                        }
+                    }
+
+                    // Apply forces to velocity with damping
+                    point.vx = (point.vx + fx) * universe.damping;
+                    point.vy = (point.vy + fy) * universe.damping;
+                }
+
+                // Update positions and rebuild quadtree
+                const newQuadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+                for (let point of allPoints) {
+                    point.x += point.vx;
+                    point.y += point.vy;
+
+                    // Keep points within canvas bounds
+                    point.x = Math.max(5, Math.min(canvas.width - 5, point.x));
+                    point.y = Math.max(5, Math.min(canvas.height - 5, point.y));
+
+                    // Stop at boundaries
+                    if (point.x <= 5 || point.x >= canvas.width - 5) point.vx = 0;
+                    if (point.y <= 5 || point.y >= canvas.height - 5) point.vy = 0;
+
+                    newQuadtree.insert(point);
+                }
+                quadtree = newQuadtree;
+            }
+
+            // Clear canvas with subtle space vignette
+            const vignetteGradient = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 0,
+                canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) * 0.7
+            );
+            vignetteGradient.addColorStop(0, '#0f0f1a');  // Subtle dark blue at center
+            vignetteGradient.addColorStop(0.6, '#05050a');  // Transition
+            vignetteGradient.addColorStop(1, '#000000');  // Pure black at edges
+            ctx.fillStyle = vignetteGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw main quadtree in green (only if checkbox is enabled)
+            // Draw main quadtree in white (only if checkbox is enabled)
             if (showQuadtree && quadtree) {
-                quadtree.draw(ctx, '#00ff41');
+                quadtree.draw(ctx, '#ffffff');
             }
 
             // Draw mouse quadtree in magenta (only if checkbox is enabled)
@@ -341,43 +548,46 @@
                 mouseQuadtree.draw(ctx, '#ff00ff');
             }
 
-            // Draw connection lines between nearby points
+            const allPoints = quadtree.getAllPoints();
+            // Draw connection lines between nearby points with cheap glow effect
+            const connectionDistance = universe.getConnectionDistance(canvas.width, canvas.height);
             if (connectionDistance > 0 && quadtree) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-
-                const connected = new Set();
-
-                for (let point of points) {
+                for (let point of allPoints) {
                     const nearby = quadtree.queryRange(point.x, point.y, connectionDistance);
 
                     for (let other of nearby) {
                         if (other === point) continue;
 
-                        // Create a unique key for this pair to avoid duplicate lines
-                        const key1 = `${point.x},${point.y}-${other.x},${other.y}`;
-                        const key2 = `${other.x},${other.y}-${point.x},${point.y}`;
+                        // Faint glow effect
+                        // Outer glow (subtle)
+                        ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(point.x, point.y);
+                        ctx.lineTo(other.x, other.y);
+                        ctx.stroke();
 
-                        if (!connected.has(key1) && !connected.has(key2)) {
-                            connected.add(key1);
-
-                            ctx.beginPath();
-                            ctx.moveTo(point.x, point.y);
-                            ctx.lineTo(other.x, other.y);
-                            ctx.stroke();
-                        }
+                        // Core (crisp bright green)
+                        ctx.strokeStyle = '#00ff41';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(point.x, point.y);
+                        ctx.lineTo(other.x, other.y);
+                        ctx.stroke();
                     }
                 }
             }
 
             // Draw all points (always)
-            for (let point of points) {
-                point.draw(ctx);
+            if (quadtree) {
+                for (let point of allPoints) {
+                    point.draw(ctx);
+                }
             }
 
             // Update stats
-            document.getElementById('pointCount').textContent = points.length;
             if (quadtree) {
+                document.getElementById('pointCount').textContent = quadtree.getAllPoints().length;
                 document.getElementById('nodeCount').textContent = quadtree.countNodes();
                 document.getElementById('depth').textContent = quadtree.getMaxDepth();
             }
@@ -388,6 +598,9 @@
 
         // Initialize quadtree
         quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+
+        // Add initial points
+        addRandomPoints(200);
 
         requestAnimationFrame(animate);
     </script>
