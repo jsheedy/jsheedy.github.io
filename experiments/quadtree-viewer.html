@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadtree Viewer</title>
+    <link rel="stylesheet" href="terminal-theme.css">
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title-text">QUADTREE VIEWER</div>
+        <div class="title-subtitle">SPATIAL PARTITIONING VISUALIZATION</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="pointCount">0</div>
+                <div class="stat-label">Points</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="nodeCount">0</div>
+                <div class="stat-label">Nodes</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="depth">0</div>
+                <div class="stat-label">Max Depth</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Connection Distance: <span class="value-display" id="distanceValue">250</span>px</label>
+            <input type="range" id="connectionDistance" min="0" max="1000" value="250" step="10">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showQuadtree" checked>
+                Show Quadtree
+            </label>
+        </div>
+
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showMouseQuadtree" checked>
+                Show Mouse Quadtree
+            </label>
+        </div>
+
+        <div class="control-group">
+            <button id="clearButton">Clear Points</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let animating = true;
+        let lastTime = performance.now();
+        let fps = 60;
+        let mouseX = 0;
+        let mouseY = 0;
+        let quadtree = null;
+        let mouseQuadtree = null;
+        let points = [];
+        let showQuadtree = true;
+        let showMouseQuadtree = true;
+        let connectionDistance = 250;
+
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+
+            // Recreate quadtree with new dimensions and re-insert all points
+            if (quadtree) {
+                quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+                for (let point of points) {
+                    quadtree.insert(point);
+                }
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Point {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Quadtree {
+            constructor(x, y, width, height, capacity = 4) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.capacity = capacity;
+                this.points = [];
+                this.divided = false;
+                this.nw = null;
+                this.ne = null;
+                this.sw = null;
+                this.se = null;
+            }
+
+            subdivide() {
+                const hw = this.width / 2;
+                const hh = this.height / 2;
+
+                this.nw = new Quadtree(this.x, this.y, hw, hh, this.capacity);
+                this.ne = new Quadtree(this.x + hw, this.y, hw, hh, this.capacity);
+                this.sw = new Quadtree(this.x, this.y + hh, hw, hh, this.capacity);
+                this.se = new Quadtree(this.x + hw, this.y + hh, hw, hh, this.capacity);
+
+                this.divided = true;
+
+                // Redistribute existing points
+                for (let p of this.points) {
+                    this.insertToChild(p);
+                }
+                this.points = [];
+            }
+
+            insertToChild(point) {
+                const hw = this.width / 2;
+                const hh = this.height / 2;
+
+                if (point.x < this.x + hw) {
+                    if (point.y < this.y + hh) {
+                        this.nw.insert(point);
+                    } else {
+                        this.sw.insert(point);
+                    }
+                } else {
+                    if (point.y < this.y + hh) {
+                        this.ne.insert(point);
+                    } else {
+                        this.se.insert(point);
+                    }
+                }
+            }
+
+            insert(point) {
+                // Check if point is in bounds
+                if (point.x < this.x || point.x >= this.x + this.width ||
+                    point.y < this.y || point.y >= this.y + this.height) {
+                    return false;
+                }
+
+                if (!this.divided) {
+                    if (this.points.length < this.capacity) {
+                        this.points.push(point);
+                        return true;
+                    } else {
+                        this.subdivide();
+                    }
+                }
+
+                return this.insertToChild(point);
+            }
+
+            insertAtDepth(x, y, targetDepth, currentDepth = 0) {
+                if (currentDepth >= targetDepth) {
+                    return;
+                }
+
+                if (!this.divided) {
+                    this.subdivide();
+                }
+
+                // Determine which quadrant the point belongs to
+                const hw = this.width / 2;
+                const hh = this.height / 2;
+
+                if (x < this.x + hw) {
+                    if (y < this.y + hh) {
+                        this.nw.insertAtDepth(x, y, targetDepth, currentDepth + 1);
+                    } else {
+                        this.sw.insertAtDepth(x, y, targetDepth, currentDepth + 1);
+                    }
+                } else {
+                    if (y < this.y + hh) {
+                        this.ne.insertAtDepth(x, y, targetDepth, currentDepth + 1);
+                    } else {
+                        this.se.insertAtDepth(x, y, targetDepth, currentDepth + 1);
+                    }
+                }
+            }
+
+            queryRange(x, y, radius, found = []) {
+                // Check if search circle intersects this quad
+                const closestX = Math.max(this.x, Math.min(x, this.x + this.width));
+                const closestY = Math.max(this.y, Math.min(y, this.y + this.height));
+                const distX = x - closestX;
+                const distY = y - closestY;
+                const distSq = distX * distX + distY * distY;
+
+                if (distSq > radius * radius) {
+                    return found;
+                }
+
+                // Check points in this node
+                for (let p of this.points) {
+                    const dx = p.x - x;
+                    const dy = p.y - y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d <= radius) {
+                        found.push(p);
+                    }
+                }
+
+                // Recursively check children
+                if (this.divided) {
+                    this.nw.queryRange(x, y, radius, found);
+                    this.ne.queryRange(x, y, radius, found);
+                    this.sw.queryRange(x, y, radius, found);
+                    this.se.queryRange(x, y, radius, found);
+                }
+
+                return found;
+            }
+
+            draw(ctx, color = '#00ff41') {
+                // Draw the boundary
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+
+                // Recursively draw children
+                if (this.divided) {
+                    this.nw.draw(ctx, color);
+                    this.ne.draw(ctx, color);
+                    this.sw.draw(ctx, color);
+                    this.se.draw(ctx, color);
+                }
+            }
+
+            countNodes() {
+                let count = 1;
+                if (this.divided) {
+                    count += this.nw.countNodes();
+                    count += this.ne.countNodes();
+                    count += this.sw.countNodes();
+                    count += this.se.countNodes();
+                }
+                return count;
+            }
+
+            getMaxDepth(currentDepth = 0) {
+                if (!this.divided) {
+                    return currentDepth;
+                }
+                return Math.max(
+                    this.nw.getMaxDepth(currentDepth + 1),
+                    this.ne.getMaxDepth(currentDepth + 1),
+                    this.sw.getMaxDepth(currentDepth + 1),
+                    this.se.getMaxDepth(currentDepth + 1)
+                );
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+
+            // Create a new quadtree just for the mouse position
+            mouseQuadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+            mouseQuadtree.insertAtDepth(mouseX, mouseY, 10);
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Add point to points array
+            const point = new Point(x, y);
+            points.push(point);
+
+            // Insert point into the main quadtree
+            quadtree.insert(point);
+        });
+
+        document.getElementById('showQuadtree').addEventListener('change', (e) => {
+            showQuadtree = e.target.checked;
+        });
+
+        document.getElementById('showMouseQuadtree').addEventListener('change', (e) => {
+            showMouseQuadtree = e.target.checked;
+        });
+
+        document.getElementById('connectionDistance').addEventListener('input', (e) => {
+            connectionDistance = parseInt(e.target.value);
+            document.getElementById('distanceValue').textContent = connectionDistance;
+        });
+
+        document.getElementById('clearButton').addEventListener('click', () => {
+            points = [];
+            quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+        });
+
+        function animate(currentTime) {
+            if (!animating) {
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw main quadtree in green (only if checkbox is enabled)
+            if (showQuadtree && quadtree) {
+                quadtree.draw(ctx, '#00ff41');
+            }
+
+            // Draw mouse quadtree in magenta (only if checkbox is enabled)
+            if (showMouseQuadtree && mouseQuadtree) {
+                mouseQuadtree.draw(ctx, '#ff00ff');
+            }
+
+            // Draw connection lines between nearby points
+            if (connectionDistance > 0 && quadtree) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+
+                const connected = new Set();
+
+                for (let point of points) {
+                    const nearby = quadtree.queryRange(point.x, point.y, connectionDistance);
+
+                    for (let other of nearby) {
+                        if (other === point) continue;
+
+                        // Create a unique key for this pair to avoid duplicate lines
+                        const key1 = `${point.x},${point.y}-${other.x},${other.y}`;
+                        const key2 = `${other.x},${other.y}-${point.x},${point.y}`;
+
+                        if (!connected.has(key1) && !connected.has(key2)) {
+                            connected.add(key1);
+
+                            ctx.beginPath();
+                            ctx.moveTo(point.x, point.y);
+                            ctx.lineTo(other.x, other.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // Draw all points (always)
+            for (let point of points) {
+                point.draw(ctx);
+            }
+
+            // Update stats
+            document.getElementById('pointCount').textContent = points.length;
+            if (quadtree) {
+                document.getElementById('nodeCount').textContent = quadtree.countNodes();
+                document.getElementById('depth').textContent = quadtree.getMaxDepth();
+            }
+            document.getElementById('fps').textContent = fps;
+
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize quadtree
+        quadtree = new Quadtree(0, 0, canvas.width, canvas.height);
+
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>

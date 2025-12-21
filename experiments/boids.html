@@ -373,6 +373,18 @@
             </label>
         </div>
 
+        <div class="control-group" id="zOrderGridGroup" style="display: none;">
+            <label>Z-Order Grid Size: <span class="value-display" id="zOrderGridValue">2^8 (256x256)</span></label>
+            <input type="range" id="zOrderGridPower" min="1" max="8" step="1" value="8">
+        </div>
+
+        <div class="control-group" id="zOrderDebugGroup" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="zOrderDebug">
+                <span>Debug Z-Order Lookup</span>
+            </label>
+        </div>
+
         <div class="control-group">
             <label>Glow Effect: <span class="value-display" id="glowValue">CSS Glow</span></label>
             <select id="glowEffect" style="width: 100%; background: #001a00; color: #00ff41; border: 2px solid #00ff41; padding: 8px; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer;">
@@ -505,8 +517,9 @@
 
                 // Update z-order code for spatial partitioning (only if enabled)
                 if (useZOrder) {
-                    const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
-                    const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
+                    const gridMax = (1 << zOrderGridPower) - 1;
+                    const gridX = Math.min(gridMax, Math.max(0, Math.floor((this.x / canvas.width) * gridMax)));
+                    const gridY = Math.min(gridMax, Math.max(0, Math.floor((this.y / canvas.height) * gridMax)));
                     this.zCode = ZOrder.encode(gridX, gridY);
                 }
             }
@@ -609,10 +622,15 @@
         let trailFade = 0.05;
         let showSearchRange = false;
         let useZOrder = true;
+        let zOrderGridPower = 8;
+        let zOrderDebug = false;
         let glowEffect = 'css'; // 'css', 'cheap', or 'none'
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
+        const ZORDER_DEBUG_DEPTH = 5;
+        let zOrderMaxCode = Math.pow(2, zOrderGridPower * 2) - 1;
+        const zOrderDebugCells = new Set();
 
         // Settings persistence
         const persist = new SettingsPersistence('boidsSettings');
@@ -630,6 +648,8 @@
                 trailFade,
                 showSearchRange,
                 useZOrder,
+                zOrderGridPower,
+                zOrderDebug,
                 glowEffect
             });
         }
@@ -649,6 +669,8 @@
                 trailFade = settings.trailFade ?? trailFade;
                 showSearchRange = settings.showSearchRange ?? showSearchRange;
                 useZOrder = settings.useZOrder ?? useZOrder;
+                zOrderGridPower = settings.zOrderGridPower ?? zOrderGridPower;
+                zOrderDebug = settings.zOrderDebug ?? zOrderDebug;
 
                 // Handle backward compatibility with old boolean glowEffect
                 if (typeof settings.glowEffect === 'boolean') {
@@ -685,6 +707,8 @@
 
                 document.getElementById('showSearchRange').checked = showSearchRange;
                 document.getElementById('useZOrder').checked = useZOrder;
+                document.getElementById('zOrderGridPower').value = zOrderGridPower;
+                document.getElementById('zOrderDebug').checked = zOrderDebug;
                 document.getElementById('glowEffect').value = glowEffect;
                 updateGlowDisplay();
             }
@@ -709,6 +733,7 @@
         function calculateBoidsForces() {
             let totalNeighbors = 0;
             let checkCount = 0;
+            zOrderDebugCells.clear();
 
             // Sort particles by z-order code for efficient neighbor search (only if enabled)
             if (useZOrder) {
@@ -724,6 +749,7 @@
 
             const avgSize = (minSize + maxSize) / 2;
             const searchDist = searchRange * avgSize * 2;
+            const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * zOrderMaxCode;
 
             if (useZOrder) {
                 // Z-ORDER OPTIMIZED PATH
@@ -740,15 +766,22 @@
                     // Accumulators for color averaging
                     let avgR = 0, avgG = 0, avgB = 0;
 
+                    if (zOrderDebug) {
+                        markZOrderDebugCell(boid.zCode);
+                    }
+
                     // Find neighbors using z-order spatial partitioning
                     // Search forward in the sorted array
                     for (let j = i + 1; j < particles.length; j++) {
                         const other = particles[j];
 
                         const zDiff = other.zCode - boid.zCode;
-                        const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
                         if (zDiff > zThreshold) {
                             break;
+                        }
+
+                        if (zOrderDebug) {
+                            markZOrderDebugCell(other.zCode);
                         }
 
                         checkCount++;
@@ -797,9 +830,12 @@
                         const other = particles[j];
 
                         const zDiff = boid.zCode - other.zCode;
-                        const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
                         if (zDiff > zThreshold) {
                             break;
+                        }
+
+                        if (zOrderDebug) {
+                            markZOrderDebugCell(other.zCode);
                         }
 
                         checkCount++;
@@ -1004,6 +1040,8 @@
                 particle.draw(ctx);
             }
 
+            drawZOrderDebugOverlay();
+
             // Update stats
             document.getElementById('neighborCount').textContent = avgNeighbors;
             document.getElementById('checkCount').textContent = checkCount;
@@ -1094,6 +1132,18 @@
 
         document.getElementById('useZOrder').addEventListener('change', (e) => {
             useZOrder = e.target.checked;
+            updateZOrderControls();
+            saveSettings();
+        });
+
+        document.getElementById('zOrderGridPower').addEventListener('input', (e) => {
+            zOrderGridPower = parseInt(e.target.value);
+            updateZOrderGridDisplay();
+            saveSettings();
+        });
+
+        document.getElementById('zOrderDebug').addEventListener('change', (e) => {
+            zOrderDebug = e.target.checked;
             saveSettings();
         });
 
@@ -1104,6 +1154,71 @@
                 'none': 'No Glow'
             };
             document.getElementById('glowValue').textContent = glowLabels[glowEffect] || 'CSS Glow';
+        }
+
+        function updateZOrderControls() {
+            const debugGroup = document.getElementById('zOrderDebugGroup');
+            const gridGroup = document.getElementById('zOrderGridGroup');
+            const shouldShow = useZOrder;
+
+            debugGroup.style.display = shouldShow ? 'flex' : 'none';
+            gridGroup.style.display = shouldShow ? 'flex' : 'none';
+            document.getElementById('zOrderDebug').checked = useZOrder && zOrderDebug;
+        }
+
+        function updateZOrderGridDisplay() {
+            const gridSize = 1 << zOrderGridPower;
+            zOrderMaxCode = Math.pow(2, zOrderGridPower * 2) - 1;
+            document.getElementById('zOrderGridValue').textContent = `2^${zOrderGridPower} (${gridSize}x${gridSize})`;
+        }
+
+        function markZOrderDebugCell(zCode) {
+            if (!zOrderDebug) return;
+            const { x, y } = ZOrder.decode(zCode);
+            const debugDepth = Math.min(ZORDER_DEBUG_DEPTH, zOrderGridPower);
+            const shift = Math.max(0, zOrderGridPower - debugDepth);
+            const cellsPerSide = 1 << debugDepth;
+            const cellX = Math.min(cellsPerSide - 1, x >>> shift);
+            const cellY = Math.min(cellsPerSide - 1, y >>> shift);
+            zOrderDebugCells.add(`${cellX},${cellY}`);
+        }
+
+        function drawZOrderDebugOverlay() {
+            if (!useZOrder || !zOrderDebug) return;
+
+            const debugDepth = Math.min(ZORDER_DEBUG_DEPTH, zOrderGridPower);
+            const cellsPerSide = 1 << debugDepth;
+            const cellW = canvas.width / cellsPerSide;
+            const cellH = canvas.height / cellsPerSide;
+
+            ctx.save();
+            ctx.lineWidth = 1;
+
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+            ctx.beginPath();
+            for (let i = 0; i <= cellsPerSide; i++) {
+                const x = i * cellW;
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            for (let j = 0; j <= cellsPerSide; j++) {
+                const y = j * cellH;
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.12)';
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.25)';
+            for (let key of zOrderDebugCells) {
+                const [cx, cy] = key.split(',').map(Number);
+                const x = cx * cellW;
+                const y = cy * cellH;
+                ctx.fillRect(x, y, cellW, cellH);
+                ctx.strokeRect(x, y, cellW, cellH);
+            }
+
+            ctx.restore();
         }
 
         document.getElementById('glowEffect').addEventListener('change', (e) => {
@@ -1148,6 +1263,8 @@
 
         loadSettings();
         updateGlowDisplay();
+        updateZOrderGridDisplay();
+        updateZOrderControls();
         resetParticles();
         requestAnimationFrame(animate);
     </script>
