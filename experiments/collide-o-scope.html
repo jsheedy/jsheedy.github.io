@@ -28,8 +28,37 @@
             padding: 15px 20px;
             text-align: center;
             box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
         }
-        
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
         .title-text {
             font-family: 'Courier New', monospace;
             font-size: 32px;
@@ -266,6 +295,7 @@
 </head>
 <body>
     <div class="title-bar">
+        <a href="index.html" class="back-link">Experiments</a>
         <div class="title-text">COLLIDE-O-SCOPE</div>
         <div class="title-subtitle">Z-ORDER SPATIAL PARTITIONING SYSTEM</div>
     </div>

@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bezier Curves</title>
+    <script src="settings-persistence.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #00ff41;
+            filter: brightness(1.2);
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            background: #001a00;
+            color: #00ff41;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 250px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar-section.highlighted {
+            background: #001a00;
+            border-color: #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        .sidebar-section.highlighted h2 {
+            text-shadow: 0 0 15px #00ff41, 0 0 25px #00ff41;
+        }
+
+        .sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
+        }
+
+        .sidebar-section.highlighted p {
+            color: #00ff41dd;
+        }
+
+        .sidebar code {
+            background: #001a00;
+            padding: 2px 6px;
+            border: 1px solid #00ff4140;
+            border-radius: 2px;
+            font-size: 10px;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .right-sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 250px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff41;
+            box-shadow: -5px 0 30px rgba(0, 255, 65, 0.2);
+            padding: 15px;
+        }
+
+        .tic-tac {
+            background: #001a00;
+            border: 2px solid #00ff41;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            transition: all 0.2s;
+        }
+
+        .tic-tac:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+        }
+
+        .tic-tac.selected {
+            background: #220022;
+            border-color: #ff00ff;
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.7);
+        }
+
+        .tic-tac-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .tic-tac-type {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        .tic-tac-delete {
+            background: transparent;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            font-size: 14px;
+            line-height: 18px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .tic-tac-delete:hover {
+            background: #ff0000;
+            border-color: #ff0000;
+            color: #000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .tic-tac-points {
+            font-size: 9px;
+            color: #00ff4199;
+            line-height: 1.4;
+        }
+
+        .tic-tac-point {
+            margin: 2px 0;
+        }
+
+        .tic-tac.clear-all {
+            background: #1a0000;
+            border-color: #ff4400;
+        }
+
+        .tic-tac.clear-all:hover {
+            background: #ff4400;
+            border-color: #ff4400;
+            cursor: pointer;
+        }
+
+        .tic-tac.clear-all .tic-tac-type {
+            color: #ff4400;
+            text-shadow: 0 0 5px #ff4400;
+            text-align: center;
+        }
+
+        .tic-tac.clear-all:hover .tic-tac-type {
+            color: #000;
+            text-shadow: none;
+        }
+
+        .algorithm-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 40px;
+        }
+
+        .algorithm-overlay.visible {
+            display: block;
+        }
+
+        .algorithm-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .algorithm-content h1 {
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #00ff41;
+            text-shadow: 0 0 15px #00ff41, 0 0 25px #00ff41;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 2px solid #00ff41;
+            padding-bottom: 15px;
+        }
+
+        .algorithm-content h3 {
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-top: 25px;
+            margin-bottom: 12px;
+        }
+
+        .algorithm-content p {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #00ff41cc;
+            margin-bottom: 15px;
+        }
+
+        .algorithm-content ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .algorithm-content li {
+            font-size: 12px;
+            line-height: 1.8;
+            color: #00ff41cc;
+            margin-bottom: 8px;
+        }
+
+        .algorithm-content code {
+            background: #001a00;
+            padding: 3px 8px;
+            border: 1px solid #00ff4140;
+            border-radius: 2px;
+            font-size: 12px;
+            color: #00ff41;
+        }
+
+        .algorithm-content .code-block {
+            background: #001a00;
+            border: 2px solid #00ff41;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41dd;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .sidebar-section#algorithmSection {
+            cursor: help;
+        }
+
+        .sidebar-section#algorithmSection:hover {
+            background: #001a00;
+            border-color: #00ff4160;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a href="index.html" class="back-link">Experiments</a>
+        <div class="title-text">BEZIER CURVES</div>
+        <div class="title-subtitle">INTERACTIVE CURVE EXPLORER</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section" id="quadraticSection">
+                    <h2>Quadratic Bezier</h2>
+                    <p>
+                        A quadratic Bezier curve is defined by three control points: 
+              two endpoints and one control point. 
+              The curve starts at the first endpoint, is influenced by the control point, 
+              and ends at the second endpoint.
+              <!--
+              First (LERP) between control points (blue dots)
+              Q0 = LERP(P₀, P₁)
+              Q1 = LERP(P₁, P₂)
+              -->
+
+              Then P(t) = LERP(Q0, Q1)
+                    <p>
+                        The mathematical formula uses parameter <code>t</code> ranging from 0 to 1:
+                    </p>
+                    <p>
+                        <code>B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂</code>
+                    </p>
+                    <p>
+                        Where P₀ is the start point, P₁ is the control point, and P₂ is the end point.
+                    </p>
+                </div>
+
+                <div class="sidebar-section" id="cubicSection">
+                    <h2>Cubic Bezier</h2>
+                    <p>
+                        A cubic Bezier curve uses four control points: two endpoints and two control points. This provides more flexibility in shaping the curve compared to quadratic curves.
+                    </p>
+                    <p>
+                        The formula for a cubic Bezier:
+                    </p>
+                    <p>
+                        <code>B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃</code>
+                    </p>
+                    <p>
+                        Cubic Beziers are widely used in vector graphics, animation, and font design.
+                    </p>
+                </div>
+
+                <div class="sidebar-section" id="algorithmSection">
+                    <h2>De Casteljau's Algorithm</h2>
+                    <p>
+                        Enable "Show Construction" and adjust the Animation slider to see how the curve is computed using successive linear interpolations between control points.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+
+            <div class="algorithm-overlay" id="algorithmOverlay">
+                <div class="algorithm-content">
+                    <h1>De Casteljau's Algorithm</h1>
+
+                    <p>
+                        De Casteljau's algorithm is a recursive method for evaluating Bezier curves at any parameter value <code>t</code>.
+                        Named after French physicist and mathematician Paul de Casteljau who developed it in 1959, it's both numerically
+                        stable and provides geometric insight into how Bezier curves work.
+                    </p>
+
+                    <h3>The Core Concept</h3>
+                    <p>
+                        The algorithm works by repeatedly performing <strong>linear interpolation</strong> (lerp) between pairs of points.
+                        At each level, the number of points decreases by one until you're left with a single point—the point on the curve
+                        at parameter <code>t</code>.
+                    </p>
+
+                    <h3>For Quadratic Bezier (3 control points)</h3>
+                    <p>Given control points P₀, P₁, P₂ and parameter t:</p>
+                    <div class="code-block">
+                        Level 1: Linear interpolation between adjacent points<br>
+                        &nbsp;&nbsp;Q₀ = lerp(P₀, P₁, t) = (1-t)P₀ + tP₁<br>
+                        &nbsp;&nbsp;Q₁ = lerp(P₁, P₂, t) = (1-t)P₁ + tP₂<br>
+                        <br>
+                        Level 2: Linear interpolation between Q points<br>
+                        &nbsp;&nbsp;B(t) = lerp(Q₀, Q₁, t) = (1-t)Q₀ + tQ₁<br>
+                    </div>
+                    <p>
+                        <strong>Result:</strong> Two first-level interpolations followed by one second-level interpolation yields the
+                        point on the quadratic curve.
+                    </p>
+
+                    <h3>For Cubic Bezier (4 control points)</h3>
+                    <p>Given control points P₀, P₁, P₂, P₃ and parameter t:</p>
+                    <div class="code-block">
+                        Level 1: Three linear interpolations<br>
+                        &nbsp;&nbsp;Q₀ = lerp(P₀, P₁, t)<br>
+                        &nbsp;&nbsp;Q₁ = lerp(P₁, P₂, t)<br>
+                        &nbsp;&nbsp;Q₂ = lerp(P₂, P₃, t)<br>
+                        <br>
+                        Level 2: Two linear interpolations<br>
+                        &nbsp;&nbsp;R₀ = lerp(Q₀, Q₁, t)<br>
+                        &nbsp;&nbsp;R₁ = lerp(Q₁, Q₂, t)<br>
+                        <br>
+                        Level 3: Final interpolation<br>
+                        &nbsp;&nbsp;B(t) = lerp(R₀, R₁, t)<br>
+                    </div>
+                    <p>
+                        <strong>Result:</strong> Three levels of interpolation: 3 → 2 → 1 point, which is the point on the cubic curve.
+                    </p>
+
+                    <h3>Visualization in This Tool</h3>
+                    <p>
+                        When you enable <strong>"Show Construction"</strong> and move the <strong>Animation (t)</strong> slider:
+                    </p>
+                    <ul>
+                        <li><strong>Cyan lines/points:</strong> First level of linear interpolation</li>
+                        <li><strong>Yellow lines/points:</strong> Second level of interpolation</li>
+                        <li><strong>Magenta lines/points:</strong> Third level (cubic only)</li>
+                        <li><strong>Yellow highlighted point:</strong> Final result—the point on the curve at parameter t</li>
+                    </ul>
+
+                    <h3>Why It Matters</h3>
+                    <ul>
+                        <li><strong>Numerical Stability:</strong> Avoids the numerical issues that can arise from directly evaluating polynomial formulas</li>
+                        <li><strong>Geometric Intuition:</strong> Shows how the curve is "pulled" toward control points</li>
+                        <li><strong>Subdivision:</strong> Can be used to split a curve into two curves at any point</li>
+                        <li><strong>Degree Independence:</strong> Works for Bezier curves of any degree, not just quadratic and cubic</li>
+                    </ul>
+
+                    <h3>The General Pattern</h3>
+                    <p>
+                        For a Bezier curve of degree <code>n</code> (with n+1 control points), De Casteljau's algorithm performs:
+                    </p>
+                    <div class="code-block">
+                        Level 0: n+1 points (the control points)<br>
+                        Level 1: n linear interpolations → n points<br>
+                        Level 2: n-1 linear interpolations → n-1 points<br>
+                        ...<br>
+                        Level n: 1 linear interpolation → 1 point (the curve point)
+                    </div>
+                    <p>
+                        Total operations: n + (n-1) + ... + 1 = <strong>n(n+1)/2</strong> linear interpolations.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-sidebar" id="ticTacContainer">
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="curveCount">0</div>
+                <div class="stat-label">Curves</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="selectedType">None</div>
+                <div class="stat-label">Selected</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="addQuadraticCurve()">Add Quadratic</button>
+            <button onclick="addCubicCurve()">Add Cubic</button>
+        </div>
+
+        <div class="button-group">
+            <button onclick="add100QuadraticCurves()">Add 100 Quadratics</button>
+            <button onclick="add100CubicCurves()">Add 100 Cubics</button>
+        </div>
+
+        <div class="control-group">
+            <label>Resolution: <span class="value-display" id="resolutionValue">50</span> segments</label>
+            <input type="range" id="resolution" min="0" max="200" value="50" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>Animation (t): <span class="value-display" id="tValueDisplay">0.00</span></label>
+            <input type="range" id="tValue" min="0" max="1" value="0" step="0.01">
+            <div class="checkbox-group" style="margin-top: 5px;">
+                <input type="checkbox" id="freerun">
+                <label for="freerun">Loop</label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Loop Duration: <span class="value-display" id="durationValue">3.0</span>s</label>
+            <input type="range" id="loopDuration" min="0.05" max="10" value="3" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Point Size: <span class="value-display" id="pointSizeValue">6</span>px</label>
+            <input type="range" id="pointSize" min="2" max="20" value="6" step="1">
+        </div>
+
+        <div class="control-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="showPoints" checked>
+                <label for="showPoints">Show Control Points</label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="checkbox-group">
+                <input type="checkbox" checked="checked" id="showConstruction">
+                <label for="showConstruction">Show Construction</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            const canvasWrapper = document.querySelector('.canvas-wrapper');
+            canvas.width = canvasWrapper.clientWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Bezier curve class
+        class BezierCurve {
+            constructor(type, points) {
+                this.type = type;        // 'quadratic' or 'cubic'
+                this.points = points;    // Array of {x, y} control points
+                this.selected = false;   // For highlighting
+            }
+        }
+
+        // State
+        let curves = [];
+        let dragState = null;  // { curveIndex, pointIndex }
+        let hoveredPoint = null;  // { curveIndex, pointIndex }
+
+        // Settings
+        let resolution = 50;
+        let thickness = 2;
+        let pointSize = 6;
+        let tValue = 0;
+        let showPoints = true;
+        let showConstruction = true;
+        let freerun = false;
+        let loopDuration = 5.0;
+
+        // Animation
+        let lastTime = performance.now();
+        let fps = 60;
+        let animationStartTime = 0;
+        let animationDirection = 1; // 1 for forward, -1 for backward
+
+        // Settings persistence
+        const persist = new SettingsPersistence('bezierCurvesSettings');
+
+        function saveSettings() {
+            persist.save({
+                curves: curves.map(c => ({
+                    type: c.type,
+                    points: c.points,
+                    selected: c.selected
+                })),
+                resolution,
+                tValue,
+                freerun,
+                loopDuration,
+                showPoints,
+                showConstruction,
+                pointSize
+            });
+        }
+
+        function loadSettings() {
+            const settings = persist.load();
+            if (settings) {
+                // Load curves
+                if (settings.curves && Array.isArray(settings.curves)) {
+                    curves = settings.curves.map(c => new BezierCurve(c.type, c.points));
+                    curves.forEach((curve, i) => {
+                        if (settings.curves[i].selected) {
+                            curve.selected = true;
+                        }
+                    });
+                }
+
+                // Load settings
+                resolution = settings.resolution ?? resolution;
+                tValue = settings.tValue ?? tValue;
+                freerun = settings.freerun ?? freerun;
+                loopDuration = settings.loopDuration ?? loopDuration;
+                showPoints = settings.showPoints ?? showPoints;
+                showConstruction = settings.showConstruction ?? showConstruction;
+                pointSize = settings.pointSize ?? pointSize;
+
+                // Update UI elements
+                document.getElementById('resolution').value = resolution;
+                document.getElementById('resolutionValue').textContent = resolution;
+
+                document.getElementById('tValue').value = tValue;
+                document.getElementById('tValueDisplay').textContent = tValue.toFixed(2);
+
+                document.getElementById('freerun').checked = freerun;
+
+                document.getElementById('loopDuration').value = loopDuration;
+                document.getElementById('durationValue').textContent = loopDuration.toFixed(1);
+
+                document.getElementById('showPoints').checked = showPoints;
+                document.getElementById('showConstruction').checked = showConstruction;
+
+                document.getElementById('pointSize').value = pointSize;
+                document.getElementById('pointSizeValue').textContent = pointSize;
+
+                updateTicTacs();
+            }
+        }
+
+        // Bezier math functions
+        function lerp(p0, p1, t) {
+            return {
+                x: p0.x + (p1.x - p0.x) * t,
+                y: p0.y + (p1.y - p0.y) * t
+            };
+        }
+
+        function getQuadraticPoint(p0, p1, p2, t) {
+            const a = lerp(p0, p1, t);
+            const b = lerp(p1, p2, t);
+            return lerp(a, b, t);
+        }
+
+        function getCubicPoint(p0, p1, p2, p3, t) {
+            const a = lerp(p0, p1, t);
+            const b = lerp(p1, p2, t);
+            const c = lerp(p2, p3, t);
+            const d = lerp(a, b, t);
+            const e = lerp(b, c, t);
+            return lerp(d, e, t);
+        }
+
+        function getQuadraticConstruction(p0, p1, p2, t) {
+            const a = lerp(p0, p1, t);
+            const b = lerp(p1, p2, t);
+            return { a, b, final: lerp(a, b, t) };
+        }
+
+        function getCubicConstruction(p0, p1, p2, p3, t) {
+            const a = lerp(p0, p1, t);
+            const b = lerp(p1, p2, t);
+            const c = lerp(p2, p3, t);
+            const d = lerp(a, b, t);
+            const e = lerp(b, c, t);
+            return { a, b, c, d, e, final: lerp(d, e, t) };
+        }
+
+        // Helper function to generate random curves
+        function randomRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        // Add curves
+        function addQuadraticCurve() {
+            const margin = 10; // Margin from canvas edges
+            const minWidth = canvas.width * 0.2; // Minimum 20% of canvas width
+
+            // Generate random points until we get a valid configuration
+            let points;
+            let attempts = 0;
+            do {
+                points = [
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) }
+                ];
+
+                // Check if bounding box width is at least minWidth
+                const xCoords = points.map(p => p.x);
+                const width = Math.max(...xCoords) - Math.min(...xCoords);
+
+                if (width >= minWidth) break;
+                attempts++;
+            } while (attempts < 100);
+
+            const curve = new BezierCurve('quadratic', points);
+
+            curves.forEach(c => c.selected = false);
+            curve.selected = true;
+            curves.push(curve);
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function addCubicCurve() {
+            const margin = 10; // Margin from canvas edges
+            const minWidth = canvas.width * 0.2; // Minimum 20% of canvas width
+
+            // Generate random points until we get a valid configuration
+            let points;
+            let attempts = 0;
+            do {
+                points = [
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                    { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) }
+                ];
+
+                // Check if bounding box width is at least minWidth
+                const xCoords = points.map(p => p.x);
+                const width = Math.max(...xCoords) - Math.min(...xCoords);
+
+                if (width >= minWidth) break;
+                attempts++;
+            } while (attempts < 100);
+
+            const curve = new BezierCurve('cubic', points);
+
+            curves.forEach(c => c.selected = false);
+            curve.selected = true;
+            curves.push(curve);
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function add100QuadraticCurves() {
+            for (let i = 0; i < 100; i++) {
+                const margin = 10;
+                const minWidth = canvas.width * 0.2;
+
+                let points;
+                let attempts = 0;
+                do {
+                    points = [
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) }
+                    ];
+
+                    const xCoords = points.map(p => p.x);
+                    const width = Math.max(...xCoords) - Math.min(...xCoords);
+
+                    if (width >= minWidth) break;
+                    attempts++;
+                } while (attempts < 100);
+
+                const curve = new BezierCurve('quadratic', points);
+                curve.selected = false;
+                curves.push(curve);
+            }
+
+            // Select the last curve added
+            if (curves.length > 0) {
+                curves.forEach(c => c.selected = false);
+                curves[curves.length - 1].selected = true;
+            }
+
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function add100CubicCurves() {
+            for (let i = 0; i < 100; i++) {
+                const margin = 10;
+                const minWidth = canvas.width * 0.2;
+
+                let points;
+                let attempts = 0;
+                do {
+                    points = [
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) },
+                        { x: randomRange(margin, canvas.width - margin), y: randomRange(margin, canvas.height - margin) }
+                    ];
+
+                    const xCoords = points.map(p => p.x);
+                    const width = Math.max(...xCoords) - Math.min(...xCoords);
+
+                    if (width >= minWidth) break;
+                    attempts++;
+                } while (attempts < 100);
+
+                const curve = new BezierCurve('cubic', points);
+                curve.selected = false;
+                curves.push(curve);
+            }
+
+            // Select the last curve added
+            if (curves.length > 0) {
+                curves.forEach(c => c.selected = false);
+                curves[curves.length - 1].selected = true;
+            }
+
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function deleteCurve(index) {
+            curves.splice(index, 1);
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function clearAllCurves() {
+            curves = [];
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function selectCurve(index) {
+            curves.forEach((c, i) => {
+                c.selected = (i === index);
+            });
+            updateTicTacs();
+            saveSettings();
+        }
+
+        function updateSidebar() {
+            const selectedCurve = curves.find(c => c.selected);
+            const quadraticSection = document.getElementById('quadraticSection');
+            const cubicSection = document.getElementById('cubicSection');
+
+            if (selectedCurve) {
+                if (selectedCurve.type === 'quadratic') {
+                    quadraticSection.classList.add('highlighted');
+                    cubicSection.classList.remove('highlighted');
+                } else {
+                    quadraticSection.classList.remove('highlighted');
+                    cubicSection.classList.add('highlighted');
+                }
+            } else {
+                quadraticSection.classList.remove('highlighted');
+                cubicSection.classList.remove('highlighted');
+            }
+        }
+
+        function updateTicTacs() {
+            const container = document.getElementById('ticTacContainer');
+            container.innerHTML = '';
+
+            updateSidebar();
+
+            let selectedTicTac = null;
+
+            curves.forEach((curve, index) => {
+                const ticTac = document.createElement('div');
+                ticTac.className = 'tic-tac' + (curve.selected ? ' selected' : '');
+                ticTac.onclick = (e) => {
+                    if (!e.target.classList.contains('tic-tac-delete')) {
+                        selectCurve(index);
+                    }
+                };
+
+                if (curve.selected) {
+                    selectedTicTac = ticTac;
+                }
+
+                const header = document.createElement('div');
+                header.className = 'tic-tac-header';
+
+                const type = document.createElement('div');
+                type.className = 'tic-tac-type';
+                type.textContent = curve.type === 'quadratic' ? 'Quadratic' : 'Cubic';
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'tic-tac-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteCurve(index);
+                };
+
+                header.appendChild(type);
+                header.appendChild(deleteBtn);
+
+                const points = document.createElement('div');
+                points.className = 'tic-tac-points';
+                curve.points.forEach((p, i) => {
+                    const pointDiv = document.createElement('div');
+                    pointDiv.className = 'tic-tac-point';
+                    const label = i === 0 ? 'Start' :
+                                  i === curve.points.length - 1 ? 'End' :
+                                  `Ctrl ${curve.type === 'cubic' && i === 2 ? '2' : '1'}`;
+                    pointDiv.textContent = `${label}: (${Math.round(p.x)}, ${Math.round(p.y)})`;
+                    points.appendChild(pointDiv);
+                });
+
+                ticTac.appendChild(header);
+                ticTac.appendChild(points);
+                container.appendChild(ticTac);
+            });
+
+            // Add "Clear All" tic-tac if more than one curve
+            if (curves.length > 1) {
+                const clearTicTac = document.createElement('div');
+                clearTicTac.className = 'tic-tac clear-all';
+                clearTicTac.onclick = clearAllCurves;
+
+                const clearType = document.createElement('div');
+                clearType.className = 'tic-tac-type';
+                clearType.textContent = '🗑 Clear All Curves';
+
+                clearTicTac.appendChild(clearType);
+                container.appendChild(clearTicTac);
+            }
+
+            // Scroll selected tic-tac into view
+            if (selectedTicTac) {
+                setTimeout(() => {
+                    selectedTicTac.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 0);
+            }
+        }
+
+        // Mouse interaction
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function findPointAtPosition(pos, radius = pointSize + 5) {
+            for (let i = curves.length - 1; i >= 0; i--) {
+                const curve = curves[i];
+                for (let j = 0; j < curve.points.length; j++) {
+                    const p = curve.points[j];
+                    const dx = pos.x - p.x;
+                    const dy = pos.y - p.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < radius) {
+                        return { curveIndex: i, pointIndex: j };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function isPointNearCurve(pos, curve, threshold = 10) {
+            const steps = Math.max(resolution, 50);
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                let point;
+                if (curve.type === 'quadratic') {
+                    point = getQuadraticPoint(curve.points[0], curve.points[1], curve.points[2], t);
+                } else {
+                    point = getCubicPoint(curve.points[0], curve.points[1], curve.points[2], curve.points[3], t);
+                }
+                const dx = pos.x - point.x;
+                const dy = pos.y - point.y;
+                if (Math.sqrt(dx * dx + dy * dy) < threshold) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Document-level mouse handlers for dragging
+        function handleMouseMove(e) {
+            if (dragState) {
+                const pos = getMousePos(e);
+                // Clamp position to canvas bounds
+                pos.x = Math.max(0, Math.min(canvas.width, pos.x));
+                pos.y = Math.max(0, Math.min(canvas.height, pos.y));
+                curves[dragState.curveIndex].points[dragState.pointIndex] = pos;
+                canvas.style.cursor = 'grabbing';
+                updateTicTacs();
+            }
+        }
+
+        function handleMouseUp() {
+            if (dragState) {
+                saveSettings();
+                dragState = null;
+            }
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            const pointHit = findPointAtPosition(pos);
+
+            if (pointHit) {
+                dragState = pointHit;
+                curves.forEach((c, i) => {
+                    c.selected = (i === pointHit.curveIndex);
+                });
+                updateSidebar();
+                // Add document-level listeners for dragging
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            } else {
+                // Check if clicking on a curve
+                let curveHit = null;
+                for (let i = curves.length - 1; i >= 0; i--) {
+                    if (isPointNearCurve(pos, curves[i])) {
+                        curveHit = i;
+                        break;
+                    }
+                }
+
+                if (curveHit !== null) {
+                    curves.forEach((c, i) => {
+                        c.selected = (i === curveHit);
+                    });
+                } else {
+                    curves.forEach(c => {
+                        c.selected = false;
+                    });
+                }
+                updateSidebar();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragState) {
+                const pos = getMousePos(e);
+                const pointHit = findPointAtPosition(pos);
+                hoveredPoint = pointHit;
+                canvas.style.cursor = pointHit ? 'grab' : 'crosshair';
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (!dragState) {
+                hoveredPoint = null;
+                canvas.style.cursor = 'crosshair';
+            }
+        });
+
+        // Rendering
+        function drawCurve(curve) {
+            const isSelected = curve.selected;
+            let curveColor;
+            if (isSelected) {
+                curveColor = '#ff00ff'; // Magenta when selected
+            } else {
+                curveColor = curve.type === 'quadratic' ? '#00cc33' : '#00ff88';
+            }
+
+            // Draw main curve (skip if resolution is 0)
+            if (resolution > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = curveColor;
+                ctx.lineWidth = thickness;
+
+                for (let i = 0; i <= resolution; i++) {
+                    const t = i / resolution;
+                    let point;
+                    if (curve.type === 'quadratic') {
+                        point = getQuadraticPoint(curve.points[0], curve.points[1], curve.points[2], t);
+                    } else {
+                        point = getCubicPoint(curve.points[0], curve.points[1], curve.points[2], curve.points[3], t);
+                    }
+
+                    if (i === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Draw control lines (shown when construction is visible)
+            if (showConstruction) {
+                ctx.beginPath();
+                ctx.strokeStyle = isSelected ? 'rgba(0, 255, 65, 0.4)' : 'rgba(0, 255, 65, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+
+                for (let i = 0; i < curve.points.length - 1; i++) {
+                    ctx.moveTo(curve.points[i].x, curve.points[i].y);
+                    ctx.lineTo(curve.points[i + 1].x, curve.points[i + 1].y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw control points
+            if (showPoints) {
+                curve.points.forEach((point, i) => {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, pointSize, 0, Math.PI * 2);
+
+                    // Endpoint vs control point styling
+                    const isEndpoint = (i === 0 || i === curve.points.length - 1);
+                    if (isSelected) {
+                        ctx.fillStyle = '#ff1493'; // Hot pink for all points when selected
+                        ctx.strokeStyle = '#ff1493';
+                    } else {
+                        ctx.fillStyle = isEndpoint ? 'rgba(0, 255, 65, 0.5)' : 'rgba(0, 204, 51, 0.5)';
+                        ctx.strokeStyle = 'rgba(0, 255, 65, 0.5)';
+                    }
+
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+
+            // Draw animation and construction
+            if (tValue >= 0 && showConstruction) {
+                if (curve.type === 'quadratic') {
+                    const construction = getQuadraticConstruction(curve.points[0], curve.points[1], curve.points[2], tValue);
+
+                    // First level lerps
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(curve.points[0].x, curve.points[0].y);
+                    ctx.lineTo(construction.a.x, construction.a.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(curve.points[1].x, curve.points[1].y);
+                    ctx.lineTo(construction.b.x, construction.b.y);
+                    ctx.stroke();
+
+                    // Second level lerp
+                    ctx.setLineDash([]);
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.moveTo(construction.a.x, construction.a.y);
+                    ctx.lineTo(construction.b.x, construction.b.y);
+                    ctx.stroke();
+
+                    // Intermediate points
+                    [construction.a, construction.b].forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, pointSize, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+                        ctx.fill();
+                    });
+                } else if (curve.type === 'cubic') {
+                    const construction = getCubicConstruction(curve.points[0], curve.points[1], curve.points[2], curve.points[3], tValue);
+
+                    // First level lerps
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([3, 3]);
+                    [[curve.points[0], construction.a], [curve.points[1], construction.b], [curve.points[2], construction.c]].forEach(([p0, p1]) => {
+                        ctx.beginPath();
+                        ctx.moveTo(p0.x, p0.y);
+                        ctx.lineTo(p1.x, p1.y);
+                        ctx.stroke();
+                    });
+
+                    // Second level lerps
+                    ctx.setLineDash([]);
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                    [[construction.a, construction.b], [construction.b, construction.c]].forEach(([p0, p1]) => {
+                        ctx.beginPath();
+                        ctx.moveTo(p0.x, p0.y);
+                        ctx.lineTo(p1.x, p1.y);
+                        ctx.stroke();
+                    });
+
+                    // Third level lerp
+                    ctx.strokeStyle = 'rgba(255, 100, 255, 0.6)';
+                    ctx.beginPath();
+                    ctx.moveTo(construction.d.x, construction.d.y);
+                    ctx.lineTo(construction.e.x, construction.e.y);
+                    ctx.stroke();
+
+                    // Intermediate points
+                    [construction.a, construction.b, construction.c].forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, pointSize, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+                        ctx.fill();
+                    });
+                    [construction.d, construction.e].forEach(p => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, pointSize, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
+                        ctx.fill();
+                    });
+            } else {
+              console.log("unsupported bezier type (only quadratic and cubic)");
+            }
+            }
+
+            // Draw animated point
+            if (tValue >= 0) {
+                let point;
+                if (curve.type === 'quadratic') {
+                    point = getQuadraticPoint(curve.points[0], curve.points[1], curve.points[2], tValue);
+                } else {
+                    point = getCubicPoint(curve.points[0], curve.points[1], curve.points[2], curve.points[3], tValue);
+                }
+
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, pointSize + 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#ff0';
+                ctx.strokeStyle = '#ff0';
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw glow
+                ctx.shadowColor = '#ff0';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, pointSize + 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function animate(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+
+            // Handle freerun animation
+            if (freerun) {
+                if (animationStartTime === 0) {
+                    animationStartTime = currentTime;
+                }
+
+                const elapsed = currentTime - animationStartTime;
+                const halfDuration = (loopDuration * 1000) / 2;
+                const progress = (elapsed % (loopDuration * 1000)) / halfDuration;
+
+                // Triangle wave: 0->1->0
+                if (progress <= 1) {
+                    tValue = progress;
+                } else {
+                    tValue = 2 - progress;
+                }
+
+                document.getElementById('tValue').value = tValue;
+                document.getElementById('tValueDisplay').textContent = tValue.toFixed(2);
+            } else {
+                animationStartTime = 0;
+            }
+
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw all curves
+            curves.forEach(curve => drawCurve(curve));
+
+            // Update stats
+            document.getElementById('curveCount').textContent = curves.length;
+            const selectedCurve = curves.find(c => c.selected);
+            document.getElementById('selectedType').textContent = selectedCurve ?
+                (selectedCurve.type === 'quadratic' ? 'Quadratic' : 'Cubic') : 'None';
+            document.getElementById('fps').textContent = fps;
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('resolution').addEventListener('input', (e) => {
+            resolution = parseInt(e.target.value);
+            document.getElementById('resolutionValue').textContent = resolution;
+            saveSettings();
+        });
+
+        document.getElementById('tValue').addEventListener('input', (e) => {
+            tValue = parseFloat(e.target.value);
+            document.getElementById('tValueDisplay').textContent = tValue.toFixed(2);
+            // Reset animation start time when manually adjusting
+            if (freerun) {
+                animationStartTime = 0;
+            }
+            saveSettings();
+        });
+
+        document.getElementById('freerun').addEventListener('change', (e) => {
+            freerun = e.target.checked;
+            animationStartTime = 0;
+            saveSettings();
+        });
+
+        document.getElementById('loopDuration').addEventListener('input', (e) => {
+            loopDuration = parseFloat(e.target.value);
+            document.getElementById('durationValue').textContent = loopDuration.toFixed(1);
+            animationStartTime = 0;
+            saveSettings();
+        });
+
+        document.getElementById('showPoints').addEventListener('change', (e) => {
+            showPoints = e.target.checked;
+            saveSettings();
+        });
+
+        document.getElementById('showConstruction').addEventListener('change', (e) => {
+            showConstruction = e.target.checked;
+            saveSettings();
+        });
+
+        document.getElementById('pointSize').addEventListener('input', (e) => {
+            pointSize = parseInt(e.target.value);
+            document.getElementById('pointSizeValue').textContent = pointSize;
+            saveSettings();
+        });
+
+        // Algorithm overlay hover
+        const algorithmSection = document.getElementById('algorithmSection');
+        const algorithmOverlay = document.getElementById('algorithmOverlay');
+
+        algorithmSection.addEventListener('mouseenter', () => {
+            algorithmOverlay.classList.add('visible');
+        });
+
+        algorithmSection.addEventListener('mouseleave', () => {
+            algorithmOverlay.classList.remove('visible');
+        });
+
+        algorithmOverlay.addEventListener('mouseenter', () => {
+            algorithmOverlay.classList.add('visible');
+        });
+
+        algorithmOverlay.addEventListener('mouseleave', () => {
+            algorithmOverlay.classList.remove('visible');
+        });
+
+        // Initialize
+        loadSettings();
+        updateTicTacs();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
