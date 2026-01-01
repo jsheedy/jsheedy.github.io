@@ -295,8 +295,8 @@
 </head>
 <body>
     <div class="title-bar">
-        <a href="index.html" class="back-link">Experiments</a>
-        <div class="title-text">COLLIDE-O-SCOPE</div>
+        <a href="../index.html" class="back-link">Experiments</a>
+        <div class="title-text">COLLIDE-O-SCOPE WASM</div>
         <div class="title-subtitle">Z-ORDER SPATIAL PARTITIONING SYSTEM</div>
     </div>
     
@@ -367,7 +367,9 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import init, { Simulation } from './particles-wasm/pkg/particles_wasm.js';
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
@@ -378,152 +380,32 @@
             canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
         }
         resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
         
-        class ZOrder {
-            static encode(x, y) {
-                return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
-            }
-            
-            static interleave(n) {
-                n = (n | (n << 8)) & 0x00FF00FF;
-                n = (n | (n << 4)) & 0x0F0F0F0F;
-                n = (n | (n << 2)) & 0x33333333;
-                n = (n | (n << 1)) & 0x55555555;
-                return n;
-            }
-            
-            static decode(code) {
-                return {
-                    x: ZOrder.deinterleave(code),
-                    y: ZOrder.deinterleave(code >> 1)
-                };
-            }
-            
-            static deinterleave(n) {
-                n = n & 0x55555555;
-                n = (n | (n >> 1)) & 0x33333333;
-                n = (n | (n >> 2)) & 0x0F0F0F0F;
-                n = (n | (n >> 4)) & 0x00FF00FF;
-                n = (n | (n >> 8)) & 0x0000FFFF;
-                return n;
-            }
-        }
-        
-        // Ice Fire color palette (cold to hot)
         const plasmaColors = [
-            [0, 255, 255],     // Bright cyan (ice cold)
-            [100, 220, 255],   // Light cyan
-            [180, 230, 255],   // Very light blue
-            [240, 240, 240],   // Near white
-            [255, 255, 200],   // Pale yellow
-            [255, 220, 100],   // Yellow
-            [255, 180, 0],     // Orange
-            [255, 100, 0],     // Red-orange
-            [255, 50, 0]       // Red (fire hot)
+            [0, 255, 255], [100, 220, 255], [180, 230, 255], [240, 240, 240],
+            [255, 255, 200], [255, 220, 100], [255, 180, 0], [255, 100, 0], [255, 50, 0]
         ];
 
-        // Interpolate between colors in the plasma palette
         function getPlasmaColor(t) {
-            // t ranges from 0 (cold) to 1 (hot)
             t = Math.max(0, Math.min(1, t));
-
             const scaledT = t * (plasmaColors.length - 1);
             const index = Math.floor(scaledT);
             const fraction = scaledT - index;
-
             if (index >= plasmaColors.length - 1) {
                 const c = plasmaColors[plasmaColors.length - 1];
                 return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
             }
-
             const c1 = plasmaColors[index];
             const c2 = plasmaColors[index + 1];
-
             const r = Math.round(c1[0] + (c2[0] - c1[0]) * fraction);
             const g = Math.round(c1[1] + (c2[1] - c1[1]) * fraction);
             const b = Math.round(c1[2] + (c2[2] - c1[2]) * fraction);
-
             return `rgb(${r}, ${g}, ${b})`;
         }
-
-        class Particle {
-            constructor(x, y, radius) {
-                this.x = x;
-                this.y = y;
-                this.radius = radius;
-                this.mass = Math.PI * radius * radius;
-                this.vx = (Math.random() - 0.5) * maxSpeed;
-                this.vy = (Math.random() - 0.5) * maxSpeed;
-                this.colliding = false;
-                this.zCode = 0;
-                this.impulseX = 0;
-                this.impulseY = 0;
-                this.colorTemp = Math.random(); // Temperature: 0 (cold) to 1 (hot)
-            }
-            
-            update() {
-                this.vy += gravity;
-
-                if (fanSpeed > 0) {
-                    const avgSize = (minSize + maxSize) / 2;
-                    const fanWidth = avgSize * 4;
-                    const fanCenterX = canvas.width / 2;
-                    const fanBottom = canvas.height;
-                    const fanTop = canvas.height / 2;
-
-                    const dx = this.x - fanCenterX;
-                    if (Math.abs(dx) < fanWidth / 2) {
-                        if (this.y > fanTop) {
-                            const distanceFromBottom = (this.y - fanTop) / (fanBottom - fanTop);
-                            const baseFanForce = 1.5 * distanceFromBottom;
-                            const horizontalFactor = 1 - Math.abs(dx) / (fanWidth / 2);
-                            this.vy -= baseFanForce * horizontalFactor * fanSpeed;
-                        }
-                    }
-                }
-
-                // Cool down: move color temperature towards cold (0)
-                const coolingRate = 0.01; // Adjust cooling speed
-                if (this.colorTemp > 0) {
-                    this.colorTemp = Math.max(0, this.colorTemp - coolingRate);
-                }
-
-                this.x += this.vx;
-                this.y += this.vy;
-
-                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
-                    this.vx *= -elasticity;
-                    this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-                }
-                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
-                    this.vy *= -elasticity;
-                    this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-                }
-
-                const gridX = Math.floor((this.x / canvas.width) * 0xFFFF) & 0xFFFF;
-                const gridY = Math.floor((this.y / canvas.height) * 0xFFFF) & 0xFFFF;
-                this.zCode = ZOrder.encode(gridX, gridY);
-            }
-            
-            draw(ctx) {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-
-                // Use plasma color palette
-                ctx.fillStyle = getPlasmaColor(this.colorTemp);
-                ctx.fill();
-            }
-            
-            intersects(other) {
-                let dx = this.x - other.x;
-                let dy = this.y - other.y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-                return distance < this.radius + other.radius;
-            }
-        }
         
-        let particles = [];
+        let simulation;
+        let wasm;
+
         let particleCount = 200;
         let minSize = 4;
         let maxSize = 12;
@@ -537,21 +419,10 @@
         let lastTime = performance.now();
         let fps = 60;
 
-        // Settings persistence
         const persist = new SettingsPersistence('collideOScopeSettings');
 
         function saveSettings() {
-            persist.save({
-                particleCount,
-                minSize,
-                maxSize,
-                maxSpeed,
-                gravity,
-                elasticity,
-                fanSpeed,
-                searchRange,
-                trailFade
-            });
+            persist.save({ particleCount, minSize, maxSize, maxSpeed, gravity, elasticity, fanSpeed, searchRange, trailFade });
         }
 
         function loadSettings() {
@@ -567,139 +438,35 @@
                 searchRange = settings.searchRange ?? searchRange;
                 trailFade = settings.trailFade ?? trailFade;
 
-                // Update UI elements
                 document.getElementById('particleCount').value = particleCount;
                 document.getElementById('countValue').textContent = particleCount;
-
                 document.getElementById('minSize').value = minSize;
                 document.getElementById('maxSize').value = maxSize;
                 document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
-
                 document.getElementById('maxSpeed').value = maxSpeed;
                 document.getElementById('speedValue').textContent = maxSpeed;
-
                 document.getElementById('gravity').value = gravity;
                 document.getElementById('gravityValue').textContent = gravity.toFixed(2);
-
                 document.getElementById('elasticity').value = elasticity;
                 document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
-
                 document.getElementById('fanSpeed').value = fanSpeed;
                 document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
-
                 document.getElementById('searchRange').value = searchRange;
                 document.getElementById('rangeValue').textContent = searchRange;
-
                 document.getElementById('trailFade').value = trailFade;
                 document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
             }
         }
 
-        function resetParticles() {
-            particles = [];
-            for (let i = 0; i < particleCount; i++) {
-                // Random size between minSize and maxSize
-                const radius = minSize + Math.random() * (maxSize - minSize);
-                
-                const p = new Particle(
-                    Math.random() * canvas.width,
-                    Math.random() * canvas.height,
-                    radius
-                );
-                p.update();
-                particles.push(p);
-            }
+        function createSimulation() {
+             return new Simulation(canvas.width, canvas.height, particleCount, minSize, maxSize, maxSpeed, gravity, elasticity, fanSpeed, searchRange);
         }
-        
-        function detectCollisions() {
-            let collisionCount = 0;
-            let checkCount = 0;
-            
-            const sortStart = performance.now();
-            particles.sort((a, b) => a.zCode - b.zCode);
-            const sortTime = (performance.now() - sortStart).toFixed(2);
-            
-            for (let particle of particles) {
-                particle.colliding = false;
-                particle.impulseX = 0;
-                particle.impulseY = 0;
-            }
-            
-            const avgSize = (minSize + maxSize) / 2;
-            const searchDist = searchRange * avgSize * 2;
-            
-            for (let i = 0; i < particles.length; i++) {
-                const particle = particles[i];
-                
-                for (let j = i + 1; j < particles.length; j++) {
-                    const other = particles[j];
-                    
-                    const zDiff = other.zCode - particle.zCode;
-                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
-                    if (zDiff > zThreshold) {
-                        break;
-                    }
-                    
-                    checkCount++;
-                    const dx = particle.x - other.x;
-                    const dy = particle.y - other.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist < particle.radius + other.radius) {
-                        particle.colliding = true;
-                        other.colliding = true;
-                        collisionCount++;
 
-                        // Heat up on collision (jump to hot end of plasma)
-                        particle.colorTemp = 1.0;
-                        other.colorTemp = 1.0;
-
-                        accumulateCollisionImpulse(particle, other, dx, dy, dist);
-                    }
-                }
-            }
-            
-            for (let particle of particles) {
-                particle.vx += particle.impulseX;
-                particle.vy += particle.impulseY;
-            }
-            
-            return { collisionCount, checkCount, sortTime };
-        }
-        
-        function accumulateCollisionImpulse(p1, p2, dx, dy, dist) {
-            if (dist === 0) return;
-            
-            const nx = dx / dist;
-            const ny = dy / dist;
-            
-            const dvx = p1.vx - p2.vx;
-            const dvy = p1.vy - p2.vy;
-            
-            const dvn = dvx * nx + dvy * ny;
-            
-            if (dvn > 0) return;
-            
-            const restitution = elasticity;
-            const impulse = -(1 + restitution) * dvn / (1 / p1.mass + 1 / p2.mass);
-            
-            p1.impulseX += (impulse * nx) / p1.mass;
-            p1.impulseY += (impulse * ny) / p1.mass;
-            p2.impulseX -= (impulse * nx) / p2.mass;
-            p2.impulseY -= (impulse * ny) / p2.mass;
-            
-            const overlap = (p1.radius + p2.radius) - dist;
-            if (overlap > 0) {
-                const totalMass = p1.mass + p2.mass;
-                const p1Factor = p2.mass / totalMass;
-                const p2Factor = p1.mass / totalMass;
-                
-                const separation = overlap + 0.1;
-                p1.x += nx * separation * p1Factor;
-                p1.y += ny * separation * p1Factor;
-                p2.x -= nx * separation * p2Factor;
-                p2.y -= ny * separation * p2Factor;
-            }
+        window.resetParticles = function() {
+            simulation.set_particle_count(particleCount);
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
         }
         
         function animate(currentTime) {
@@ -712,9 +479,6 @@
             lastTime = currentTime;
             fps = Math.round(1000 / deltaTime);
             
-            // Create trails by drawing semi-transparent black instead of clearing
-            // trailFade = 0: no fade (infinite trails)
-            // trailFade = 1: full fade (no trails)
             ctx.fillStyle = `rgba(0, 0, 0, ${trailFade})`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
@@ -723,11 +487,9 @@
                 const fanWidth = avgSize * 4;
                 const fanCenterX = canvas.width / 2;
                 const fanBottom = canvas.height;
-                
                 const gradient = ctx.createLinearGradient(fanCenterX, fanBottom, fanCenterX, canvas.height / 2);
                 gradient.addColorStop(0, `rgba(0, 255, 65, ${0.2 * fanSpeed})`);
                 gradient.addColorStop(1, 'rgba(0, 255, 65, 0)');
-                
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
                 ctx.moveTo(fanCenterX - fanWidth / 2, fanBottom);
@@ -735,94 +497,116 @@
                 ctx.lineTo(fanCenterX, canvas.height / 2);
                 ctx.closePath();
                 ctx.fill();
-                
                 ctx.fillStyle = `rgba(0, 255, 65, ${0.3 * fanSpeed})`;
                 ctx.fillRect(fanCenterX - fanWidth / 2, fanBottom - 5, fanWidth, 5);
             }
             
-            for (let particle of particles) {
-                particle.update();
-            }
+            simulation.update();
             
-            const { collisionCount, checkCount, sortTime } = detectCollisions();
-            
-            for (let particle of particles) {
-                particle.draw(ctx);
+            const particlesPtr = simulation.get_particles_ptr();
+            const pCount = simulation.get_particle_count();
+            const particleSizeInFloats = 11;
+            const particles = new Float32Array(wasm.memory.buffer, particlesPtr, pCount * particleSizeInFloats);
+
+            let collisionCount = 0;
+            for (let i = 0; i < pCount; i++) {
+                const offset = i * particleSizeInFloats;
+                const x = particles[offset];
+                const y = particles[offset + 1];
+                const radius = particles[offset + 2];
+                const colliding = particles[offset + 6];
+                const colorTemp = particles[offset + 10];
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = getPlasmaColor(colorTemp);
+                ctx.fill();
+
+                if(colliding) {
+                    collisionCount++;
+                }
             }
             
             document.getElementById('collisionCount').textContent = collisionCount;
-            document.getElementById('checkCount').textContent = checkCount;
             document.getElementById('fps').textContent = fps;
             
             requestAnimationFrame(animate);
         }
-        
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (simulation) {
+                simulation.free();
+                simulation = createSimulation();
+            }
+        });
+
         document.getElementById('particleCount').addEventListener('input', (e) => {
             particleCount = parseInt(e.target.value);
             document.getElementById('countValue').textContent = particleCount;
-            resetParticles();
+            simulation.set_particle_count(particleCount);
+            simulation.reset();
             saveSettings();
         });
-        
+
         document.getElementById('minSize').addEventListener('input', (e) => {
             minSize = parseFloat(e.target.value);
-            // Ensure min doesn't exceed max
             if (minSize > maxSize) {
                 maxSize = minSize;
                 document.getElementById('maxSize').value = maxSize;
             }
             document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
-            resetParticles();
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
             saveSettings();
         });
 
         document.getElementById('maxSize').addEventListener('input', (e) => {
             maxSize = parseFloat(e.target.value);
-            // Ensure max doesn't go below min
             if (maxSize < minSize) {
                 minSize = maxSize;
                 document.getElementById('minSize').value = minSize;
             }
             document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
-            resetParticles();
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
             saveSettings();
         });
         
         document.getElementById('maxSpeed').addEventListener('input', (e) => {
             maxSpeed = parseFloat(e.target.value);
             document.getElementById('speedValue').textContent = maxSpeed;
-            for (let particle of particles) {
-                const currentSpeed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
-                if (currentSpeed > 0) {
-                    const scale = (Math.random() * maxSpeed) / currentSpeed;
-                    particle.vx *= scale;
-                    particle.vy *= scale;
-                }
-            }
+            simulation.set_max_speed(maxSpeed);
             saveSettings();
         });
 
         document.getElementById('gravity').addEventListener('input', (e) => {
             gravity = parseFloat(e.target.value);
             document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+            simulation.set_gravity(gravity);
             saveSettings();
         });
 
         document.getElementById('elasticity').addEventListener('input', (e) => {
             elasticity = parseFloat(e.target.value);
             document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+            simulation.set_elasticity(elasticity);
             saveSettings();
         });
 
         document.getElementById('fanSpeed').addEventListener('input', (e) => {
             fanSpeed = parseFloat(e.target.value);
             document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+            simulation.set_fan_speed(fanSpeed);
             saveSettings();
         });
 
         document.getElementById('searchRange').addEventListener('input', (e) => {
             searchRange = parseInt(e.target.value);
             document.getElementById('rangeValue').textContent = searchRange;
+            simulation.set_search_range(searchRange);
             saveSettings();
         });
 
@@ -836,21 +620,21 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            const radius = minSize + Math.random() * (maxSize - minSize);
-            const p = new Particle(x, y, radius);
-            p.vx = 0;
-            p.vy = 0;
-            p.update();
-            particles.push(p);
+            simulation.add_particle(x, y);
         });
         
-        function toggleAnimation() {
+        window.toggleAnimation = function() {
             animating = !animating;
         }
 
-        loadSettings();
-        resetParticles();
-        requestAnimationFrame(animate);
+        async function run() {
+            wasm = await init();
+            loadSettings();
+            simulation = createSimulation();
+            requestAnimationFrame(animate);
+        }
+
+        run();
     </script>
 </body>
 </html>

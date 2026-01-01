@@ -1,0 +1,11 @@
+# Cargo build artifacts (can be regenerated)
+particles-wasm/target/
+
+# pkg/ files that aren't needed for runtime
+particles-wasm/pkg/.gitignore
+particles-wasm/pkg/package.json
+particles-wasm/pkg/*.d.ts
+
+# Keep these essential runtime files:
+# particles-wasm/pkg/particles_wasm.js
+# particles-wasm/pkg/particles_wasm_bg.wasm
