@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Order Collision Detection</title>
+    <script src="settings-persistence.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow: 
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+        
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+        
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+        
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+        
+        .dual-range {
+            position: relative;
+            height: 4px;
+            width: 100%;
+        }
+        
+        .dual-range input[type="range"] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        .dual-range input[type="range"]::-webkit-slider-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range input[type="range"]::-moz-range-thumb {
+            pointer-events: all;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dual-range::before {
+            content: "";
+            position: absolute;
+            height: 4px;
+            width: 100%;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            top: 0;
+        }
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #00ff41;
+            filter: brightness(1.2);
+        }
+        
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+        
+        .button-group button {
+            flex: 1;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+        
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a href="../index.html" class="back-link">Experiments</a>
+        <div class="title-text">COLLIDE-O-SCOPE WASM</div>
+        <div class="title-subtitle">Z-ORDER SPATIAL PARTITIONING SYSTEM</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="collisionCount">0</div>
+                <div class="stat-label">Collisions</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="checkCount">0</div>
+                <div class="stat-label">Checks</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Particles: <span class="value-display" id="countValue">200</span></label>
+            <input type="range" id="particleCount" min="0" max="50000" value="200" step="10">
+        </div>
+        
+        <div class="control-group">
+            <label>Size Range: <span class="value-display" id="sizeRangeValue">4.0 - 12.0</span></label>
+            <div class="dual-range">
+                <input type="range" id="minSize" min="0.1" max="20" value="4" step="0.1" class="range-min">
+                <input type="range" id="maxSize" min="0.1" max="20" value="12" step="0.1" class="range-max">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label>Speed: <span class="value-display" id="speedValue">4</span></label>
+            <input type="range" id="maxSpeed" min="1" max="10" value="4" step="0.5">
+        </div>
+        
+        <div class="control-group">
+            <label>Gravity: <span class="value-display" id="gravityValue">0.00</span></label>
+            <input type="range" id="gravity" min="0" max="1" value="0" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Elasticity: <span class="value-display" id="elasticityValue">0.70</span></label>
+            <input type="range" id="elasticity" min="0" max="1" value="0.7" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Fan Speed: <span class="value-display" id="fanSpeedValue">0.50</span></label>
+            <input type="range" id="fanSpeed" min="0" max="1" value="0.5" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
+            <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
+        </div>
+        
+        <div class="control-group">
+            <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
+            <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.01">
+        </div>
+
+        <div class="button-group">
+            <button onclick="resetParticles()">Reset</button>
+            <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { Simulation } from './particles-wasm/pkg/particles_wasm.js';
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+        }
+        resizeCanvas();
+        
+        const plasmaColors = [
+            [0, 255, 255], [100, 220, 255], [180, 230, 255], [240, 240, 240],
+            [255, 255, 200], [255, 220, 100], [255, 180, 0], [255, 100, 0], [255, 50, 0]
+        ];
+
+        function getPlasmaColor(t) {
+            t = Math.max(0, Math.min(1, t));
+            const scaledT = t * (plasmaColors.length - 1);
+            const index = Math.floor(scaledT);
+            const fraction = scaledT - index;
+            if (index >= plasmaColors.length - 1) {
+                const c = plasmaColors[plasmaColors.length - 1];
+                return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+            }
+            const c1 = plasmaColors[index];
+            const c2 = plasmaColors[index + 1];
+            const r = Math.round(c1[0] + (c2[0] - c1[0]) * fraction);
+            const g = Math.round(c1[1] + (c2[1] - c1[1]) * fraction);
+            const b = Math.round(c1[2] + (c2[2] - c1[2]) * fraction);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        let simulation;
+        let wasm;
+
+        let particleCount = 200;
+        let minSize = 4;
+        let maxSize = 12;
+        let maxSpeed = 4;
+        let gravity = 0;
+        let elasticity = 0.7;
+        let fanSpeed = 0.5;
+        let searchRange = 3;
+        let trailFade = 0.15;
+        let animating = true;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        const persist = new SettingsPersistence('collideOScopeSettings');
+
+        function saveSettings() {
+            persist.save({ particleCount, minSize, maxSize, maxSpeed, gravity, elasticity, fanSpeed, searchRange, trailFade });
+        }
+
+        function loadSettings() {
+            const settings = persist.load();
+            if (settings) {
+                particleCount = settings.particleCount ?? particleCount;
+                minSize = settings.minSize ?? minSize;
+                maxSize = settings.maxSize ?? maxSize;
+                maxSpeed = settings.maxSpeed ?? maxSpeed;
+                gravity = settings.gravity ?? gravity;
+                elasticity = settings.elasticity ?? elasticity;
+                fanSpeed = settings.fanSpeed ?? fanSpeed;
+                searchRange = settings.searchRange ?? searchRange;
+                trailFade = settings.trailFade ?? trailFade;
+
+                document.getElementById('particleCount').value = particleCount;
+                document.getElementById('countValue').textContent = particleCount;
+                document.getElementById('minSize').value = minSize;
+                document.getElementById('maxSize').value = maxSize;
+                document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+                document.getElementById('maxSpeed').value = maxSpeed;
+                document.getElementById('speedValue').textContent = maxSpeed;
+                document.getElementById('gravity').value = gravity;
+                document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+                document.getElementById('elasticity').value = elasticity;
+                document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+                document.getElementById('fanSpeed').value = fanSpeed;
+                document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+                document.getElementById('searchRange').value = searchRange;
+                document.getElementById('rangeValue').textContent = searchRange;
+                document.getElementById('trailFade').value = trailFade;
+                document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            }
+        }
+
+        function createSimulation() {
+             return new Simulation(canvas.width, canvas.height, particleCount, minSize, maxSize, maxSpeed, gravity, elasticity, fanSpeed, searchRange);
+        }
+
+        window.resetParticles = function() {
+            simulation.set_particle_count(particleCount);
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
+        }
+        
+        function animate(currentTime) {
+            if (!animating) {
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            fps = Math.round(1000 / deltaTime);
+            
+            ctx.fillStyle = `rgba(0, 0, 0, ${trailFade})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (fanSpeed > 0) {
+                const avgSize = (minSize + maxSize) / 2;
+                const fanWidth = avgSize * 4;
+                const fanCenterX = canvas.width / 2;
+                const fanBottom = canvas.height;
+                const gradient = ctx.createLinearGradient(fanCenterX, fanBottom, fanCenterX, canvas.height / 2);
+                gradient.addColorStop(0, `rgba(0, 255, 65, ${0.2 * fanSpeed})`);
+                gradient.addColorStop(1, 'rgba(0, 255, 65, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(fanCenterX - fanWidth / 2, fanBottom);
+                ctx.lineTo(fanCenterX + fanWidth / 2, fanBottom);
+                ctx.lineTo(fanCenterX, canvas.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = `rgba(0, 255, 65, ${0.3 * fanSpeed})`;
+                ctx.fillRect(fanCenterX - fanWidth / 2, fanBottom - 5, fanWidth, 5);
+            }
+            
+            simulation.update();
+            
+            const particlesPtr = simulation.get_particles_ptr();
+            const pCount = simulation.get_particle_count();
+            const particleSizeInFloats = 11;
+            const particles = new Float32Array(wasm.memory.buffer, particlesPtr, pCount * particleSizeInFloats);
+
+            let collisionCount = 0;
+            for (let i = 0; i < pCount; i++) {
+                const offset = i * particleSizeInFloats;
+                const x = particles[offset];
+                const y = particles[offset + 1];
+                const radius = particles[offset + 2];
+                const colliding = particles[offset + 6];
+                const colorTemp = particles[offset + 10];
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = getPlasmaColor(colorTemp);
+                ctx.fill();
+
+                if(colliding) {
+                    collisionCount++;
+                }
+            }
+            
+            document.getElementById('collisionCount').textContent = collisionCount;
+            document.getElementById('fps').textContent = fps;
+            
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (simulation) {
+                simulation.free();
+                simulation = createSimulation();
+            }
+        });
+
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            particleCount = parseInt(e.target.value);
+            document.getElementById('countValue').textContent = particleCount;
+            simulation.set_particle_count(particleCount);
+            simulation.reset();
+            saveSettings();
+        });
+
+        document.getElementById('minSize').addEventListener('input', (e) => {
+            minSize = parseFloat(e.target.value);
+            if (minSize > maxSize) {
+                maxSize = minSize;
+                document.getElementById('maxSize').value = maxSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
+            saveSettings();
+        });
+
+        document.getElementById('maxSize').addEventListener('input', (e) => {
+            maxSize = parseFloat(e.target.value);
+            if (maxSize < minSize) {
+                minSize = maxSize;
+                document.getElementById('minSize').value = minSize;
+            }
+            document.getElementById('sizeRangeValue').textContent = `${minSize.toFixed(1)} - ${maxSize.toFixed(1)}`;
+            simulation.set_min_size(minSize);
+            simulation.set_max_size(maxSize);
+            simulation.reset();
+            saveSettings();
+        });
+        
+        document.getElementById('maxSpeed').addEventListener('input', (e) => {
+            maxSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = maxSpeed;
+            simulation.set_max_speed(maxSpeed);
+            saveSettings();
+        });
+
+        document.getElementById('gravity').addEventListener('input', (e) => {
+            gravity = parseFloat(e.target.value);
+            document.getElementById('gravityValue').textContent = gravity.toFixed(2);
+            simulation.set_gravity(gravity);
+            saveSettings();
+        });
+
+        document.getElementById('elasticity').addEventListener('input', (e) => {
+            elasticity = parseFloat(e.target.value);
+            document.getElementById('elasticityValue').textContent = elasticity.toFixed(2);
+            simulation.set_elasticity(elasticity);
+            saveSettings();
+        });
+
+        document.getElementById('fanSpeed').addEventListener('input', (e) => {
+            fanSpeed = parseFloat(e.target.value);
+            document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
+            simulation.set_fan_speed(fanSpeed);
+            saveSettings();
+        });
+
+        document.getElementById('searchRange').addEventListener('input', (e) => {
+            searchRange = parseInt(e.target.value);
+            document.getElementById('rangeValue').textContent = searchRange;
+            simulation.set_search_range(searchRange);
+            saveSettings();
+        });
+
+        document.getElementById('trailFade').addEventListener('input', (e) => {
+            trailFade = parseFloat(e.target.value);
+            document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+            saveSettings();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            simulation.add_particle(x, y);
+        });
+        
+        window.toggleAnimation = function() {
+            animating = !animating;
+        }
+
+        async function run() {
+            wasm = await init();
+            loadSettings();
+            simulation = createSimulation();
+            requestAnimationFrame(animate);
+        }
+
+        run();
+    </script>
+</body>
+</html>
