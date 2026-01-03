@@ -297,7 +297,7 @@
     <div class="title-bar">
         <a href="index.html" class="back-link">Experiments</a>
         <div class="title-text">COLLIDE-O-SCOPE</div>
-        <div class="title-subtitle">Z-ORDER SPATIAL PARTITIONING SYSTEM</div>
+        <div class="title-subtitle">SPATIAL PARTITIONING COLLISION SYSTEM</div>
     </div>
     
     <canvas id="canvas"></canvas>
@@ -320,7 +320,7 @@
         
         <div class="control-group">
             <label>Particles: <span class="value-display" id="countValue">200</span></label>
-            <input type="range" id="particleCount" min="0" max="50000" value="200" step="10">
+            <input type="range" id="particleCount" min="0" max="10000" value="200" step="10">
         </div>
         
         <div class="control-group">
@@ -338,7 +338,7 @@
         
         <div class="control-group">
             <label>Gravity: <span class="value-display" id="gravityValue">0.00</span></label>
-            <input type="range" id="gravity" min="0" max="1" value="0" step="0.05">
+            <input type="range" id="gravity" min="0" max="1" value="0" step="0.01">
         </div>
         
         <div class="control-group">
@@ -355,10 +355,30 @@
             <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
             <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
         </div>
-        
+
+        <div class="control-group">
+            <label>Spatial Mode: <span class="value-display" id="spatialModeValue">Z-Order</span></label>
+            <select id="spatialMode" style="width: 100%; background: #001a00; color: #00ff41; border: 2px solid #00ff41; padding: 8px; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer;">
+                <option value="zorder">Z-Order</option>
+                <option value="grid">Uniform Grid</option>
+            </select>
+        </div>
+
+        <div class="control-group" id="gridCellSizeControl" style="display: none;">
+            <label>Grid Cell Size: <span class="value-display" id="gridCellSizeValue">50</span>px</label>
+            <input type="range" id="gridCellSize" min="10" max="200" value="50" step="5">
+        </div>
+
         <div class="control-group">
             <label>Trail Fade: <span class="value-display" id="trailFadeValue">0.15</span></label>
             <input type="range" id="trailFade" min="0" max="1" value="0.15" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="debugMode">
+                <span>Debug Visualization</span>
+            </label>
         </div>
 
         <div class="button-group">
@@ -384,7 +404,7 @@
             static encode(x, y) {
                 return ZOrder.interleave(x) | (ZOrder.interleave(y) << 1);
             }
-            
+
             static interleave(n) {
                 n = (n | (n << 8)) & 0x00FF00FF;
                 n = (n | (n << 4)) & 0x0F0F0F0F;
@@ -392,14 +412,14 @@
                 n = (n | (n << 1)) & 0x55555555;
                 return n;
             }
-            
+
             static decode(code) {
                 return {
                     x: ZOrder.deinterleave(code),
                     y: ZOrder.deinterleave(code >> 1)
                 };
             }
-            
+
             static deinterleave(n) {
                 n = n & 0x55555555;
                 n = (n | (n >> 1)) & 0x33333333;
@@ -409,7 +429,63 @@
                 return n;
             }
         }
-        
+
+        class UniformGrid {
+            constructor(width, height, cellSize) {
+                this.width = width;
+                this.height = height;
+                this.cellSize = cellSize;
+                this.cols = Math.ceil(width / cellSize);
+                this.rows = Math.ceil(height / cellSize);
+                this.cells = new Map();
+                this.searchedCells = new Set();
+            }
+
+            clear() {
+                this.cells.clear();
+                this.searchedCells.clear();
+            }
+
+            hash(x, y) {
+                const col = Math.floor(x / this.cellSize);
+                const row = Math.floor(y / this.cellSize);
+                return `${col},${row}`;
+            }
+
+            insert(particle) {
+                const key = this.hash(particle.x, particle.y);
+                if (!this.cells.has(key)) {
+                    this.cells.set(key, []);
+                }
+                this.cells.get(key).push(particle);
+            }
+
+            // Optimized version that doesn't create intermediate arrays
+            forEachNearby(particle, cellCount, callback) {
+                const col = Math.floor(particle.x / this.cellSize);
+                const row = Math.floor(particle.y / this.cellSize);
+
+                // Search cellCount cells in each direction
+                for (let dy = -cellCount; dy <= cellCount; dy++) {
+                    for (let dx = -cellCount; dx <= cellCount; dx++) {
+                        const key = `${col + dx},${row + dy}`;
+                        this.searchedCells.add(key);
+
+                        if (this.cells.has(key)) {
+                            const cellParticles = this.cells.get(key);
+                            for (let i = 0; i < cellParticles.length; i++) {
+                                callback(cellParticles[i]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            getSearchedCells() {
+                return this.searchedCells;
+            }
+        }
+
         // Ice Fire color palette (cold to hot)
         const plasmaColors = [
             [0, 255, 255],     // Bright cyan (ice cold)
@@ -447,8 +523,11 @@
             return `rgb(${r}, ${g}, ${b})`;
         }
 
+        let particleIdCounter = 0;
+
         class Particle {
             constructor(x, y, radius) {
+                this.id = particleIdCounter++;
                 this.x = x;
                 this.y = y;
                 this.radius = radius;
@@ -532,10 +611,14 @@
         let elasticity = 0.7;
         let fanSpeed = 0.5;
         let searchRange = 3;
+        let gridCellSize = 50;
         let trailFade = 0.15;
+        let spatialMode = 'zorder'; // 'zorder' or 'grid'
+        let debugMode = false;
         let animating = true;
         let lastTime = performance.now();
         let fps = 60;
+        let uniformGrid = null;
 
         // Settings persistence
         const persist = new SettingsPersistence('collideOScopeSettings');
@@ -550,7 +633,10 @@
                 elasticity,
                 fanSpeed,
                 searchRange,
-                trailFade
+                gridCellSize,
+                trailFade,
+                spatialMode,
+                debugMode
             });
         }
 
@@ -565,7 +651,10 @@
                 elasticity = settings.elasticity ?? elasticity;
                 fanSpeed = settings.fanSpeed ?? fanSpeed;
                 searchRange = settings.searchRange ?? searchRange;
+                gridCellSize = settings.gridCellSize ?? gridCellSize;
                 trailFade = settings.trailFade ?? trailFade;
+                spatialMode = settings.spatialMode ?? spatialMode;
+                debugMode = settings.debugMode ?? debugMode;
 
                 // Update UI elements
                 document.getElementById('particleCount').value = particleCount;
@@ -590,17 +679,44 @@
                 document.getElementById('searchRange').value = searchRange;
                 document.getElementById('rangeValue').textContent = searchRange;
 
+                document.getElementById('gridCellSize').value = gridCellSize;
+                document.getElementById('gridCellSizeValue').textContent = gridCellSize;
+
                 document.getElementById('trailFade').value = trailFade;
                 document.getElementById('trailFadeValue').textContent = trailFade.toFixed(2);
+
+                document.getElementById('spatialMode').value = spatialMode;
+                updateSpatialModeDisplay();
+
+                document.getElementById('debugMode').checked = debugMode;
+            }
+        }
+
+        function updateSpatialModeDisplay() {
+            const modeLabels = {
+                'zorder': 'Z-Order',
+                'grid': 'Uniform Grid'
+            };
+            document.getElementById('spatialModeValue').textContent = modeLabels[spatialMode] || 'Z-Order';
+            updateControlVisibility();
+        }
+
+        function updateControlVisibility() {
+            const gridCellSizeControl = document.getElementById('gridCellSizeControl');
+            if (spatialMode === 'grid') {
+                gridCellSizeControl.style.display = 'flex';
+            } else {
+                gridCellSizeControl.style.display = 'none';
             }
         }
 
         function resetParticles() {
             particles = [];
+            particleIdCounter = 0; // Reset ID counter
             for (let i = 0; i < particleCount; i++) {
                 // Random size between minSize and maxSize
                 const radius = minSize + Math.random() * (maxSize - minSize);
-                
+
                 const p = new Particle(
                     Math.random() * canvas.width,
                     Math.random() * canvas.height,
@@ -611,60 +727,256 @@
             }
         }
         
+        // Track which cells were searched for debug visualization
+        let zOrderSearchedCells = new Set();
+        const ZORDER_DEBUG_GRID_SIZE = 32; // Fixed grid size for visualization
+
         function detectCollisions() {
             let collisionCount = 0;
             let checkCount = 0;
-            
-            const sortStart = performance.now();
-            particles.sort((a, b) => a.zCode - b.zCode);
-            const sortTime = (performance.now() - sortStart).toFixed(2);
-            
+
+            const avgSize = (minSize + maxSize) / 2;
+            const searchDist = searchRange * avgSize * 2;
+
+            // Clear debug tracking
+            zOrderSearchedCells.clear();
+
             for (let particle of particles) {
                 particle.colliding = false;
                 particle.impulseX = 0;
                 particle.impulseY = 0;
             }
-            
-            const avgSize = (minSize + maxSize) / 2;
-            const searchDist = searchRange * avgSize * 2;
-            
-            for (let i = 0; i < particles.length; i++) {
-                const particle = particles[i];
-                
-                for (let j = i + 1; j < particles.length; j++) {
-                    const other = particles[j];
-                    
-                    const zDiff = other.zCode - particle.zCode;
-                    const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
-                    if (zDiff > zThreshold) {
-                        break;
+
+            if (spatialMode === 'zorder') {
+                // Z-ORDER MODE
+                const sortStart = performance.now();
+                particles.sort((a, b) => a.zCode - b.zCode);
+                const sortTime = (performance.now() - sortStart).toFixed(2);
+
+                for (let i = 0; i < particles.length; i++) {
+                    const particle = particles[i];
+
+                    // Track this particle's cell for debug
+                    if (debugMode) {
+                        markZOrderCell(particle.x, particle.y);
                     }
-                    
-                    checkCount++;
-                    const dx = particle.x - other.x;
-                    const dy = particle.y - other.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist < particle.radius + other.radius) {
-                        particle.colliding = true;
-                        other.colliding = true;
-                        collisionCount++;
 
-                        // Heat up on collision (jump to hot end of plasma)
-                        particle.colorTemp = 1.0;
-                        other.colorTemp = 1.0;
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const other = particles[j];
 
-                        accumulateCollisionImpulse(particle, other, dx, dy, dist);
+                        const zDiff = other.zCode - particle.zCode;
+                        const zThreshold = (searchDist * searchDist) / (canvas.width * canvas.height) * 0xFFFFFFFF;
+                        if (zDiff > zThreshold) {
+                            break;
+                        }
+
+                        // Track searched cell for debug
+                        if (debugMode) {
+                            markZOrderCell(other.x, other.y);
+                        }
+
+                        checkCount++;
+                        const dx = particle.x - other.x;
+                        const dy = particle.y - other.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < particle.radius + other.radius) {
+                            particle.colliding = true;
+                            other.colliding = true;
+                            collisionCount++;
+
+                            // Heat up on collision (jump to hot end of plasma)
+                            particle.colorTemp = 1.0;
+                            other.colorTemp = 1.0;
+
+                            accumulateCollisionImpulse(particle, other, dx, dy, dist);
+                        }
                     }
                 }
+            } else {
+                // UNIFORM GRID MODE
+                // Create grid with specified cell size
+                uniformGrid = new UniformGrid(canvas.width, canvas.height, gridCellSize);
+
+                // Insert all particles into grid
+                for (let particle of particles) {
+                    uniformGrid.insert(particle);
+                }
+
+                // Check collisions using grid
+                // searchRange is the number of cells to check in each direction
+                // Calculate max distance we care about (for early culling)
+                const maxDist = gridCellSize * searchRange;
+                const maxDistSq = maxDist * maxDist;
+
+                for (let particle of particles) {
+                    // Use forEachNearby to avoid creating intermediate arrays
+                    uniformGrid.forEachNearby(particle, searchRange, (other) => {
+                        // Only check pairs where particle.id < other.id to avoid duplicates
+                        // This eliminates the need for a checkedPairs Set
+                        if (particle.id >= other.id) return;
+
+                        // Early distance culling - skip if too far (broad phase)
+                        const dx = particle.x - other.x;
+                        const dy = particle.y - other.y;
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq > maxDistSq) return;
+
+                        checkCount++;
+                        const dist = Math.sqrt(distSq);
+
+                        if (dist < particle.radius + other.radius) {
+                            particle.colliding = true;
+                            other.colliding = true;
+                            collisionCount++;
+
+                            // Heat up on collision (jump to hot end of plasma)
+                            particle.colorTemp = 1.0;
+                            other.colorTemp = 1.0;
+
+                            accumulateCollisionImpulse(particle, other, dx, dy, dist);
+                        }
+                    });
+                }
             }
-            
+
             for (let particle of particles) {
                 particle.vx += particle.impulseX;
                 particle.vy += particle.impulseY;
             }
-            
-            return { collisionCount, checkCount, sortTime };
+
+            return { collisionCount, checkCount };
+        }
+
+        function markZOrderCell(x, y) {
+            const cellX = Math.floor((x / canvas.width) * ZORDER_DEBUG_GRID_SIZE);
+            const cellY = Math.floor((y / canvas.height) * ZORDER_DEBUG_GRID_SIZE);
+            zOrderSearchedCells.add(`${cellX},${cellY}`);
+        }
+
+        function drawDebugVisualization() {
+            if (!debugMode) return;
+
+            ctx.save();
+
+            if (spatialMode === 'zorder') {
+                // Draw Z-order grid
+                const cellW = canvas.width / ZORDER_DEBUG_GRID_SIZE;
+                const cellH = canvas.height / ZORDER_DEBUG_GRID_SIZE;
+
+                // Draw grid lines
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let i = 0; i <= ZORDER_DEBUG_GRID_SIZE; i++) {
+                    const x = i * cellW;
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                }
+                for (let j = 0; j <= ZORDER_DEBUG_GRID_SIZE; j++) {
+                    const y = j * cellH;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                }
+                ctx.stroke();
+
+                // Draw search radius circles for each particle (show theoretical search area)
+                const avgSize = (minSize + maxSize) / 2;
+                const searchDist = searchRange * avgSize * 2;
+
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)';
+                ctx.lineWidth = 1;
+                for (let particle of particles) {
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, searchDist, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Calculate which Z-order cells fall within the theoretical search distance
+                // and highlight them more brightly
+                const theoreticalCells = new Set();
+                for (let particle of particles) {
+                    const particleCellX = Math.floor((particle.x / canvas.width) * ZORDER_DEBUG_GRID_SIZE);
+                    const particleCellY = Math.floor((particle.y / canvas.height) * ZORDER_DEBUG_GRID_SIZE);
+
+                    // Calculate how many cells to check based on search distance
+                    const cellRange = Math.ceil((searchDist / canvas.width) * ZORDER_DEBUG_GRID_SIZE);
+
+                    for (let dy = -cellRange; dy <= cellRange; dy++) {
+                        for (let dx = -cellRange; dx <= cellRange; dx++) {
+                            const cx = particleCellX + dx;
+                            const cy = particleCellY + dy;
+                            if (cx >= 0 && cx < ZORDER_DEBUG_GRID_SIZE && cy >= 0 && cy < ZORDER_DEBUG_GRID_SIZE) {
+                                // Check if this cell is within circular search radius
+                                const cellCenterX = (cx + 0.5) * cellW;
+                                const cellCenterY = (cy + 0.5) * cellH;
+                                const dist = Math.sqrt(
+                                    Math.pow(cellCenterX - particle.x, 2) +
+                                    Math.pow(cellCenterY - particle.y, 2)
+                                );
+                                if (dist <= searchDist + cellW) {  // Add cell diagonal for tolerance
+                                    theoreticalCells.add(`${cx},${cy}`);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Highlight theoretical search area cells
+                ctx.fillStyle = 'rgba(0, 255, 65, 0.12)';
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.25)';
+                for (let key of theoreticalCells) {
+                    const [cx, cy] = key.split(',').map(Number);
+                    const x = cx * cellW;
+                    const y = cy * cellH;
+                    ctx.fillRect(x, y, cellW, cellH);
+                    ctx.strokeRect(x, y, cellW, cellH);
+                }
+
+                // Highlight cells with particles that were actually checked (brighter)
+                ctx.fillStyle = 'rgba(0, 255, 65, 0.25)';
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.5)';
+                for (let key of zOrderSearchedCells) {
+                    const [cx, cy] = key.split(',').map(Number);
+                    const x = cx * cellW;
+                    const y = cy * cellH;
+                    ctx.fillRect(x, y, cellW, cellH);
+                    ctx.strokeRect(x, y, cellW, cellH);
+                }
+            } else if (uniformGrid) {
+                // Draw uniform grid
+                const cellW = uniformGrid.cellSize;
+                const cellH = uniformGrid.cellSize;
+
+                // Draw grid lines
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let i = 0; i <= uniformGrid.cols; i++) {
+                    const x = i * cellW;
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                }
+                for (let j = 0; j <= uniformGrid.rows; j++) {
+                    const y = j * cellH;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                }
+                ctx.stroke();
+
+                // Highlight searched cells
+                ctx.fillStyle = 'rgba(0, 255, 65, 0.12)';
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.25)';
+                for (let key of uniformGrid.getSearchedCells()) {
+                    const [cx, cy] = key.split(',').map(Number);
+                    const x = cx * cellW;
+                    const y = cy * cellH;
+                    ctx.fillRect(x, y, cellW, cellH);
+                    ctx.strokeRect(x, y, cellW, cellH);
+                }
+            }
+
+            ctx.restore();
         }
         
         function accumulateCollisionImpulse(p1, p2, dx, dy, dist) {
@@ -744,16 +1056,18 @@
                 particle.update();
             }
             
-            const { collisionCount, checkCount, sortTime } = detectCollisions();
+            const { collisionCount, checkCount } = detectCollisions();
             
             for (let particle of particles) {
                 particle.draw(ctx);
             }
-            
+
+            drawDebugVisualization();
+
             document.getElementById('collisionCount').textContent = collisionCount;
             document.getElementById('checkCount').textContent = checkCount;
             document.getElementById('fps').textContent = fps;
-            
+
             requestAnimationFrame(animate);
         }
         
@@ -832,6 +1146,23 @@
             saveSettings();
         });
 
+        document.getElementById('spatialMode').addEventListener('change', (e) => {
+            spatialMode = e.target.value;
+            updateSpatialModeDisplay();
+            saveSettings();
+        });
+
+        document.getElementById('gridCellSize').addEventListener('input', (e) => {
+            gridCellSize = parseInt(e.target.value);
+            document.getElementById('gridCellSizeValue').textContent = gridCellSize;
+            saveSettings();
+        });
+
+        document.getElementById('debugMode').addEventListener('change', (e) => {
+            debugMode = e.target.checked;
+            saveSettings();
+        });
+
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -849,6 +1180,7 @@
         }
 
         loadSettings();
+        updateControlVisibility();
         resetParticles();
         requestAnimationFrame(animate);
     </script>
