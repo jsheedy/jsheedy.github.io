@@ -78,3 +78,12 @@ Two distinct visual themes:
 2. **Modern gradient** (quadtree.html, zorder.html): Colorful gradients, rounded corners, clean typography
 
 When adding new experiments, choose one of these themes for consistency.
+
+## Tasks
+
+When I say "create a task to '<description here>' you will
+- create a new git worktree two levels up in ../../worktrees
+- implement the task
+- push up a new PR upstream for my review
+- show me the link to review
+- once I've merged, you can remove the worktree
