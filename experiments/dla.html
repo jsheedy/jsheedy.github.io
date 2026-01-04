@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion Limited Aggregation - Brownian Tree</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header {
+            padding: 20px;
+            background: rgba(0, 255, 65, 0.05);
+            border-bottom: 2px solid #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        h1 {
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+            margin-bottom: 10px;
+        }
+
+        #main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        #controls {
+            width: 320px;
+            padding: 20px;
+            background: rgba(0, 255, 65, 0.05);
+            border-left: 2px solid #00ff41;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 255, 65, 0.2);
+            outline: none;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+        }
+
+        select, button {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 255, 65, 0.1);
+            color: #00ff41;
+            border: 1px solid #00ff41;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:hover, button:hover {
+            background: rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        button {
+            margin-bottom: 8px;
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.8);
+        }
+
+        #stats {
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        #stats div {
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            display: inline-block;
+            width: 140px;
+        }
+
+        .stat-value {
+            float: right;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.8);
+        }
+
+        /* Scanline effect */
+        #canvas-container::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>[ DIFFUSION LIMITED AGGREGATION ]</h1>
+        <div style="font-size: 11px; opacity: 0.7;">Brownian Tree Growth Simulation</div>
+    </div>
+
+    <div id="main">
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div id="controls">
+            <div class="control-group">
+                <button id="playPauseBtn">PAUSE</button>
+                <button id="resetBtn">RESET</button>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Particles/Frame
+                    <span class="value-display" id="particlesPerFrameValue">10</span>
+                </label>
+                <input type="range" id="particlesPerFrame" min="1" max="100" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Stick Probability
+                    <span class="value-display" id="stickProbValue">1.00</span>
+                </label>
+                <input type="range" id="stickProb" min="10" max="100" value="100">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Simultaneous Walkers
+                    <span class="value-display" id="walkerCountValue">20</span>
+                </label>
+                <input type="range" id="walkerCount" min="1" max="100" value="20">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Spawn Radius Multiplier
+                    <span class="value-display" id="spawnRadiusValue">1.5</span>
+                </label>
+                <input type="range" id="spawnRadius" min="100" max="200" value="150">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Kill Radius Multiplier
+                    <span class="value-display" id="killRadiusValue">3.0</span>
+                </label>
+                <input type="range" id="killRadius" min="150" max="500" value="300">
+            </div>
+
+            <div class="control-group">
+                <label>Seed Pattern</label>
+                <select id="seedPattern">
+                    <option value="center">Center Point</option>
+                    <option value="hline">Horizontal Line</option>
+                    <option value="vline">Vertical Line</option>
+                    <option value="circle">Circle Outline</option>
+                    <option value="multi">Multiple Points</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Color Scheme</label>
+                <select id="colorScheme">
+                    <option value="distance">Distance from Center</option>
+                    <option value="age">Age (Time)</option>
+                    <option value="green">Monochrome Green</option>
+                    <option value="rainbow">Rainbow</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showWalkers" style="width: auto; margin-right: 5px;">
+                    Show Active Walkers
+                </label>
+            </div>
+
+            <div class="control-group">
+                <h3 style="margin-bottom: 10px; font-size: 14px;">[ STATISTICS ]</h3>
+                <div id="stats">
+                    <div><span class="stat-label">Particles Stuck:</span><span class="stat-value" id="particleCount">0</span></div>
+                    <div><span class="stat-label">Active Walkers:</span><span class="stat-value" id="activeWalkers">0</span></div>
+                    <div><span class="stat-label">Current Spawn R:</span><span class="stat-value" id="currentSpawnRadius">0</span></div>
+                    <div><span class="stat-label">Particles/Sec:</span><span class="stat-value" id="particlesPerSec">0</span></div>
+                    <div><span class="stat-label">Bounding Radius:</span><span class="stat-value" id="boundingRadius">0</span></div>
+                    <div><span class="stat-label">FPS:</span><span class="stat-value" id="fps">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resize canvas to fill container
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Simulation state
+        let particles = [];
+        let walkers = [];
+        let grid = new Map(); // Spatial hash grid
+        let centerX, centerY;
+        let maxRadius = 0;
+        let isPaused = false;
+        let frameCount = 0;
+        let lastTime = Date.now();
+        let particlesAddedLastSec = 0;
+        let lastSecTime = Date.now();
+
+        // Settings
+        let settings = {
+            particlesPerFrame: 10,
+            stickProbability: 1.0,
+            walkerCount: 20,
+            spawnRadiusMult: 1.5,
+            killRadiusMult: 3.0,
+            seedPattern: 'center',
+            colorScheme: 'distance',
+            showWalkers: false
+        };
+
+        // Grid cell size for spatial hashing
+        const CELL_SIZE = 4;
+
+        // Helper functions
+        function hashKey(x, y) {
+            const gx = Math.floor(x / CELL_SIZE);
+            const gy = Math.floor(y / CELL_SIZE);
+            return `${gx},${gy}`;
+        }
+
+        function addToGrid(x, y, particle) {
+            const key = hashKey(x, y);
+            if (!grid.has(key)) {
+                grid.set(key, []);
+            }
+            grid.get(key).push(particle);
+        }
+
+        function isNearStructure(x, y) {
+            const gx = Math.floor(x / CELL_SIZE);
+            const gy = Math.floor(y / CELL_SIZE);
+
+            // Check neighboring cells
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const key = `${gx + dx},${gy + dy}`;
+                    const cell = grid.get(key);
+                    if (cell && cell.length > 0) {
+                        // Check actual distance to particles in cell
+                        for (const p of cell) {
+                            const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+                            if (dist < 2) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function initializeSeeds() {
+            particles = [];
+            grid.clear();
+            maxRadius = 0;
+            centerX = canvas.width / 2;
+            centerY = canvas.height / 2;
+
+            switch (settings.seedPattern) {
+                case 'center':
+                    addParticle(centerX, centerY, 0);
+                    break;
+
+                case 'hline':
+                    for (let i = -20; i <= 20; i += 2) {
+                        addParticle(centerX + i, centerY, 0);
+                    }
+                    break;
+
+                case 'vline':
+                    for (let i = -20; i <= 20; i += 2) {
+                        addParticle(centerX, centerY + i, 0);
+                    }
+                    break;
+
+                case 'circle':
+                    const circleRadius = 30;
+                    for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
+                        const x = centerX + Math.cos(angle) * circleRadius;
+                        const y = centerY + Math.sin(angle) * circleRadius;
+                        addParticle(x, y, 0);
+                    }
+                    break;
+
+                case 'multi':
+                    const positions = [
+                        [centerX - 40, centerY],
+                        [centerX + 40, centerY],
+                        [centerX, centerY - 40],
+                        [centerX, centerY + 40]
+                    ];
+                    for (const [x, y] of positions) {
+                        addParticle(x, y, 0);
+                    }
+                    break;
+            }
+        }
+
+        function addParticle(x, y, age) {
+            const particle = { x, y, age };
+            particles.push(particle);
+            addToGrid(x, y, particle);
+
+            const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+            maxRadius = Math.max(maxRadius, dist);
+        }
+
+        class Walker {
+            constructor() {
+                this.respawn();
+            }
+
+            respawn() {
+                const spawnRadius = (maxRadius + 10) * settings.spawnRadiusMult;
+                const angle = Math.random() * Math.PI * 2;
+                this.x = centerX + Math.cos(angle) * spawnRadius;
+                this.y = centerY + Math.sin(angle) * spawnRadius;
+            }
+
+            walk() {
+                // Random walk in 4 directions
+                const dir = Math.floor(Math.random() * 4);
+                switch (dir) {
+                    case 0: this.x += 1; break;
+                    case 1: this.x -= 1; break;
+                    case 2: this.y += 1; break;
+                    case 3: this.y -= 1; break;
+                }
+            }
+
+            update() {
+                this.walk();
+
+                // Check if stuck to structure
+                if (isNearStructure(this.x, this.y)) {
+                    if (Math.random() < settings.stickProbability) {
+                        addParticle(this.x, this.y, frameCount);
+                        particlesAddedLastSec++;
+                        this.respawn();
+                        return true;
+                    }
+                }
+
+                // Check if too far away
+                const dist = Math.sqrt((this.x - centerX) ** 2 + (this.y - centerY) ** 2);
+                const killRadius = (maxRadius + 10) * settings.killRadiusMult;
+                if (dist > killRadius) {
+                    this.respawn();
+                }
+
+                return false;
+            }
+        }
+
+        function getParticleColor(particle) {
+            const dist = Math.sqrt((particle.x - centerX) ** 2 + (particle.y - centerY) ** 2);
+
+            switch (settings.colorScheme) {
+                case 'distance':
+                    const hue = (dist / maxRadius) * 120;
+                    return `hsl(${120 - hue}, 100%, 50%)`;
+
+                case 'age':
+                    const age = frameCount - particle.age;
+                    const ageHue = (age / frameCount) * 120;
+                    return `hsl(${120 - ageHue}, 100%, 50%)`;
+
+                case 'green':
+                    return '#00ff41';
+
+                case 'rainbow':
+                    const rainbowHue = (dist / maxRadius) * 360;
+                    return `hsl(${rainbowHue}, 100%, 50%)`;
+            }
+        }
+
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw particles
+            for (const particle of particles) {
+                ctx.fillStyle = getParticleColor(particle);
+                ctx.fillRect(particle.x - 1, particle.y - 1, 2, 2);
+
+                // Add glow effect
+                ctx.shadowBlur = 3;
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.fillRect(particle.x - 1, particle.y - 1, 2, 2);
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw walkers if enabled
+            if (settings.showWalkers) {
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                for (const walker of walkers) {
+                    ctx.fillRect(walker.x - 1, walker.y - 1, 2, 2);
+                }
+            }
+        }
+
+        function update() {
+            if (isPaused) return;
+
+            // Update walkers
+            for (let i = 0; i < settings.particlesPerFrame; i++) {
+                for (const walker of walkers) {
+                    walker.update();
+                }
+            }
+
+            frameCount++;
+        }
+
+        function animate() {
+            update();
+            render();
+
+            // Update FPS
+            const now = Date.now();
+            const delta = now - lastTime;
+            if (delta > 100) {
+                const fps = Math.round(1000 / delta);
+                document.getElementById('fps').textContent = fps;
+                lastTime = now;
+            }
+
+            // Update particles per second
+            if (now - lastSecTime > 1000) {
+                document.getElementById('particlesPerSec').textContent = particlesAddedLastSec;
+                particlesAddedLastSec = 0;
+                lastSecTime = now;
+            }
+
+            // Update stats
+            document.getElementById('particleCount').textContent = particles.length;
+            document.getElementById('activeWalkers').textContent = walkers.length;
+            document.getElementById('currentSpawnRadius').textContent = Math.round((maxRadius + 10) * settings.spawnRadiusMult);
+            document.getElementById('boundingRadius').textContent = Math.round(maxRadius);
+
+            requestAnimationFrame(animate);
+        }
+
+        // Control handlers
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('playPauseBtn').textContent = isPaused ? 'PLAY' : 'PAUSE';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            initializeSeeds();
+            walkers = [];
+            for (let i = 0; i < settings.walkerCount; i++) {
+                walkers.push(new Walker());
+            }
+            frameCount = 0;
+            particlesAddedLastSec = 0;
+        });
+
+        document.getElementById('particlesPerFrame').addEventListener('input', (e) => {
+            settings.particlesPerFrame = parseInt(e.target.value);
+            document.getElementById('particlesPerFrameValue').textContent = settings.particlesPerFrame;
+        });
+
+        document.getElementById('stickProb').addEventListener('input', (e) => {
+            settings.stickProbability = parseInt(e.target.value) / 100;
+            document.getElementById('stickProbValue').textContent = settings.stickProbability.toFixed(2);
+        });
+
+        document.getElementById('walkerCount').addEventListener('input', (e) => {
+            const newCount = parseInt(e.target.value);
+            document.getElementById('walkerCountValue').textContent = newCount;
+
+            while (walkers.length < newCount) {
+                walkers.push(new Walker());
+            }
+            while (walkers.length > newCount) {
+                walkers.pop();
+            }
+            settings.walkerCount = newCount;
+        });
+
+        document.getElementById('spawnRadius').addEventListener('input', (e) => {
+            settings.spawnRadiusMult = parseInt(e.target.value) / 100;
+            document.getElementById('spawnRadiusValue').textContent = settings.spawnRadiusMult.toFixed(1);
+        });
+
+        document.getElementById('killRadius').addEventListener('input', (e) => {
+            settings.killRadiusMult = parseInt(e.target.value) / 100;
+            document.getElementById('killRadiusValue').textContent = settings.killRadiusMult.toFixed(1);
+        });
+
+        document.getElementById('seedPattern').addEventListener('change', (e) => {
+            settings.seedPattern = e.target.value;
+        });
+
+        document.getElementById('colorScheme').addEventListener('change', (e) => {
+            settings.colorScheme = e.target.value;
+        });
+
+        document.getElementById('showWalkers').addEventListener('change', (e) => {
+            settings.showWalkers = e.target.checked;
+        });
+
+        // Initialize
+        initializeSeeds();
+        for (let i = 0; i < settings.walkerCount; i++) {
+            walkers.push(new Walker());
+        }
+
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
