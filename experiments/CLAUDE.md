@@ -79,6 +79,13 @@ Two distinct visual themes:
 
 When adding new experiments, choose one of these themes for consistency.
 
+## File References
+When showing file paths that should be opened in a browser, always present them as clickable file:/// URLs and also call the open command on them which opens in a browser
+
+## URL References
+When presenting URLS, always present them as clickable links and also call the open command on them which opens in a browser
+
+
 ## Future Experiments
 
 The `projects/` directory contains detailed proposals for future experiments:
@@ -93,7 +100,7 @@ Each proposal includes algorithm details, use cases, interactive features, and t
 ## Tasks
 
 When I say "create a task to '<description here>' you will
-- create a new git worktree three levels up in ../../../worktrees
+- create a new git worktree in $HOME/git/worktrees/
 - implement the task
 - iterate with me until we agree it's correct
 - when correct, push up a new PR upstream for my review
