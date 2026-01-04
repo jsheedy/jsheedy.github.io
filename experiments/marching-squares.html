@@ -856,6 +856,7 @@
 		document.getElementById('gridSize').addEventListener('input', (e) => {
 			gridSize = parseInt(e.target.value);
 			document.getElementById('gridSizeVal').textContent = gridSize;
+			updateDebug(`Grid: ${gridSize}x${gridSize}`);
 			computeField();
 			render();
 		});
@@ -863,17 +864,20 @@
 		document.getElementById('threshold').addEventListener('input', (e) => {
 			threshold = parseFloat(e.target.value);
 			document.getElementById('thresholdVal').textContent = threshold.toFixed(1);
+			updateDebug(`Threshold: ${threshold.toFixed(1)}`);
 			render();
 		});
 
 		document.getElementById('strength').addEventListener('input', (e) => {
 			strength = parseInt(e.target.value);
 			document.getElementById('strengthVal').textContent = strength;
+			updateDebug(`Strength: ${strength}`);
 		});
 
 		document.getElementById('levels').addEventListener('input', (e) => {
 			levels = parseInt(e.target.value);
 			document.getElementById('levelsVal').textContent = levels;
+			updateDebug(`Levels: ${levels}`);
 			render();
 		});
 
@@ -900,11 +904,13 @@
 			sources = [];
 			computeField();
 			render();
+			updateDebug('Cleared all sources');
 		});
 
 		// Presets
 		document.getElementById('preset').addEventListener('change', (e) => {
 			const preset = e.target.value;
+			updateDebug(`Preset: ${preset}`);
 			sources = [];
 
 			const margin = 100;
@@ -997,6 +1003,9 @@
 		// Initialize with preset
 		document.getElementById('preset').value = 'metaballs';
 		document.getElementById('preset').dispatchEvent(new Event('change'));
+
+		// Initialize debug panel
+		updateDebug('Ready! Tap canvas or move sliders');
 
 		// Start animation
 		animationLoop(0);
