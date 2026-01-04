@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFT Audio Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(0, 255, 65, 0.05) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1000;
+            animation: scanline 0.1s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        #canvas {
+            flex: 1;
+            border: 2px solid #00ff41;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            cursor: crosshair;
+        }
+
+        #controls {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #00ff41;
+            background: rgba(0, 255, 65, 0.05);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: inline-block;
+            min-width: 140px;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 20px;
+            background: transparent;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            width: 100%;
+            height: 4px;
+            background: #003311;
+            border: 1px solid #00ff41;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            background: #00ff41;
+            border: 2px solid #000;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 4px;
+            background: #003311;
+            border: 1px solid #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            height: 12px;
+            width: 12px;
+            background: #00ff41;
+            border: 2px solid #000;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+
+        .value-display {
+            min-width: 60px;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        button, select, input[type="file"] {
+            background: #003311;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 8px 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover, select:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        select {
+            padding: 6px 10px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            background: #003311;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 8px 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .file-label:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        #stats {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border: 1px solid #00ff41;
+            font-size: 12px;
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .stat-line {
+            margin: 3px 0;
+        }
+
+        .glow {
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+        }
+
+        .separator {
+            height: 1px;
+            background: #00ff41;
+            margin: 10px 0;
+            opacity: 0.3;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="stats">
+        <div class="stat-line">FPS: <span id="fps">0</span></div>
+        <div class="stat-line">Source: <span id="currentSource">None</span></div>
+        <div class="stat-line">Mode: <span id="currentMode">Bars</span></div>
+        <div class="stat-line">Peak Freq: <span id="peakFreq">-</span></div>
+        <div class="stat-line">Peak Note: <span id="peakNote">-</span></div>
+        <div class="stat-line">Bass: <span id="bassLevel">0</span></div>
+        <div class="stat-line">Mid: <span id="midLevel">0</span></div>
+        <div class="stat-line">Treble: <span id="trebleLevel">0</span></div>
+    </div>
+
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        <div id="controls">
+            <h1 class="glow">FFT AUDIO VISUALIZER</h1>
+
+            <div class="control-group">
+                <div class="control-row button-group">
+                    <button id="micBtn">Microphone</button>
+                    <label for="fileInput" class="file-label">Upload Audio</label>
+                    <input type="file" id="fileInput" accept="audio/*">
+                    <button id="pianoBtn">Piano Mode</button>
+                    <button id="stopBtn" disabled>Stop</button>
+                </div>
+                <div class="control-row" style="margin-top: 15px;">
+                    <label style="min-width: 80px; font-size: 18px; font-weight: bold;">VOLUME:</label>
+                    <input type="range" id="volume" min="0" max="100" value="50" style="height: 30px;">
+                    <span class="value-display" style="min-width: 80px; font-size: 18px; font-weight: bold;"><span id="volumeValue">50</span>%</span>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="control-group">
+                <div class="control-row">
+                    <label>Visualization:</label>
+                    <select id="vizMode">
+                        <option value="bars">Frequency Bars</option>
+                        <option value="circular">Circular</option>
+                        <option value="waveform">Waveform</option>
+                        <option value="spectrogram">Spectrogram</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Color Mode:</label>
+                    <select id="colorMode">
+                        <option value="green">Terminal Green</option>
+                        <option value="rainbow">Rainbow</option>
+                        <option value="frequency">Frequency Map</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="control-group">
+                <div class="control-row">
+                    <label>FFT Size:</label>
+                    <select id="fftSize">
+                        <option value="512">512</option>
+                        <option value="1024">1024</option>
+                        <option value="2048" selected>2048</option>
+                        <option value="4096">4096</option>
+                        <option value="8192">8192</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Smoothing:</label>
+                    <input type="range" id="smoothing" min="0" max="100" value="80">
+                    <span class="value-display"><span id="smoothingValue">0.80</span></span>
+                </div>
+                <div class="control-row">
+                    <label>Scale:</label>
+                    <select id="scaleType">
+                        <option value="log" selected>Logarithmic</option>
+                        <option value="linear">Linear</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="control-group">
+                <div class="control-row">
+                    <label>Bass (20-250Hz):</label>
+                    <input type="range" id="bassGain" min="0" max="200" value="100">
+                    <span class="value-display"><span id="bassGainValue">1.0</span>x</span>
+                </div>
+                <div class="control-row">
+                    <label>Mid (250-4kHz):</label>
+                    <input type="range" id="midGain" min="0" max="200" value="100">
+                    <span class="value-display"><span id="midGainValue">1.0</span>x</span>
+                </div>
+                <div class="control-row">
+                    <label>Treble (4k-20kHz):</label>
+                    <input type="range" id="trebleGain" min="0" max="200" value="100">
+                    <span class="value-display"><span id="trebleGainValue">1.0</span>x</span>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="control-group">
+                <div class="control-row">
+                    <label>Piano Waveform:</label>
+                    <select id="pianoWaveform">
+                        <option value="sine">Sine</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label style="min-width: 100%; text-align: center; font-size: 12px; opacity: 0.8;">
+                        Piano Keys: ASDFGHJKL;' (white) | WETYUIO (black) | Home row starts at C3
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Audio context and nodes
+        let audioContext = null;
+        let analyser = null;
+        let gainNode = null;
+        let bassFilter = null;
+        let midFilter = null;
+        let trebleFilter = null;
+        let source = null;
+        let pianoMixer = null;
+        let activeOscillators = new Map(); // key -> {osc, gain}
+        let pianoModeActive = false;
+        let dataArray = null;
+        let bufferLength = 0;
+        let currentAudioSource = 'none';
+
+        // Spectrogram state
+        let spectrogramData = [];
+        const spectrogramHeight = 200;
+
+        // FPS tracking
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        // Settings
+        const settings = {
+            volume: 0.5,
+            fftSize: 2048,
+            smoothing: 0.8,
+            vizMode: 'bars',
+            colorMode: 'green',
+            scaleType: 'log',
+            bassGain: 1.0,
+            midGain: 1.0,
+            trebleGain: 1.0,
+            pianoWaveform: 'sine'
+        };
+
+        // Piano keyboard mapping (key -> frequency in Hz)
+        const pianoKeyMap = {
+            // White keys (home row) - C3 to F4
+            'a': 130.81, // C3
+            's': 146.83, // D3
+            'd': 164.81, // E3
+            'f': 174.61, // F3
+            'g': 196.00, // G3
+            'h': 220.00, // A3
+            'j': 246.94, // B3
+            'k': 261.63, // C4
+            'l': 293.66, // D4
+            ';': 329.63, // E4
+            "'": 349.23, // F4
+
+            // Black keys (row above, shifted right to match piano layout)
+            'w': 138.59, // C#3 (between C and D)
+            'e': 155.56, // D#3 (between D and E)
+            't': 185.00, // F#3 (between F and G)
+            'y': 207.65, // G#3 (between G and A)
+            'u': 233.08, // A#3 (between A and B)
+            'i': 277.18, // C#4 (between C4 and D4)
+            'o': 311.13  // D#4 (between D4 and E4)
+        };
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('fft-settings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+                updateUIFromSettings();
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('fft-settings', JSON.stringify(settings));
+        }
+
+        function updateUIFromSettings() {
+            document.getElementById('volume').value = settings.volume * 100;
+            document.getElementById('volumeValue').textContent = Math.round(settings.volume * 100);
+            document.getElementById('fftSize').value = settings.fftSize;
+            document.getElementById('smoothing').value = settings.smoothing * 100;
+            document.getElementById('smoothingValue').textContent = settings.smoothing.toFixed(2);
+            document.getElementById('vizMode').value = settings.vizMode;
+            document.getElementById('colorMode').value = settings.colorMode;
+            document.getElementById('scaleType').value = settings.scaleType;
+            document.getElementById('bassGain').value = settings.bassGain * 100;
+            document.getElementById('bassGainValue').textContent = settings.bassGain.toFixed(1);
+            document.getElementById('midGain').value = settings.midGain * 100;
+            document.getElementById('midGainValue').textContent = settings.midGain.toFixed(1);
+            document.getElementById('trebleGain').value = settings.trebleGain * 100;
+            document.getElementById('trebleGainValue').textContent = settings.trebleGain.toFixed(1);
+            document.getElementById('pianoWaveform').value = settings.pianoWaveform;
+        }
+
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                gainNode = audioContext.createGain();
+                gainNode.gain.value = settings.volume;
+
+                // Create 3-band EQ filters
+                // Bass: lowshelf filter at 250Hz
+                bassFilter = audioContext.createBiquadFilter();
+                bassFilter.type = 'lowshelf';
+                bassFilter.frequency.value = 250;
+                bassFilter.gain.value = 20 * Math.log10(settings.bassGain);
+
+                // Mid: peaking filter at 1500Hz
+                midFilter = audioContext.createBiquadFilter();
+                midFilter.type = 'peaking';
+                midFilter.frequency.value = 1500;
+                midFilter.Q.value = 0.7;
+                midFilter.gain.value = 20 * Math.log10(settings.midGain);
+
+                // Treble: highshelf filter at 4000Hz
+                trebleFilter = audioContext.createBiquadFilter();
+                trebleFilter.type = 'highshelf';
+                trebleFilter.frequency.value = 4000;
+                trebleFilter.gain.value = 20 * Math.log10(settings.trebleGain);
+
+                // Connect: source → bass → mid → treble → analyser → gainNode → destination
+                bassFilter.connect(midFilter);
+                midFilter.connect(trebleFilter);
+                trebleFilter.connect(analyser);
+                analyser.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                updateAnalyserSettings();
+            }
+            return audioContext;
+        }
+
+        function updateAnalyserSettings() {
+            if (analyser) {
+                analyser.fftSize = settings.fftSize;
+                analyser.smoothingTimeConstant = settings.smoothing;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+            }
+        }
+
+        // Stop current audio source
+        function stopAudio() {
+            if (source) {
+                try {
+                    if (source.mediaStream) {
+                        source.mediaStream.getTracks().forEach(track => track.stop());
+                    }
+                    source.disconnect();
+                } catch (e) {}
+                source = null;
+            }
+
+            // Stop all piano oscillators
+            if (pianoModeActive) {
+                for (const [key, { osc, gain }] of activeOscillators) {
+                    try {
+                        osc.stop();
+                        osc.disconnect();
+                        gain.disconnect();
+                    } catch (e) {}
+                }
+                activeOscillators.clear();
+                if (pianoMixer) {
+                    try {
+                        pianoMixer.disconnect();
+                    } catch (e) {}
+                    pianoMixer = null;
+                }
+                pianoModeActive = false;
+            }
+
+            currentAudioSource = 'none';
+            document.getElementById('currentSource').textContent = 'None';
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        // Microphone input
+        document.getElementById('micBtn').addEventListener('click', async () => {
+            stopAudio();
+            initAudio();
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                source = audioContext.createMediaStreamSource(stream);
+                source.mediaStream = stream;
+                source.connect(bassFilter);
+                currentAudioSource = 'microphone';
+                document.getElementById('currentSource').textContent = 'Microphone';
+                document.getElementById('stopBtn').disabled = false;
+            } catch (err) {
+                alert('Error accessing microphone: ' + err.message);
+            }
+        });
+
+        // File upload
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            stopAudio();
+            initAudio();
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.loop = true;
+                source.connect(bassFilter);
+                source.start(0);
+                currentAudioSource = 'file';
+                document.getElementById('currentSource').textContent = file.name;
+                document.getElementById('stopBtn').disabled = false;
+            } catch (err) {
+                alert('Error loading audio file: ' + err.message);
+            }
+        });
+
+        // Piano mode
+        document.getElementById('pianoBtn').addEventListener('click', () => {
+            stopAudio();
+            initAudio();
+
+            // Create piano mixer node
+            pianoMixer = audioContext.createGain();
+            pianoMixer.gain.value = 1.0;
+            pianoMixer.connect(bassFilter);
+
+            pianoModeActive = true;
+            currentAudioSource = 'piano';
+            document.getElementById('currentSource').textContent = 'Piano Mode';
+            document.getElementById('stopBtn').disabled = false;
+        });
+
+        // Piano keyboard handlers
+        function playNote(key) {
+            if (!pianoModeActive || !pianoKeyMap[key] || activeOscillators.has(key)) return;
+
+            const freq = pianoKeyMap[key];
+            const osc = audioContext.createOscillator();
+            const oscGain = audioContext.createGain();
+
+            osc.type = settings.pianoWaveform;
+            osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+
+            // ADSR envelope - quick attack
+            oscGain.gain.setValueAtTime(0, audioContext.currentTime);
+            oscGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+
+            osc.connect(oscGain);
+            oscGain.connect(pianoMixer);
+            osc.start();
+
+            activeOscillators.set(key, { osc, gain: oscGain });
+        }
+
+        function releaseNote(key) {
+            if (!activeOscillators.has(key)) return;
+
+            const { osc, gain } = activeOscillators.get(key);
+
+            // ADSR envelope - release
+            const now = audioContext.currentTime;
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+
+            setTimeout(() => {
+                try {
+                    osc.stop();
+                    osc.disconnect();
+                    gain.disconnect();
+                } catch (e) {}
+            }, 150);
+
+            activeOscillators.delete(key);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return; // Ignore key repeat
+            playNote(e.key.toLowerCase());
+        });
+
+        document.addEventListener('keyup', (e) => {
+            releaseNote(e.key.toLowerCase());
+        });
+
+        // Stop button
+        document.getElementById('stopBtn').addEventListener('click', stopAudio);
+
+        // Control event listeners
+        document.getElementById('volume').addEventListener('input', (e) => {
+            settings.volume = e.target.value / 100;
+            document.getElementById('volumeValue').textContent = Math.round(settings.volume * 100);
+            if (gainNode) gainNode.gain.value = settings.volume;
+            saveSettings();
+        });
+
+        document.getElementById('fftSize').addEventListener('change', (e) => {
+            settings.fftSize = parseInt(e.target.value);
+            updateAnalyserSettings();
+            saveSettings();
+        });
+
+        document.getElementById('smoothing').addEventListener('input', (e) => {
+            settings.smoothing = e.target.value / 100;
+            document.getElementById('smoothingValue').textContent = settings.smoothing.toFixed(2);
+            if (analyser) analyser.smoothingTimeConstant = settings.smoothing;
+            saveSettings();
+        });
+
+        document.getElementById('vizMode').addEventListener('change', (e) => {
+            settings.vizMode = e.target.value;
+            document.getElementById('currentMode').textContent = e.target.options[e.target.selectedIndex].text;
+            spectrogramData = [];
+            saveSettings();
+        });
+
+        document.getElementById('colorMode').addEventListener('change', (e) => {
+            settings.colorMode = e.target.value;
+            saveSettings();
+        });
+
+        document.getElementById('scaleType').addEventListener('change', (e) => {
+            settings.scaleType = e.target.value;
+            saveSettings();
+        });
+
+        document.getElementById('bassGain').addEventListener('input', (e) => {
+            settings.bassGain = e.target.value / 100;
+            document.getElementById('bassGainValue').textContent = settings.bassGain.toFixed(1);
+            if (bassFilter) {
+                const gainDB = settings.bassGain > 0 ? 20 * Math.log10(settings.bassGain) : -40;
+                bassFilter.gain.value = gainDB;
+            }
+            saveSettings();
+        });
+
+        document.getElementById('midGain').addEventListener('input', (e) => {
+            settings.midGain = e.target.value / 100;
+            document.getElementById('midGainValue').textContent = settings.midGain.toFixed(1);
+            if (midFilter) {
+                const gainDB = settings.midGain > 0 ? 20 * Math.log10(settings.midGain) : -40;
+                midFilter.gain.value = gainDB;
+            }
+            saveSettings();
+        });
+
+        document.getElementById('trebleGain').addEventListener('input', (e) => {
+            settings.trebleGain = e.target.value / 100;
+            document.getElementById('trebleGainValue').textContent = settings.trebleGain.toFixed(1);
+            if (trebleFilter) {
+                const gainDB = settings.trebleGain > 0 ? 20 * Math.log10(settings.trebleGain) : -40;
+                trebleFilter.gain.value = gainDB;
+            }
+            saveSettings();
+        });
+
+        document.getElementById('pianoWaveform').addEventListener('change', (e) => {
+            settings.pianoWaveform = e.target.value;
+            saveSettings();
+        });
+
+        // Frequency to note conversion
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        function frequencyToNote(freq) {
+            if (freq < 20) return '-';
+            const noteNum = 12 * (Math.log(freq / 440) / Math.log(2));
+            const noteIndex = Math.round(noteNum) + 69;
+            const octave = Math.floor(noteIndex / 12) - 1;
+            const note = noteNames[noteIndex % 12];
+            return `${note}${octave}`;
+        }
+
+        // Get frequency bin index
+        function getBinForFrequency(freq) {
+            const nyquist = audioContext.sampleRate / 2;
+            return Math.floor((freq / nyquist) * bufferLength);
+        }
+
+        // Apply frequency band gains
+        function applyBandGains(dataArray) {
+            const sampleRate = audioContext.sampleRate;
+            const nyquist = sampleRate / 2;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const freq = (i / bufferLength) * nyquist;
+                let gain = 1.0;
+
+                if (freq < 250) {
+                    gain = settings.bassGain;
+                } else if (freq < 4000) {
+                    gain = settings.midGain;
+                } else {
+                    gain = settings.trebleGain;
+                }
+
+                dataArray[i] = Math.min(255, dataArray[i] * gain);
+            }
+        }
+
+        // Calculate band energy levels
+        function calculateBandLevels(dataArray) {
+            const sampleRate = audioContext.sampleRate;
+            const nyquist = sampleRate / 2;
+
+            let bassSum = 0, midSum = 0, trebleSum = 0;
+            let bassCount = 0, midCount = 0, trebleCount = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const freq = (i / bufferLength) * nyquist;
+
+                if (freq < 250) {
+                    bassSum += dataArray[i];
+                    bassCount++;
+                } else if (freq < 4000) {
+                    midSum += dataArray[i];
+                    midCount++;
+                } else {
+                    trebleSum += dataArray[i];
+                    trebleCount++;
+                }
+            }
+
+            return {
+                bass: bassCount > 0 ? Math.round(bassSum / bassCount) : 0,
+                mid: midCount > 0 ? Math.round(midSum / midCount) : 0,
+                treble: trebleCount > 0 ? Math.round(trebleSum / trebleCount) : 0
+            };
+        }
+
+        // Find peak frequency
+        function findPeakFrequency(dataArray) {
+            let maxVal = 0;
+            let maxIndex = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                if (dataArray[i] > maxVal) {
+                    maxVal = dataArray[i];
+                    maxIndex = i;
+                }
+            }
+
+            const nyquist = audioContext.sampleRate / 2;
+            const freq = (maxIndex / bufferLength) * nyquist;
+            return { freq, value: maxVal };
+        }
+
+        // Color functions
+        function getColor(value, index, total) {
+            const intensity = value / 255;
+
+            if (settings.colorMode === 'green') {
+                const r = Math.floor(intensity * 0);
+                const g = Math.floor(intensity * 255);
+                const b = Math.floor(intensity * 65);
+                return `rgb(${r}, ${g}, ${b})`;
+            } else if (settings.colorMode === 'rainbow') {
+                const hue = (index / total) * 360;
+                return `hsl(${hue}, 100%, ${intensity * 50}%)`;
+            } else { // frequency
+                // Bass = red, Mid = green, Treble = blue
+                const freqRatio = index / total;
+                if (freqRatio < 0.33) {
+                    return `rgb(${Math.floor(intensity * 255)}, 0, 0)`;
+                } else if (freqRatio < 0.66) {
+                    return `rgb(0, ${Math.floor(intensity * 255)}, 0)`;
+                } else {
+                    return `rgb(0, 0, ${Math.floor(intensity * 255)})`;
+                }
+            }
+        }
+
+        function getGlowColor(value) {
+            const intensity = value / 255;
+            if (settings.colorMode === 'green') {
+                return `rgba(0, 255, 65, ${intensity * 0.8})`;
+            } else {
+                return `rgba(255, 255, 255, ${intensity * 0.5})`;
+            }
+        }
+
+        // Visualization functions
+        function drawBars() {
+            const barCount = settings.scaleType === 'log' ? 128 : Math.min(bufferLength, 256);
+            const barWidth = canvas.width / barCount;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < barCount; i++) {
+                let dataIndex;
+                if (settings.scaleType === 'log') {
+                    // Logarithmic spacing
+                    const logIndex = Math.pow(bufferLength, i / barCount);
+                    dataIndex = Math.floor(logIndex);
+                } else {
+                    // Linear spacing
+                    dataIndex = Math.floor((i / barCount) * bufferLength);
+                }
+
+                const value = dataArray[Math.min(dataIndex, bufferLength - 1)];
+                const barHeight = (value / 255) * canvas.height;
+                const x = i * barWidth;
+                const y = canvas.height - barHeight;
+
+                // Draw bar
+                ctx.fillStyle = getColor(value, i, barCount);
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+
+                // Draw glow
+                if (value > 50) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = getGlowColor(value);
+                    ctx.fillRect(x, y, barWidth - 2, barHeight);
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        function drawCircular() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            const barCount = 128;
+            const angleStep = (Math.PI * 2) / barCount;
+
+            for (let i = 0; i < barCount; i++) {
+                let dataIndex;
+                if (settings.scaleType === 'log') {
+                    const logIndex = Math.pow(bufferLength, i / barCount);
+                    dataIndex = Math.floor(logIndex);
+                } else {
+                    dataIndex = Math.floor((i / barCount) * bufferLength);
+                }
+
+                const value = dataArray[Math.min(dataIndex, bufferLength - 1)];
+                const barHeight = (value / 255) * radius;
+                const angle = i * angleStep;
+
+                const x1 = centerX + Math.cos(angle) * radius;
+                const y1 = centerY + Math.sin(angle) * radius;
+                const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+                const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+                ctx.strokeStyle = getColor(value, i, barCount);
+                ctx.lineWidth = 3;
+
+                if (value > 50) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = getGlowColor(value);
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawWaveform() {
+            const waveformArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(waveformArray);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00ff41';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(0, 255, 65, 0.8)';
+
+            // Find zero crossing for phase lock
+            let startIndex = 0;
+            const threshold = 128;
+
+            for (let i = 1; i < bufferLength / 2; i++) {
+                if (waveformArray[i - 1] < threshold && waveformArray[i] >= threshold) {
+                    startIndex = i;
+                    break;
+                }
+            }
+
+            ctx.beginPath();
+            const sliceWidth = canvas.width / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const dataIndex = (startIndex + i) % bufferLength;
+                const v = waveformArray[dataIndex] / 128.0;
+                const y = v * canvas.height / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawSpectrogram() {
+            const barCount = 128;
+            const newRow = [];
+
+            for (let i = 0; i < barCount; i++) {
+                let dataIndex;
+                if (settings.scaleType === 'log') {
+                    const logIndex = Math.pow(bufferLength, i / barCount);
+                    dataIndex = Math.floor(logIndex);
+                } else {
+                    dataIndex = Math.floor((i / barCount) * bufferLength);
+                }
+                newRow.push(dataArray[Math.min(dataIndex, bufferLength - 1)]);
+            }
+
+            spectrogramData.push(newRow);
+            if (spectrogramData.length > canvas.width) {
+                spectrogramData.shift();
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const rowHeight = canvas.height / spectrogramHeight;
+
+            for (let x = 0; x < spectrogramData.length; x++) {
+                const row = spectrogramData[x];
+                for (let y = 0; y < row.length; y++) {
+                    const value = row[y];
+                    ctx.fillStyle = getColor(value, y, barCount);
+                    const displayY = canvas.height - (y * rowHeight) - rowHeight;
+                    ctx.fillRect(x, displayY, 1, rowHeight);
+                }
+            }
+        }
+
+        // Main animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Update FPS
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = currentTime;
+                document.getElementById('fps').textContent = fps;
+            }
+
+            if (!analyser || currentAudioSource === 'none') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00ff41';
+                ctx.font = '20px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.fillText('Select an audio source to begin', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            analyser.getByteFrequencyData(dataArray);
+            applyBandGains(dataArray);
+
+            // Update stats
+            const bandLevels = calculateBandLevels(dataArray);
+            document.getElementById('bassLevel').textContent = bandLevels.bass;
+            document.getElementById('midLevel').textContent = bandLevels.mid;
+            document.getElementById('trebleLevel').textContent = bandLevels.treble;
+
+            const peak = findPeakFrequency(dataArray);
+            if (peak.value > 50) {
+                document.getElementById('peakFreq').textContent = Math.round(peak.freq) + ' Hz';
+                document.getElementById('peakNote').textContent = frequencyToNote(peak.freq);
+            } else {
+                document.getElementById('peakFreq').textContent = '-';
+                document.getElementById('peakNote').textContent = '-';
+            }
+
+            // Draw visualization
+            switch (settings.vizMode) {
+                case 'bars':
+                    drawBars();
+                    break;
+                case 'circular':
+                    drawCircular();
+                    break;
+                case 'waveform':
+                    drawWaveform();
+                    break;
+                case 'spectrogram':
+                    drawSpectrogram();
+                    break;
+            }
+        }
+
+        // Initialize
+        loadSettings();
+        document.getElementById('currentMode').textContent =
+            document.getElementById('vizMode').options[document.getElementById('vizMode').selectedIndex].text;
+        animate();
+    </script>
+</body>
+</html>
