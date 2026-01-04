@@ -807,6 +807,7 @@
             }
 
             let nodesVisited = 0;
+            let iterationCount = 0;
 
             while (unvisited.length > 0 && isRunning) {
                 // Find node with minimum distance
@@ -856,13 +857,23 @@
 
                 // Calculate delay dynamically for real-time speed changes
                 const delay = Math.max(0, Math.floor((101 - animationSpeed) / 5));
+                iterationCount++;
+
+                // Always yield periodically to prevent browser lockup
                 if (delay > 0) {
                     draw();
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    draw();
+                    // In instant mode, batch updates and yield every 50 iterations
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
                 }
             }
+
+            // Make sure we draw the final state
+            draw();
 
             if (!isRunning) {
                 // User stopped the algorithm
@@ -888,9 +899,11 @@
             }
 
             // Animate path
-            for (const node of pathNodes.reverse()) {
+            const reversedPath = pathNodes.reverse();
+            for (let i = 0; i < reversedPath.length; i++) {
                 if (!isRunning) break;
 
+                const node = reversedPath[i];
                 const gridNode = grid[node.row][node.col];
                 if (gridNode.state !== START && gridNode.state !== END) {
                     gridNode.state = PATH;
@@ -902,7 +915,11 @@
                     draw();
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    draw();
+                    // In instant mode, batch updates and yield every 10 path nodes
+                    if (i % 10 === 0 || i === reversedPath.length - 1) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
                 }
             }
 
