@@ -867,11 +867,25 @@
 		canvas.addEventListener('mouseup', handlePointerUp);
 		canvas.addEventListener('mouseleave', handlePointerUp);
 
-		// Touch events
-		canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
-		canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
-		canvas.addEventListener('touchend', handlePointerUp);
-		canvas.addEventListener('touchcancel', handlePointerUp);
+		// Touch events with debug
+		canvas.addEventListener('touchstart', (e) => {
+			updateDebug('touchstart fired!');
+			handlePointerDown(e);
+		}, { passive: false });
+
+		canvas.addEventListener('touchmove', (e) => {
+			handlePointerMove(e);
+		}, { passive: false });
+
+		canvas.addEventListener('touchend', (e) => {
+			updateDebug('touchend fired!');
+			handlePointerUp(e);
+		});
+
+		canvas.addEventListener('touchcancel', (e) => {
+			updateDebug('touchcancel fired!');
+			handlePointerUp(e);
+		});
 
 		// Controls
 		document.getElementById('gridSize').addEventListener('input', (e) => {
