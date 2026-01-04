@@ -795,6 +795,8 @@
 		function handlePointerUp(e) {
 			// If we didn't move and didn't grab a source, add a new source
 			if (!hasMoved && !draggedSource && pointerStartPos) {
+				// Debug: log to verify touch is working
+				console.log('Adding source at', pointerStartPos.x, pointerStartPos.y);
 				sources.push({
 					x: pointerStartPos.x,
 					y: pointerStartPos.y,
@@ -804,6 +806,9 @@
 				});
 				computeField();
 				render();
+			} else {
+				// Debug: log why we didn't add
+				console.log('No add:', { hasMoved, draggedSource: !!draggedSource, pointerStartPos: !!pointerStartPos });
 			}
 
 			draggedSource = null;
