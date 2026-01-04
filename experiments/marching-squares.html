@@ -356,6 +356,13 @@
 	</div>
 
 	<script>
+		// FIRST THING - test if script runs at all
+		try {
+			document.getElementById('debugInfo').innerHTML = '<div>JS RUNNING!</div>';
+		} catch(e) {
+			alert('Debug fail: ' + e.message);
+		}
+
 		const canvas = document.getElementById('canvas');
 		const ctx = canvas.getContext('2d');
 
