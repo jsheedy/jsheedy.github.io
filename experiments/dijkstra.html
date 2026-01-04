@@ -82,6 +82,78 @@
             font-weight: normal;
         }
 
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 280px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            background: #001a00;
+            border-radius: 4px;
+            border: 2px solid #00ff4140;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+        }
+
+        .sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
+        }
+
+        .sidebar code {
+            background: #000;
+            padding: 2px 6px;
+            border: 1px solid #00ff4140;
+            border-radius: 2px;
+            font-size: 10px;
+            color: #00ff41;
+        }
+
+        .sidebar ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .sidebar li {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 8px;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
         #canvas {
             display: block;
             background: #000;
@@ -304,9 +376,75 @@
         <div class="title-subtitle">SHORTEST PATH VISUALIZATION</div>
     </div>
 
-    <canvas id="canvas"></canvas>
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <h2>What is Dijkstra's Algorithm?</h2>
+                    <p>
+                        Dijkstra's algorithm finds the shortest path between nodes in a graph.
+                        It's widely used in GPS navigation, network routing, and game AI.
+                    </p>
+                    <p>
+                        Named after Dutch computer scientist Edsger W. Dijkstra, who published it in 1956.
+                    </p>
+                </div>
 
-    <div class="control-panel">
+                <div class="sidebar-section">
+                    <h2>How It Works</h2>
+                    <p>
+                        The algorithm explores nodes in order of their distance from the start:
+                    </p>
+                    <ul>
+                        <li><strong>Initialize:</strong> Set start node distance to 0, all others to infinity</li>
+                        <li><strong>Visit:</strong> Pick the unvisited node with smallest distance</li>
+                        <li><strong>Update:</strong> Check all neighbors and update their distances if we found a shorter path</li>
+                        <li><strong>Repeat:</strong> Continue until we reach the end or run out of nodes</li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Visualization Guide</h2>
+                    <p>
+                        <strong>Green cells</strong> mark the start point, <strong>red cells</strong> mark the destination.
+                    </p>
+                    <p>
+                        <strong>Dark green</strong> shows visited nodes. <strong>Medium green</strong> shows the frontier - nodes being considered.
+                    </p>
+                    <p>
+                        <strong>Orange</strong> highlights the final shortest path once found.
+                    </p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Time Complexity</h2>
+                    <p>
+                        Using a priority queue: <code>O((V + E) log V)</code>
+                    </p>
+                    <p>
+                        Where <code>V</code> is the number of vertices (grid cells) and <code>E</code> is the number of edges (connections between cells).
+                    </p>
+                    <p>
+                        This implementation uses a simple sorted array, which is <code>O(V²)</code> but easier to visualize.
+                    </p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Try It Out</h2>
+                    <p>
+                        Draw walls by clicking and dragging. Use the maze generator for interesting patterns.
+                    </p>
+                    <p>
+                        Adjust the animation speed to see the algorithm in action, or set it to max for instant results.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+
+            <div class="control-panel">
         <div class="stats">
             <div class="stat">
                 <div class="stat-value" id="nodesVisited">0</div>
@@ -380,6 +518,8 @@
             </div>
         </div>
     </div>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -408,7 +548,8 @@
         function resizeCanvas() {
             const titleBar = document.querySelector('.title-bar');
             const controlPanel = document.querySelector('.control-panel');
-            canvas.width = window.innerWidth;
+            const sidebar = document.querySelector('.sidebar');
+            canvas.width = window.innerWidth - sidebar.offsetWidth;
             canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
             initGrid();
             draw();
