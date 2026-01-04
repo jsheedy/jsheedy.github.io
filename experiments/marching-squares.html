@@ -345,6 +345,11 @@
 		<div class="instructions">
 			<div>CLICK to add source • DRAG to move • SHIFT+CLICK to remove</div>
 		</div>
+
+		<div class="debug-panel" id="debugPanel" style="position: absolute; top: 80px; right: 12px; background: rgba(0,26,0,0.95); border: 1px solid #00ff41; padding: 8px 12px; font-size: 10px; line-height: 1.4; border-radius: 3px; max-width: 200px;">
+			<div style="color: #00ff41; font-weight: bold; margin-bottom: 4px;">DEBUG</div>
+			<div id="debugInfo" style="color: #00ff4199;"></div>
+		</div>
 	</div>
 
 	<script>
@@ -398,6 +403,20 @@
 		let hasMoved = false;
 		let lastFrameTime = 0;
 		let fps = 60;
+
+		// Debug panel
+		function updateDebug(msg) {
+			const debugInfo = document.getElementById('debugInfo');
+			const timestamp = new Date().toLocaleTimeString();
+			debugInfo.innerHTML = `
+				<div>Last: ${msg}</div>
+				<div>Time: ${timestamp}</div>
+				<div>hasMoved: ${hasMoved}</div>
+				<div>draggedSrc: ${!!draggedSource}</div>
+				<div>startPos: ${pointerStartPos ? 'yes' : 'no'}</div>
+				<div>Sources: ${sources.length}</div>
+			`;
+		}
 
 		// Scalar field evaluation
 		function evaluateField(x, y) {
@@ -761,10 +780,12 @@
 					sources = sources.filter(s => s !== source);
 					computeField();
 					render();
+					updateDebug('Removed source');
 				}
 			} else {
 				// Check if tapping on existing source (for dragging)
 				draggedSource = findNearestSource(pos);
+				updateDebug(`Down at ${pos.x.toFixed(0)},${pos.y.toFixed(0)}`);
 			}
 		}
 
@@ -777,8 +798,9 @@
 				const dist = Math.sqrt(dx * dx + dy * dy);
 
 				// Consider it a drag if moved more than 5 pixels
-				if (dist > 5) {
+				if (dist > 5 && !hasMoved) {
 					hasMoved = true;
+					updateDebug(`Move dist=${dist.toFixed(0)}px`);
 				}
 
 				if (draggedSource && hasMoved) {
@@ -795,8 +817,6 @@
 		function handlePointerUp(e) {
 			// If we didn't move and didn't grab a source, add a new source
 			if (!hasMoved && !draggedSource && pointerStartPos) {
-				// Debug: log to verify touch is working
-				console.log('Adding source at', pointerStartPos.x, pointerStartPos.y);
 				sources.push({
 					x: pointerStartPos.x,
 					y: pointerStartPos.y,
@@ -806,9 +826,13 @@
 				});
 				computeField();
 				render();
+				updateDebug('✓ Added source!');
 			} else {
-				// Debug: log why we didn't add
-				console.log('No add:', { hasMoved, draggedSource: !!draggedSource, pointerStartPos: !!pointerStartPos });
+				let reason = '';
+				if (hasMoved) reason = 'moved';
+				else if (draggedSource) reason = 'on source';
+				else if (!pointerStartPos) reason = 'no start';
+				updateDebug(`✗ No add: ${reason}`);
 			}
 
 			draggedSource = null;
