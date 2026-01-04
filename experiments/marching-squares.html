@@ -394,6 +394,8 @@
 		let showFilled = false;
 		let showField = true;
 		let draggedSource = null;
+		let pointerStartPos = null;
+		let hasMoved = false;
 		let lastFrameTime = 0;
 		let fps = 60;
 
@@ -749,6 +751,8 @@
 		function handlePointerDown(e) {
 			e.preventDefault();
 			const pos = getPointerPos(e);
+			pointerStartPos = pos;
+			hasMoved = false;
 
 			if (e.shiftKey) {
 				// Remove source
@@ -759,39 +763,52 @@
 					render();
 				}
 			} else {
-				// Check if clicking on existing source (for dragging)
+				// Check if tapping on existing source (for dragging)
 				draggedSource = findNearestSource(pos);
+			}
+		}
 
-				if (!draggedSource) {
-					// Add new source
-					sources.push({
-						x: pos.x,
-						y: pos.y,
-						strength: strength,
-						vx: 0,
-						vy: 0
-					});
+		// Unified pointer move handler (mouse + touch)
+		function handlePointerMove(e) {
+			if (pointerStartPos) {
+				const pos = getPointerPos(e);
+				const dx = pos.x - pointerStartPos.x;
+				const dy = pos.y - pointerStartPos.y;
+				const dist = Math.sqrt(dx * dx + dy * dy);
+
+				// Consider it a drag if moved more than 5 pixels
+				if (dist > 5) {
+					hasMoved = true;
+				}
+
+				if (draggedSource && hasMoved) {
+					e.preventDefault();
+					draggedSource.x = pos.x;
+					draggedSource.y = pos.y;
 					computeField();
 					render();
 				}
 			}
 		}
 
-		// Unified pointer move handler (mouse + touch)
-		function handlePointerMove(e) {
-			if (draggedSource) {
-				e.preventDefault();
-				const pos = getPointerPos(e);
-				draggedSource.x = pos.x;
-				draggedSource.y = pos.y;
+		// Unified pointer up handler (mouse + touch)
+		function handlePointerUp(e) {
+			// If we didn't move and didn't grab a source, add a new source
+			if (!hasMoved && !draggedSource && pointerStartPos) {
+				sources.push({
+					x: pointerStartPos.x,
+					y: pointerStartPos.y,
+					strength: strength,
+					vx: 0,
+					vy: 0
+				});
 				computeField();
 				render();
 			}
-		}
 
-		// Unified pointer up handler (mouse + touch)
-		function handlePointerUp(e) {
 			draggedSource = null;
+			pointerStartPos = null;
+			hasMoved = false;
 		}
 
 		// Mouse events
