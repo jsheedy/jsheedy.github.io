@@ -714,10 +714,12 @@
                 document.getElementById('nodesVisited').textContent = nodesVisited;
 
                 // Calculate delay dynamically for real-time speed changes
-                const delay = Math.max(1, 101 - animationSpeed);
-                if (delay > 1) {
+                const delay = Math.max(0, Math.floor((101 - animationSpeed) / 2));
+                if (delay > 0) {
                     draw();
                     await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    draw();
                 }
             }
 
@@ -754,10 +756,12 @@
                 }
 
                 // Calculate delay dynamically for real-time speed changes
-                const delay = Math.max(1, 101 - animationSpeed);
-                if (delay > 1) {
+                const delay = Math.max(0, Math.floor((101 - animationSpeed) / 2));
+                if (delay > 0) {
                     draw();
-                    await new Promise(resolve => setTimeout(resolve, delay * 2));
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    draw();
                 }
             }
 
