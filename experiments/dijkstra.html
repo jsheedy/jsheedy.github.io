@@ -385,17 +385,6 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        function resizeCanvas() {
-            const titleBar = document.querySelector('.title-bar');
-            const controlPanel = document.querySelector('.control-panel');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
-            initGrid();
-            draw();
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
         // Grid state
         let gridSize = 30;
         let cellSize = 0;
@@ -415,6 +404,15 @@
         const VISITED = 4;
         const FRONTIER = 5;
         const PATH = 6;
+
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+            initGrid();
+            draw();
+        }
 
         function initGrid() {
             cellSize = Math.min(
@@ -822,8 +820,8 @@
             draw();
         }
 
-        initGrid();
-        draw();
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
     </script>
 </body>
 </html>
