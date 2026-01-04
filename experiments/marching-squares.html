@@ -348,7 +348,10 @@
 
 		<div class="debug-panel" id="debugPanel" style="position: absolute; top: 80px; right: 12px; background: rgba(0,26,0,0.95); border: 1px solid #00ff41; padding: 8px 12px; font-size: 10px; line-height: 1.4; border-radius: 3px; max-width: 200px;">
 			<div style="color: #00ff41; font-weight: bold; margin-bottom: 4px;">DEBUG</div>
-			<div id="debugInfo" style="color: #00ff4199;"></div>
+			<div id="debugInfo" style="color: #00ff4199;">
+				<div>Initializing...</div>
+				<div>Loading script...</div>
+			</div>
 		</div>
 	</div>
 
@@ -406,17 +409,28 @@
 
 		// Debug panel
 		function updateDebug(msg) {
-			const debugInfo = document.getElementById('debugInfo');
-			const timestamp = new Date().toLocaleTimeString();
-			debugInfo.innerHTML = `
-				<div>Last: ${msg}</div>
-				<div>Time: ${timestamp}</div>
-				<div>hasMoved: ${hasMoved}</div>
-				<div>draggedSrc: ${!!draggedSource}</div>
-				<div>startPos: ${pointerStartPos ? 'yes' : 'no'}</div>
-				<div>Sources: ${sources.length}</div>
-			`;
+			try {
+				const debugInfo = document.getElementById('debugInfo');
+				if (!debugInfo) {
+					console.error('Debug panel not found!');
+					return;
+				}
+				const timestamp = new Date().toLocaleTimeString();
+				debugInfo.innerHTML = `
+					<div>Last: ${msg}</div>
+					<div>Time: ${timestamp}</div>
+					<div>hasMoved: ${hasMoved}</div>
+					<div>draggedSrc: ${!!draggedSource}</div>
+					<div>startPos: ${pointerStartPos ? 'yes' : 'no'}</div>
+					<div>Sources: ${sources.length}</div>
+				`;
+			} catch (e) {
+				console.error('Debug update failed:', e);
+			}
 		}
+
+		// Test debug panel immediately
+		updateDebug('Script loaded!');
 
 		// Scalar field evaluation
 		function evaluateField(x, y) {
