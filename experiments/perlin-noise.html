@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Perlin/Simplex Noise</title>
+	<style>
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		html, body { height: 100%; overflow: hidden; }
+		body {
+			font-family: 'Courier New', monospace;
+			background: #0a0e0a;
+			color: #00ff41;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.title-bar {
+			background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+			border-bottom: 3px solid #00ff41;
+			padding: 12px 20px;
+			box-shadow: 0 5px 30px rgba(0,255,65,0.25), inset 0 1px 0 rgba(0,255,65,0.15);
+		}
+
+		.title-text {
+			font-size: 24px;
+			letter-spacing: 6px;
+			text-transform: uppercase;
+			color: #00ff41;
+			text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+			font-weight: bold;
+			display: inline-block;
+			margin-right: 20px;
+		}
+
+		.subtitle {
+			font-size: 11px;
+			color: #00ff4199;
+			letter-spacing: 2px;
+		}
+
+		.controls {
+			background: #001a00;
+			border-bottom: 1px solid #00ff4133;
+			padding: 12px 20px;
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 16px;
+			font-size: 12px;
+		}
+
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.control-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		label {
+			color: #00ff4199;
+			font-size: 11px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			min-width: 100px;
+		}
+
+		input[type="range"] {
+			flex: 1;
+			height: 4px;
+			background: #00ff4133;
+			border: none;
+			outline: none;
+			-webkit-appearance: none;
+		}
+
+		input[type="range"]::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			width: 14px;
+			height: 14px;
+			background: #00ff41;
+			cursor: pointer;
+			border-radius: 50%;
+			box-shadow: 0 0 8px #00ff41;
+		}
+
+		input[type="range"]::-moz-range-thumb {
+			width: 14px;
+			height: 14px;
+			background: #00ff41;
+			cursor: pointer;
+			border-radius: 50%;
+			border: none;
+			box-shadow: 0 0 8px #00ff41;
+		}
+
+		.value-display {
+			color: #00ff41;
+			font-weight: bold;
+			min-width: 50px;
+			text-align: right;
+			font-size: 11px;
+		}
+
+		select, input[type="number"] {
+			background: #001a00;
+			color: #00ff41;
+			border: 2px solid #00ff4133;
+			padding: 4px 8px;
+			font-family: inherit;
+			font-size: 11px;
+			border-radius: 3px;
+		}
+
+		select:focus, input[type="number"]:focus {
+			outline: none;
+			border-color: #00ff41;
+		}
+
+		button {
+			background: #001a00;
+			color: #00ff41;
+			border: 2px solid #00ff41;
+			padding: 6px 14px;
+			font-family: inherit;
+			font-size: 11px;
+			cursor: pointer;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			transition: all 0.15s;
+			border-radius: 3px;
+		}
+
+		button:hover {
+			background: #00ff41;
+			color: #001;
+			box-shadow: 0 0 15px rgba(0,255,65,0.4);
+		}
+
+		button:active {
+			transform: scale(0.97);
+		}
+
+		.canvas-container {
+			flex: 1;
+			position: relative;
+			overflow: hidden;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #000;
+		}
+
+		canvas {
+			display: block;
+			max-width: 100%;
+			max-height: 100%;
+			image-rendering: pixelated;
+		}
+
+		.stats {
+			position: absolute;
+			top: 12px;
+			right: 12px;
+			background: rgba(0,26,0,0.85);
+			border: 1px solid #00ff4133;
+			padding: 10px 14px;
+			font-size: 11px;
+			line-height: 1.6;
+			border-radius: 3px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+		}
+
+		.stats div {
+			display: flex;
+			justify-content: space-between;
+			gap: 12px;
+		}
+
+		.stats .label {
+			color: #00ff4199;
+		}
+
+		.stats .value {
+			color: #00ff41;
+			font-weight: bold;
+		}
+
+		@keyframes scanline {
+			0% { transform: translateY(-100%); }
+			100% { transform: translateY(100%); }
+		}
+
+		.scanline {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 2px;
+			background: linear-gradient(transparent, #00ff4133, transparent);
+			pointer-events: none;
+			animation: scanline 8s linear infinite;
+		}
+
+		input[type="checkbox"] {
+			width: 16px;
+			height: 16px;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+	<div class="title-bar">
+		<span class="title-text">Perlin/Simplex Noise</span>
+		<span class="subtitle">Procedural noise generation with fractal brownian motion</span>
+	</div>
+
+	<div class="controls">
+		<div class="control-group">
+			<div class="control-row">
+				<label>Noise Type</label>
+				<select id="noiseType">
+					<option value="perlin">Perlin</option>
+					<option value="simplex" selected>Simplex</option>
+				</select>
+			</div>
+			<div class="control-row">
+				<label>Color Mode</label>
+				<select id="colorMode">
+					<option value="grayscale">Grayscale</option>
+					<option value="green">Green Terminal</option>
+					<option value="terrain" selected>Terrain</option>
+					<option value="fire">Fire</option>
+					<option value="water">Water</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="control-group">
+			<div class="control-row">
+				<label>Scale</label>
+				<input type="range" id="scale" min="10" max="500" value="100" step="10">
+				<span class="value-display" id="scaleVal">100</span>
+			</div>
+			<div class="control-row">
+				<label>Octaves</label>
+				<input type="range" id="octaves" min="1" max="8" value="4" step="1">
+				<span class="value-display" id="octavesVal">4</span>
+			</div>
+		</div>
+
+		<div class="control-group">
+			<div class="control-row">
+				<label>Persistence</label>
+				<input type="range" id="persistence" min="0.1" max="1" value="0.5" step="0.05">
+				<span class="value-display" id="persistenceVal">0.5</span>
+			</div>
+			<div class="control-row">
+				<label>Lacunarity</label>
+				<input type="range" id="lacunarity" min="1" max="4" value="2" step="0.1">
+				<span class="value-display" id="lacunarityVal">2</span>
+			</div>
+		</div>
+
+		<div class="control-group">
+			<div class="control-row">
+				<label>
+					<input type="checkbox" id="animate"> Animate
+				</label>
+				<label>Speed</label>
+				<input type="range" id="speed" min="0.1" max="2" value="0.5" step="0.1">
+				<span class="value-display" id="speedVal">0.5</span>
+			</div>
+			<div class="control-row">
+				<label>Seed</label>
+				<input type="number" id="seed" value="12345" min="0" max="999999">
+				<button id="randomSeed">Random</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="canvas-container">
+		<canvas id="canvas"></canvas>
+		<div class="scanline"></div>
+
+		<div class="stats">
+			<div><span class="label">Resolution:</span><span class="value" id="statRes">512x512</span></div>
+			<div><span class="label">FPS:</span><span class="value" id="statFps">60</span></div>
+		</div>
+	</div>
+
+	<script>
+		const canvas = document.getElementById('canvas');
+		const ctx = canvas.getContext('2d');
+
+		// Set canvas resolution
+		const RESOLUTION = 512;
+		canvas.width = RESOLUTION;
+		canvas.height = RESOLUTION;
+
+		// Parameters
+		let params = {
+			noiseType: 'simplex',
+			colorMode: 'terrain',
+			scale: 100,
+			octaves: 4,
+			persistence: 0.5,
+			lacunarity: 2.0,
+			animate: false,
+			speed: 0.5,
+			seed: 12345,
+			time: 0
+		};
+
+		let animationFrameId = null;
+		let lastFrameTime = 0;
+		let fps = 60;
+
+		// Perlin/Simplex noise implementation
+		class NoiseGenerator {
+			constructor(seed) {
+				this.setSeed(seed);
+			}
+
+			setSeed(seed) {
+				this.seed = seed;
+				this.perm = this.buildPermutationTable(seed);
+				this.gradients = this.buildGradients();
+			}
+
+			buildPermutationTable(seed) {
+				const p = [];
+				for (let i = 0; i < 256; i++) {
+					p[i] = i;
+				}
+
+				// Seeded shuffle
+				let random = this.seededRandom(seed);
+				for (let i = 255; i > 0; i--) {
+					const j = Math.floor(random() * (i + 1));
+					[p[i], p[j]] = [p[j], p[i]];
+				}
+
+				// Duplicate for overflow
+				return [...p, ...p];
+			}
+
+			seededRandom(seed) {
+				return function() {
+					seed = (seed * 9301 + 49297) % 233280;
+					return seed / 233280;
+				};
+			}
+
+			buildGradients() {
+				const grad3 = [
+					[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+					[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+					[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+				];
+				return grad3;
+			}
+
+			fade(t) {
+				// 6t^5 - 15t^4 + 10t^3
+				return t * t * t * (t * (t * 6 - 15) + 10);
+			}
+
+			lerp(a, b, t) {
+				return a + t * (b - a);
+			}
+
+			grad(hash, x, y, z) {
+				const h = hash & 15;
+				const u = h < 8 ? x : y;
+				const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+				return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+			}
+
+			perlin(x, y, z) {
+				const X = Math.floor(x) & 255;
+				const Y = Math.floor(y) & 255;
+				const Z = Math.floor(z) & 255;
+
+				x -= Math.floor(x);
+				y -= Math.floor(y);
+				z -= Math.floor(z);
+
+				const u = this.fade(x);
+				const v = this.fade(y);
+				const w = this.fade(z);
+
+				const p = this.perm;
+				const A = p[X] + Y;
+				const AA = p[A] + Z;
+				const AB = p[A + 1] + Z;
+				const B = p[X + 1] + Y;
+				const BA = p[B] + Z;
+				const BB = p[B + 1] + Z;
+
+				return this.lerp(
+					this.lerp(
+						this.lerp(this.grad(p[AA], x, y, z), this.grad(p[BA], x - 1, y, z), u),
+						this.lerp(this.grad(p[AB], x, y - 1, z), this.grad(p[BB], x - 1, y - 1, z), u),
+						v
+					),
+					this.lerp(
+						this.lerp(this.grad(p[AA + 1], x, y, z - 1), this.grad(p[BA + 1], x - 1, y, z - 1), u),
+						this.lerp(this.grad(p[AB + 1], x, y - 1, z - 1), this.grad(p[BB + 1], x - 1, y - 1, z - 1), u),
+						v
+					),
+					w
+				);
+			}
+
+			// Simplex noise (2D)
+			simplex(xin, yin) {
+				const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+				const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+
+				const s = (xin + yin) * F2;
+				const i = Math.floor(xin + s);
+				const j = Math.floor(yin + s);
+
+				const t = (i + j) * G2;
+				const X0 = i - t;
+				const Y0 = j - t;
+				const x0 = xin - X0;
+				const y0 = yin - Y0;
+
+				let i1, j1;
+				if (x0 > y0) {
+					i1 = 1; j1 = 0;
+				} else {
+					i1 = 0; j1 = 1;
+				}
+
+				const x1 = x0 - i1 + G2;
+				const y1 = y0 - j1 + G2;
+				const x2 = x0 - 1.0 + 2.0 * G2;
+				const y2 = y0 - 1.0 + 2.0 * G2;
+
+				const ii = i & 255;
+				const jj = j & 255;
+				const p = this.perm;
+				const gi0 = p[ii + p[jj]] % 12;
+				const gi1 = p[ii + i1 + p[jj + j1]] % 12;
+				const gi2 = p[ii + 1 + p[jj + 1]] % 12;
+
+				const grad3 = this.gradients;
+
+				let n0, n1, n2;
+
+				let t0 = 0.5 - x0 * x0 - y0 * y0;
+				if (t0 < 0) {
+					n0 = 0.0;
+				} else {
+					t0 *= t0;
+					n0 = t0 * t0 * (grad3[gi0][0] * x0 + grad3[gi0][1] * y0);
+				}
+
+				let t1 = 0.5 - x1 * x1 - y1 * y1;
+				if (t1 < 0) {
+					n1 = 0.0;
+				} else {
+					t1 *= t1;
+					n1 = t1 * t1 * (grad3[gi1][0] * x1 + grad3[gi1][1] * y1);
+				}
+
+				let t2 = 0.5 - x2 * x2 - y2 * y2;
+				if (t2 < 0) {
+					n2 = 0.0;
+				} else {
+					t2 *= t2;
+					n2 = t2 * t2 * (grad3[gi2][0] * x2 + grad3[gi2][1] * y2);
+				}
+
+				return 70.0 * (n0 + n1 + n2);
+			}
+
+			// Fractal Brownian Motion
+			fbm(x, y, z, octaves, persistence, lacunarity, noiseType) {
+				let total = 0;
+				let frequency = 1;
+				let amplitude = 1;
+				let maxValue = 0;
+
+				for (let i = 0; i < octaves; i++) {
+					if (noiseType === 'perlin') {
+						total += this.perlin(x * frequency, y * frequency, z * frequency) * amplitude;
+					} else {
+						total += this.simplex(x * frequency, y * frequency) * amplitude;
+					}
+
+					maxValue += amplitude;
+					amplitude *= persistence;
+					frequency *= lacunarity;
+				}
+
+				return total / maxValue;
+			}
+		}
+
+		let noise = new NoiseGenerator(params.seed);
+
+		// Color mapping
+		function applyColorMap(value, mode) {
+			// Normalize to 0-1
+			value = (value + 1) / 2;
+			value = Math.max(0, Math.min(1, value));
+
+			let r, g, b;
+
+			switch (mode) {
+				case 'grayscale':
+					r = g = b = Math.floor(value * 255);
+					break;
+
+				case 'green':
+					r = 0;
+					g = Math.floor(value * 255);
+					b = 0;
+					break;
+
+				case 'terrain':
+					if (value < 0.3) {
+						// Water (blue)
+						const t = value / 0.3;
+						r = Math.floor(0 * t);
+						g = Math.floor(64 * t);
+						b = Math.floor(128 + 127 * t);
+					} else if (value < 0.5) {
+						// Beach (sand)
+						const t = (value - 0.3) / 0.2;
+						r = Math.floor(194 + 61 * t);
+						g = Math.floor(178 + 77 * t);
+						b = Math.floor(128 * (1 - t));
+					} else if (value < 0.7) {
+						// Grass (green)
+						const t = (value - 0.5) / 0.2;
+						r = Math.floor(34 * (1 - t * 0.5));
+						g = Math.floor(139 + 50 * t);
+						b = Math.floor(34 * (1 - t * 0.5));
+					} else if (value < 0.85) {
+						// Mountain (brown/gray)
+						const t = (value - 0.7) / 0.15;
+						r = Math.floor(139 - 39 * t);
+						g = Math.floor(137 - 37 * t);
+						b = Math.floor(112 - 12 * t);
+					} else {
+						// Snow (white)
+						const t = (value - 0.85) / 0.15;
+						r = Math.floor(200 + 55 * t);
+						g = Math.floor(200 + 55 * t);
+						b = Math.floor(200 + 55 * t);
+					}
+					break;
+
+				case 'fire':
+					if (value < 0.25) {
+						const t = value / 0.25;
+						r = Math.floor(t * 128);
+						g = 0;
+						b = 0;
+					} else if (value < 0.5) {
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(128 + 127 * t);
+						g = Math.floor(t * 64);
+						b = 0;
+					} else if (value < 0.75) {
+						const t = (value - 0.5) / 0.25;
+						r = 255;
+						g = Math.floor(64 + 127 * t);
+						b = 0;
+					} else {
+						const t = (value - 0.75) / 0.25;
+						r = 255;
+						g = Math.floor(191 + 64 * t);
+						b = Math.floor(t * 128);
+					}
+					break;
+
+				case 'water':
+					const t = value;
+					r = Math.floor(0 + t * 100);
+					g = Math.floor(64 + t * 150);
+					b = Math.floor(128 + t * 127);
+					break;
+
+				default:
+					r = g = b = Math.floor(value * 255);
+			}
+
+			return { r, g, b };
+		}
+
+		// Render noise
+		function render() {
+			const imageData = ctx.createImageData(canvas.width, canvas.height);
+			const data = imageData.data;
+
+			const scale = params.scale;
+			const z = params.time;
+
+			for (let y = 0; y < canvas.height; y++) {
+				for (let x = 0; x < canvas.width; x++) {
+					const nx = x / scale;
+					const ny = y / scale;
+
+					const value = noise.fbm(
+						nx, ny, z,
+						params.octaves,
+						params.persistence,
+						params.lacunarity,
+						params.noiseType
+					);
+
+					const color = applyColorMap(value, params.colorMode);
+					const idx = (y * canvas.width + x) * 4;
+
+					data[idx] = color.r;
+					data[idx + 1] = color.g;
+					data[idx + 2] = color.b;
+					data[idx + 3] = 255;
+				}
+			}
+
+			ctx.putImageData(imageData, 0, 0);
+		}
+
+		// Animation loop
+		function animate(timestamp) {
+			if (!lastFrameTime) lastFrameTime = timestamp;
+			const delta = timestamp - lastFrameTime;
+
+			if (delta >= 1000 / 60) {
+				fps = Math.round(1000 / delta);
+				document.getElementById('statFps').textContent = fps;
+
+				if (params.animate) {
+					params.time += params.speed * 0.01;
+					render();
+				}
+
+				lastFrameTime = timestamp;
+			}
+
+			animationFrameId = requestAnimationFrame(animate);
+		}
+
+		// Update stats
+		function updateStats() {
+			document.getElementById('statRes').textContent = `${canvas.width}x${canvas.height}`;
+		}
+
+		// Control handlers
+		function setupControls() {
+			// Sliders with value display
+			const sliders = ['scale', 'octaves', 'persistence', 'lacunarity', 'speed'];
+			sliders.forEach(id => {
+				const slider = document.getElementById(id);
+				const display = document.getElementById(id + 'Val');
+
+				slider.addEventListener('input', (e) => {
+					const value = parseFloat(e.target.value);
+					params[id] = value;
+					display.textContent = id === 'octaves' ? value : value.toFixed(2);
+					if (!params.animate) render();
+				});
+			});
+
+			// Dropdowns
+			document.getElementById('noiseType').addEventListener('change', (e) => {
+				params.noiseType = e.target.value;
+				if (!params.animate) render();
+			});
+
+			document.getElementById('colorMode').addEventListener('change', (e) => {
+				params.colorMode = e.target.value;
+				if (!params.animate) render();
+			});
+
+			// Animate checkbox
+			document.getElementById('animate').addEventListener('change', (e) => {
+				params.animate = e.target.checked;
+			});
+
+			// Seed
+			document.getElementById('seed').addEventListener('change', (e) => {
+				params.seed = parseInt(e.target.value) || 12345;
+				noise.setSeed(params.seed);
+				if (!params.animate) render();
+			});
+
+			document.getElementById('randomSeed').addEventListener('click', () => {
+				params.seed = Math.floor(Math.random() * 999999);
+				document.getElementById('seed').value = params.seed;
+				noise.setSeed(params.seed);
+				if (!params.animate) render();
+			});
+		}
+
+		// Initialize
+		setupControls();
+		updateStats();
+		render();
+		animate(0);
+	</script>
+</body>
+</html>
