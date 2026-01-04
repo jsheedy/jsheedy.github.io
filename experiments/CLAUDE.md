@@ -79,11 +79,23 @@ Two distinct visual themes:
 
 When adding new experiments, choose one of these themes for consistency.
 
+## Future Experiments
+
+The `projects/` directory contains detailed proposals for future experiments:
+- `01-voronoi-diagrams.md` - Fortune's algorithm for geospatial/weather visualization
+- `02-perlin-simplex-noise.md` - Procedural noise generation for games/terrain
+- `03-fft-audio-visualizer.md` - Real-time audio frequency analysis and visualization
+- `04-marching-squares.md` - Contour generation for weather/metaballs
+- `05-delaunay-triangulation.md` - Triangulation for terrain/navigation meshes
+
+Each proposal includes algorithm details, use cases, interactive features, and target applications.
+
 ## Tasks
 
 When I say "create a task to '<description here>' you will
-- create a new git worktree two levels up in ../../worktrees
+- create a new git worktree three levels up in ../../../worktrees
 - implement the task
-- push up a new PR upstream for my review
+- iterate with me until we agree it's correct
+- when correct, push up a new PR upstream for my review
 - show me the link to review
 - once I've merged, you can remove the worktree

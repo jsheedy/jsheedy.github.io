@@ -350,11 +350,6 @@
             <label>Fan Speed: <span class="value-display" id="fanSpeedValue">0.50</span></label>
             <input type="range" id="fanSpeed" min="0" max="1" value="0.5" step="0.05">
         </div>
-        
-        <div class="control-group">
-            <label>Search Range: <span class="value-display" id="rangeValue">3</span>x</label>
-            <input type="range" id="searchRange" min="1" max="20" value="3" step="1">
-        </div>
 
         <div class="control-group">
             <label>Spatial Mode: <span class="value-display" id="spatialModeValue">Z-Order</span></label>
@@ -384,6 +379,17 @@
         <div class="button-group">
             <button onclick="resetParticles()">Reset</button>
             <button onclick="toggleAnimation()">Pause/Resume</button>
+        </div>
+
+        <div class="control-group" id="energyHistogramsContainer" style="display: flex; grid-column: 1 / -1; flex-direction: row; gap: 20px;">
+            <div style="flex: 1;">
+                <div style="font-size: 10px; text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Kinetic Energy Distribution</div>
+                <canvas id="kineticEnergyHistogram" width="400" height="100" style="width: 100%; height: 100px; background: #001a00; border: 1px solid #00ff41;"></canvas>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 10px; text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Potential Energy Distribution</div>
+                <canvas id="potentialEnergyHistogram" width="400" height="100" style="width: 100%; height: 100px; background: #001a00; border: 1px solid #00ff41;"></canvas>
+            </div>
         </div>
     </div>
 
@@ -610,7 +616,6 @@
         let gravity = 0;
         let elasticity = 0.7;
         let fanSpeed = 0.5;
-        let searchRange = 3;
         let gridCellSize = 50;
         let trailFade = 0.15;
         let spatialMode = 'zorder'; // 'zorder' or 'grid'
@@ -632,7 +637,6 @@
                 gravity,
                 elasticity,
                 fanSpeed,
-                searchRange,
                 gridCellSize,
                 trailFade,
                 spatialMode,
@@ -650,7 +654,6 @@
                 gravity = settings.gravity ?? gravity;
                 elasticity = settings.elasticity ?? elasticity;
                 fanSpeed = settings.fanSpeed ?? fanSpeed;
-                searchRange = settings.searchRange ?? searchRange;
                 gridCellSize = settings.gridCellSize ?? gridCellSize;
                 trailFade = settings.trailFade ?? trailFade;
                 spatialMode = settings.spatialMode ?? spatialMode;
@@ -675,9 +678,6 @@
 
                 document.getElementById('fanSpeed').value = fanSpeed;
                 document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
-
-                document.getElementById('searchRange').value = searchRange;
-                document.getElementById('rangeValue').textContent = searchRange;
 
                 document.getElementById('gridCellSize').value = gridCellSize;
                 document.getElementById('gridCellSizeValue').textContent = gridCellSize;
@@ -734,6 +734,7 @@
         function detectCollisions() {
             let collisionCount = 0;
             let checkCount = 0;
+            let searchRange = 3;
 
             const avgSize = (minSize + maxSize) / 2;
             const searchDist = searchRange * avgSize * 2;
@@ -752,6 +753,10 @@
                 const sortStart = performance.now();
                 particles.sort((a, b) => a.zCode - b.zCode);
                 const sortTime = (performance.now() - sortStart).toFixed(2);
+
+                // Hardcoded search range for z-order
+                const searchRange = 3;
+                const searchDist = searchRange * avgSize * 2;
 
                 for (let i = 0; i < particles.length; i++) {
                     const particle = particles[i];
@@ -804,26 +809,19 @@
                 }
 
                 // Check collisions using grid
-                // searchRange is the number of cells to check in each direction
-                // Calculate max distance we care about (for early culling)
-                const maxDist = gridCellSize * searchRange;
-                const maxDistSq = maxDist * maxDist;
+                // Always search 3x3 cells (1 cell in each direction)
+                const cellsToSearch = 1;
 
                 for (let particle of particles) {
                     // Use forEachNearby to avoid creating intermediate arrays
-                    uniformGrid.forEachNearby(particle, searchRange, (other) => {
+                    uniformGrid.forEachNearby(particle, cellsToSearch, (other) => {
                         // Only check pairs where particle.id < other.id to avoid duplicates
-                        // This eliminates the need for a checkedPairs Set
                         if (particle.id >= other.id) return;
 
-                        // Early distance culling - skip if too far (broad phase)
+                        checkCount++;
                         const dx = particle.x - other.x;
                         const dy = particle.y - other.y;
-                        const distSq = dx * dx + dy * dy;
-                        if (distSq > maxDistSq) return;
-
-                        checkCount++;
-                        const dist = Math.sqrt(distSq);
+                        const dist = Math.sqrt(dx * dx + dy * dy);
 
                         if (dist < particle.radius + other.radius) {
                             particle.colliding = true;
@@ -854,6 +852,65 @@
             zOrderSearchedCells.add(`${cellX},${cellY}`);
         }
 
+        function drawEnergyHistograms() {
+            if (particles.length === 0) return;
+
+            const kineticCanvas = document.getElementById('kineticEnergyHistogram');
+            const potentialCanvas = document.getElementById('potentialEnergyHistogram');
+            const kCtx = kineticCanvas.getContext('2d');
+            const pCtx = potentialCanvas.getContext('2d');
+
+            const numBins = 40;
+            const kineticBins = new Array(numBins).fill(0);
+            const potentialBins = new Array(numBins).fill(0);
+
+            // Calculate energies
+            let maxKE = 0;
+            let maxPE = 0;
+            const energies = particles.map(p => {
+                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                const ke = 0.5 * p.mass * speed * speed;
+                // Potential energy: mass * gravity * height (where height is from bottom)
+                const pe = p.mass * gravity * (canvas.height - p.y);
+                maxKE = Math.max(maxKE, ke);
+                maxPE = Math.max(maxPE, pe);
+                return { ke, pe };
+            });
+
+            // Avoid division by zero
+            if (maxKE === 0) maxKE = 1;
+            if (maxPE === 0) maxPE = 1;
+
+            // Fill bins
+            energies.forEach(({ ke, pe }) => {
+                const kBin = Math.min(numBins - 1, Math.floor((ke / maxKE) * numBins));
+                const pBin = Math.min(numBins - 1, Math.floor((pe / maxPE) * numBins));
+                kineticBins[kBin]++;
+                potentialBins[pBin]++;
+            });
+
+            const maxKCount = Math.max(...kineticBins, 1);
+            const maxPCount = Math.max(...potentialBins, 1);
+
+            // Draw kinetic energy histogram
+            kCtx.clearRect(0, 0, kineticCanvas.width, kineticCanvas.height);
+            const kBarWidth = kineticCanvas.width / numBins;
+            kineticBins.forEach((count, i) => {
+                const barHeight = (count / maxKCount) * kineticCanvas.height;
+                kCtx.fillStyle = '#00ff41';
+                kCtx.fillRect(i * kBarWidth, kineticCanvas.height - barHeight, kBarWidth - 1, barHeight);
+            });
+
+            // Draw potential energy histogram
+            pCtx.clearRect(0, 0, potentialCanvas.width, potentialCanvas.height);
+            const pBarWidth = potentialCanvas.width / numBins;
+            potentialBins.forEach((count, i) => {
+                const barHeight = (count / maxPCount) * potentialCanvas.height;
+                pCtx.fillStyle = '#00ff41';
+                pCtx.fillRect(i * pBarWidth, potentialCanvas.height - barHeight, pBarWidth - 1, barHeight);
+            });
+        }
+
         function drawDebugVisualization() {
             if (!debugMode) return;
 
@@ -882,6 +939,7 @@
 
                 // Draw search radius circles for each particle (show theoretical search area)
                 const avgSize = (minSize + maxSize) / 2;
+                const searchRange = 3; // Hardcoded
                 const searchDist = searchRange * avgSize * 2;
 
                 ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)';
@@ -1005,8 +1063,14 @@
                 const totalMass = p1.mass + p2.mass;
                 const p1Factor = p2.mass / totalMass;
                 const p2Factor = p1.mass / totalMass;
-                
-                const separation = overlap + 0.1;
+
+                // Scale separation by elasticity
+                // Low elasticity = minimal separation (particles stick together)
+                // High elasticity = aggressive separation (clean bounce)
+                const minSeparation = 0.01;
+                const extraSeparation = 0.2 * elasticity;
+                const separation = overlap + minSeparation + extraSeparation;
+
                 p1.x += nx * separation * p1Factor;
                 p1.y += ny * separation * p1Factor;
                 p2.x -= nx * separation * p2Factor;
@@ -1057,12 +1121,13 @@
             }
             
             const { collisionCount, checkCount } = detectCollisions();
-            
+
             for (let particle of particles) {
                 particle.draw(ctx);
             }
 
             drawDebugVisualization();
+            drawEnergyHistograms();
 
             document.getElementById('collisionCount').textContent = collisionCount;
             document.getElementById('checkCount').textContent = checkCount;
@@ -1131,12 +1196,6 @@
         document.getElementById('fanSpeed').addEventListener('input', (e) => {
             fanSpeed = parseFloat(e.target.value);
             document.getElementById('fanSpeedValue').textContent = fanSpeed.toFixed(2);
-            saveSettings();
-        });
-
-        document.getElementById('searchRange').addEventListener('input', (e) => {
-            searchRange = parseInt(e.target.value);
-            document.getElementById('rangeValue').textContent = searchRange;
             saveSettings();
         });
 
