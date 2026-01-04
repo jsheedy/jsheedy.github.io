@@ -149,6 +149,9 @@
 			flex: 1;
 			position: relative;
 			overflow: hidden;
+			touch-action: none;
+			-webkit-user-select: none;
+			user-select: none;
 		}
 
 		canvas {
@@ -156,6 +159,7 @@
 			width: 100%;
 			height: 100%;
 			cursor: crosshair;
+			touch-action: none;
 		}
 
 		.stats {
@@ -217,6 +221,54 @@
 			background: linear-gradient(transparent, #00ff4133, transparent);
 			pointer-events: none;
 			animation: scanline 8s linear infinite;
+		}
+
+		/* Mobile optimizations */
+		@media (max-width: 768px) {
+			.title-text {
+				font-size: 18px;
+				letter-spacing: 3px;
+			}
+
+			.subtitle {
+				font-size: 9px;
+				letter-spacing: 2px;
+			}
+
+			.controls {
+				padding: 8px 12px;
+				gap: 12px;
+				grid-template-columns: 1fr;
+			}
+
+			.control-row {
+				gap: 8px;
+			}
+
+			label {
+				font-size: 10px;
+				min-width: 70px;
+			}
+
+			button, select {
+				padding: 6px 10px;
+				font-size: 10px;
+			}
+
+			.stats, .instructions {
+				font-size: 10px;
+				padding: 8px 10px;
+			}
+
+			input[type="range"]::-webkit-slider-thumb {
+				width: 18px;
+				height: 18px;
+			}
+
+			input[type="range"]::-moz-range-thumb {
+				width: 18px;
+				height: 18px;
+			}
 		}
 	</style>
 </head>
@@ -465,18 +517,27 @@
 			const imageData = ctx.createImageData(canvas.width, canvas.height);
 			const data = imageData.data;
 
-			for (let y = 0; y < canvas.height; y++) {
-				for (let x = 0; x < canvas.width; x++) {
+			// Sample every 2 pixels for better mobile performance
+			const step = 2;
+
+			for (let y = 0; y < canvas.height; y += step) {
+				for (let x = 0; x < canvas.width; x += step) {
 					const value = evaluateField(x, y);
 					const normalized = Math.min(1, value / (threshold * 2));
 
 					// Green gradient
 					const intensity = normalized * 64;
-					const idx = (y * canvas.width + x) * 4;
-					data[idx] = 0;
-					data[idx + 1] = intensity;
-					data[idx + 2] = 0;
-					data[idx + 3] = 180;
+
+					// Fill the step x step block
+					for (let dy = 0; dy < step && y + dy < canvas.height; dy++) {
+						for (let dx = 0; dx < step && x + dx < canvas.width; dx++) {
+							const idx = ((y + dy) * canvas.width + (x + dx)) * 4;
+							data[idx] = 0;
+							data[idx + 1] = intensity;
+							data[idx + 2] = 0;
+							data[idx + 3] = 180;
+						}
+					}
 				}
 			}
 
@@ -580,8 +641,10 @@
 				ctx.shadowBlur = 15;
 				ctx.shadowColor = source.strength > 0 ? '#00ff41' : '#ff4100';
 
+				// Larger sources for easier touch on mobile
+				const sourceRadius = 8;
 				ctx.beginPath();
-				ctx.arc(source.x, source.y, 6, 0, Math.PI * 2);
+				ctx.arc(source.x, source.y, sourceRadius, 0, Math.PI * 2);
 				ctx.fill();
 
 				ctx.strokeStyle = '#001a00';
@@ -653,16 +716,19 @@
 			document.getElementById('statFps').textContent = fps;
 		}
 
-		// Mouse handling
-		function getMousePos(e) {
+		// Mouse and touch handling
+		function getPointerPos(e) {
 			const rect = canvas.getBoundingClientRect();
+			// Handle both mouse and touch events
+			const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+			const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
 			return {
-				x: e.clientX - rect.left,
-				y: e.clientY - rect.top
+				x: clientX - rect.left,
+				y: clientY - rect.top
 			};
 		}
 
-		function findNearestSource(pos, maxDist = 20) {
+		function findNearestSource(pos, maxDist = 30) {
 			let nearest = null;
 			let minDist = maxDist;
 
@@ -679,8 +745,10 @@
 			return nearest;
 		}
 
-		canvas.addEventListener('mousedown', (e) => {
-			const pos = getMousePos(e);
+		// Unified pointer down handler (mouse + touch)
+		function handlePointerDown(e) {
+			e.preventDefault();
+			const pos = getPointerPos(e);
 
 			if (e.shiftKey) {
 				// Remove source
@@ -707,25 +775,36 @@
 					render();
 				}
 			}
-		});
+		}
 
-		canvas.addEventListener('mousemove', (e) => {
+		// Unified pointer move handler (mouse + touch)
+		function handlePointerMove(e) {
 			if (draggedSource) {
-				const pos = getMousePos(e);
+				e.preventDefault();
+				const pos = getPointerPos(e);
 				draggedSource.x = pos.x;
 				draggedSource.y = pos.y;
 				computeField();
 				render();
 			}
-		});
+		}
 
-		canvas.addEventListener('mouseup', () => {
+		// Unified pointer up handler (mouse + touch)
+		function handlePointerUp(e) {
 			draggedSource = null;
-		});
+		}
 
-		canvas.addEventListener('mouseleave', () => {
-			draggedSource = null;
-		});
+		// Mouse events
+		canvas.addEventListener('mousedown', handlePointerDown);
+		canvas.addEventListener('mousemove', handlePointerMove);
+		canvas.addEventListener('mouseup', handlePointerUp);
+		canvas.addEventListener('mouseleave', handlePointerUp);
+
+		// Touch events
+		canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+		canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+		canvas.addEventListener('touchend', handlePointerUp);
+		canvas.addEventListener('touchcancel', handlePointerUp);
 
 		// Controls
 		document.getElementById('gridSize').addEventListener('input', (e) => {
