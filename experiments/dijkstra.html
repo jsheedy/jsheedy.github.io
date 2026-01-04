@@ -343,7 +343,7 @@
         </div>
 
         <div class="button-group">
-            <button onclick="runDijkstra()" id="runButton">Run Algorithm</button>
+            <button onclick="toggleAlgorithm()" id="runButton">Run Algorithm</button>
             <button onclick="clearPath()">Clear Path</button>
             <button onclick="clearGrid()">Clear Grid</button>
         </div>
@@ -625,6 +625,19 @@
             return neighbors;
         }
 
+        function stopAlgorithm() {
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        function toggleAlgorithm() {
+            if (isRunning) {
+                stopAlgorithm();
+            } else {
+                runDijkstra();
+            }
+        }
+
         async function runDijkstra() {
             if (!startNode || !endNode) {
                 alert('Please set both start and end nodes!');
@@ -633,7 +646,7 @@
 
             if (isRunning) return;
             isRunning = true;
-            document.getElementById('runButton').disabled = true;
+            document.getElementById('runButton').textContent = 'Stop';
 
             clearPath();
 
@@ -653,9 +666,8 @@
             }
 
             let nodesVisited = 0;
-            const delay = Math.max(1, 101 - animationSpeed);
 
-            while (unvisited.length > 0) {
+            while (unvisited.length > 0 && isRunning) {
                 // Find node with minimum distance
                 unvisited.sort((a, b) =>
                     grid[a.row][a.col].distance - grid[b.row][b.col].distance
@@ -701,10 +713,19 @@
 
                 document.getElementById('nodesVisited').textContent = nodesVisited;
 
+                // Calculate delay dynamically for real-time speed changes
+                const delay = Math.max(1, 101 - animationSpeed);
                 if (delay > 1) {
                     draw();
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
+            }
+
+            if (!isRunning) {
+                // User stopped the algorithm
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
             }
 
             // Reconstruct path
@@ -725,10 +746,15 @@
 
             // Animate path
             for (const node of pathNodes.reverse()) {
+                if (!isRunning) break;
+
                 const gridNode = grid[node.row][node.col];
                 if (gridNode.state !== START && gridNode.state !== END) {
                     gridNode.state = PATH;
                 }
+
+                // Calculate delay dynamically for real-time speed changes
+                const delay = Math.max(1, 101 - animationSpeed);
                 if (delay > 1) {
                     draw();
                     await new Promise(resolve => setTimeout(resolve, delay * 2));
@@ -740,7 +766,7 @@
 
             draw();
             isRunning = false;
-            document.getElementById('runButton').disabled = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
         }
 
         function generateMaze() {
