@@ -195,9 +195,9 @@
             <div class="control-group">
                 <label>
                     Particles/Frame
-                    <span class="value-display" id="particlesPerFrameValue">10</span>
+                    <span class="value-display" id="particlesPerFrameValue">50</span>
                 </label>
-                <input type="range" id="particlesPerFrame" min="1" max="100" value="10">
+                <input type="range" id="particlesPerFrame" min="1" max="200" value="50">
             </div>
 
             <div class="control-group">
@@ -211,17 +211,17 @@
             <div class="control-group">
                 <label>
                     Simultaneous Walkers
-                    <span class="value-display" id="walkerCountValue">20</span>
+                    <span class="value-display" id="walkerCountValue">100</span>
                 </label>
-                <input type="range" id="walkerCount" min="1" max="100" value="20">
+                <input type="range" id="walkerCount" min="1" max="200" value="100">
             </div>
 
             <div class="control-group">
                 <label>
                     Spawn Radius Multiplier
-                    <span class="value-display" id="spawnRadiusValue">1.5</span>
+                    <span class="value-display" id="spawnRadiusValue">1.2</span>
                 </label>
-                <input type="range" id="spawnRadius" min="100" max="200" value="150">
+                <input type="range" id="spawnRadius" min="100" max="200" value="120">
             </div>
 
             <div class="control-group">
@@ -301,10 +301,10 @@
 
         // Settings
         let settings = {
-            particlesPerFrame: 10,
+            particlesPerFrame: 50,
             stickProbability: 1.0,
-            walkerCount: 20,
-            spawnRadiusMult: 1.5,
+            walkerCount: 100,
+            spawnRadiusMult: 1.2,
             killRadiusMult: 3.0,
             seedPattern: 'center',
             colorScheme: 'distance',
