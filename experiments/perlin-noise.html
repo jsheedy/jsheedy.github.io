@@ -236,6 +236,10 @@
 					<option value="terrain" selected>Terrain</option>
 					<option value="fire">Fire</option>
 					<option value="water">Water</option>
+					<option value="vaporwave">Vaporwave</option>
+					<option value="turbo">Turbo</option>
+					<option value="miami-vice">Miami Vice</option>
+					<option value="plasma">Plasma</option>
 				</select>
 			</div>
 		</div>
@@ -297,10 +301,17 @@
 		const canvas = document.getElementById('canvas');
 		const ctx = canvas.getContext('2d');
 
-		// Set canvas resolution
-		const RESOLUTION = 512;
-		canvas.width = RESOLUTION;
-		canvas.height = RESOLUTION;
+		// Calculate canvas resolution dynamically
+		function calculateCanvasSize() {
+			const width = Math.min(window.innerWidth - 40, 1600);
+			const height = Math.min(window.innerHeight - 200, 1200);
+			return { width, height };
+		}
+
+		// Set initial canvas resolution
+		let canvasSize = calculateCanvasSize();
+		canvas.width = canvasSize.width;
+		canvas.height = canvasSize.height;
 
 		// Parameters
 		let params = {
@@ -493,7 +504,8 @@
 					if (noiseType === 'perlin') {
 						total += this.perlin(x * frequency, y * frequency, z * frequency) * amplitude;
 					} else {
-						total += this.simplex(x * frequency, y * frequency) * amplitude;
+						// For simplex, offset x and y by time (z) to create animation
+						total += this.simplex((x + z) * frequency, (y + z) * frequency) * amplitude;
 					}
 
 					maxValue += amplitude;
@@ -589,6 +601,112 @@
 					r = Math.floor(0 + t * 100);
 					g = Math.floor(64 + t * 150);
 					b = Math.floor(128 + t * 127);
+					break;
+
+				case 'vaporwave':
+					if (value < 0.33) {
+						// Deep purple → Hot pink
+						const t = value / 0.33;
+						r = Math.floor(66 + (255 - 66) * t);
+						g = Math.floor(16 + (113 - 16) * t);
+						b = Math.floor(120 + (206 - 120) * t);
+					} else if (value < 0.66) {
+						// Hot pink → Purple
+						const t = (value - 0.33) / 0.33;
+						r = Math.floor(255 + (185 - 255) * t);
+						g = Math.floor(113 + (103 - 113) * t);
+						b = Math.floor(206 + (255 - 206) * t);
+					} else {
+						// Purple → Cyan
+						const t = (value - 0.66) / 0.34;
+						r = Math.floor(185 + (1 - 185) * t);
+						g = Math.floor(103 + (205 - 103) * t);
+						b = Math.floor(255 + (254 - 255) * t);
+					}
+					break;
+
+				case 'turbo':
+					if (value < 0.2) {
+						// Deep blue → Blue
+						const t = value / 0.2;
+						r = Math.floor(48 + (66 - 48) * t);
+						g = Math.floor(18 + (134 - 18) * t);
+						b = Math.floor(59 + (244 - 59) * t);
+					} else if (value < 0.4) {
+						// Blue → Cyan
+						const t = (value - 0.2) / 0.2;
+						r = Math.floor(66 + (28 - 66) * t);
+						g = Math.floor(134 + (212 - 134) * t);
+						b = Math.floor(244 + (230 - 244) * t);
+					} else if (value < 0.6) {
+						// Cyan → Green
+						const t = (value - 0.4) / 0.2;
+						r = Math.floor(28 + (178 - 28) * t);
+						g = Math.floor(212 + (255 - 212) * t);
+						b = Math.floor(230 + (89 - 230) * t);
+					} else if (value < 0.8) {
+						// Green → Orange
+						const t = (value - 0.6) / 0.2;
+						r = Math.floor(178 + (252 - 178) * t);
+						g = Math.floor(255 + (157 - 255) * t);
+						b = Math.floor(89 + (57 - 89) * t);
+					} else {
+						// Orange → Red
+						const t = (value - 0.8) / 0.2;
+						r = Math.floor(252 + (188 - 252) * t);
+						g = Math.floor(157 + (2 - 157) * t);
+						b = Math.floor(57 + (47 - 57) * t);
+					}
+					break;
+
+				case 'miami-vice':
+					if (value < 0.4) {
+						// Dark blue → Cyan
+						const t = value / 0.4;
+						r = Math.floor(26 + (0 - 26) * t);
+						g = Math.floor(26 + (217 - 26) * t);
+						b = Math.floor(46 + (255 - 46) * t);
+					} else if (value < 0.7) {
+						// Cyan → Pink
+						const t = (value - 0.4) / 0.3;
+						r = Math.floor(0 + (255 - 0) * t);
+						g = Math.floor(217 + (0 - 217) * t);
+						b = Math.floor(255 + (144 - 255) * t);
+					} else {
+						// Pink → Bright pink
+						const t = (value - 0.7) / 0.3;
+						r = 255;
+						g = Math.floor(0 + (105 - 0) * t);
+						b = Math.floor(144 + (180 - 144) * t);
+					}
+					break;
+
+				case 'plasma':
+					if (value < 0.25) {
+						// Dark purple → Purple
+						const t = value / 0.25;
+						r = Math.floor(13 + (126 - 13) * t);
+						g = Math.floor(8 + (3 - 8) * t);
+						b = Math.floor(135 + (168 - 135) * t);
+					} else if (value < 0.5) {
+						// Purple → Pink
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(126 + (204 - 126) * t);
+						g = Math.floor(3 + (71 - 3) * t);
+						b = Math.floor(168 + (120 - 168) * t);
+					} else if (value < 0.75) {
+						// Pink → Orange
+						const t = (value - 0.5) / 0.25;
+						r = Math.floor(204 + (241 - 204) * t);
+						g = Math.floor(71 + (130 - 71) * t);
+						b = Math.floor(120 + (60 - 120) * t);
+					} else {
+						// Orange → Yellow
+						const t = (value - 0.75) / 0.25;
+						r = Math.floor(241 + (252 - 241) * t);
+						g = Math.floor(130 + (255 - 130) * t);
+						b = Math.floor(60 + (164 - 60) * t);
+					}
 					break;
 
 				default:
@@ -703,6 +821,21 @@
 				if (!params.animate) render();
 			});
 		}
+
+		// Handle window resize with debouncing
+		let resizeTimeout;
+		function handleResize() {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(() => {
+				canvasSize = calculateCanvasSize();
+				canvas.width = canvasSize.width;
+				canvas.height = canvasSize.height;
+				updateStats();
+				render();
+			}, 250);
+		}
+
+		window.addEventListener('resize', handleResize);
 
 		// Initialize
 		setupControls();
