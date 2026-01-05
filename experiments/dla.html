@@ -352,10 +352,10 @@
 
             <div class="control-group">
                 <label>
-                    Particles/Frame
-                    <span class="value-display" id="particlesPerFrameValue">100</span>
+                    Steps Multiplier
+                    <span class="value-display" id="particlesPerFrameValue">1.0x</span>
                 </label>
-                <input type="range" id="particlesPerFrame" min="1" max="300" value="100">
+                <input type="range" id="particlesPerFrame" min="1" max="30" value="10">
             </div>
 
             <div class="control-group">
@@ -470,7 +470,7 @@
         // Settings
         let settings = {
             speed: 5.0,
-            particlesPerFrame: 100,
+            particlesPerFrame: 1.0,  // Now used as steps multiplier
             stickProbability: 1.0,
             walkerCount: 200,
             spawnRadiusMult: 1.2,
@@ -753,19 +753,19 @@
         function update() {
             if (isPaused) return;
 
-            // Update walkers
-            for (let i = 0; i < settings.particlesPerFrame; i++) {
-                for (const walker of walkers) {
-                    walker.update();
-                }
+            // Update each walker once per simulation step
+            for (const walker of walkers) {
+                walker.update();
             }
 
             frameCount++;
         }
 
         function animate() {
-            // Run simulation multiple times per frame based on speed
-            for (let i = 0; i < settings.speed; i++) {
+            // Run simulation steps based on speed and multiplier
+            // Each step updates all walkers once
+            const stepsPerFrame = Math.ceil(settings.speed * settings.particlesPerFrame);
+            for (let i = 0; i < stepsPerFrame; i++) {
                 update();
             }
             render();
@@ -820,8 +820,8 @@
         });
 
         document.getElementById('particlesPerFrame').addEventListener('input', (e) => {
-            settings.particlesPerFrame = parseInt(e.target.value);
-            document.getElementById('particlesPerFrameValue').textContent = settings.particlesPerFrame;
+            settings.particlesPerFrame = parseInt(e.target.value) / 10;
+            document.getElementById('particlesPerFrameValue').textContent = settings.particlesPerFrame.toFixed(1) + 'x';
         });
 
         document.getElementById('stickProb').addEventListener('input', (e) => {
