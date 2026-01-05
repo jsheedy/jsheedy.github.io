@@ -18,35 +18,154 @@
 		.title-bar {
 			background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
 			border-bottom: 3px solid #00ff41;
-			padding: 12px 20px;
-			box-shadow: 0 5px 30px rgba(0,255,65,0.25), inset 0 1px 0 rgba(0,255,65,0.15);
+			padding: 15px 20px;
+			text-align: center;
+			box-shadow: 0 5px 30px rgba(0,255,65,0.4), inset 0 1px 0 rgba(0,255,65,0.3);
+			position: relative;
+		}
+
+		.back-link {
+			position: absolute;
+			left: 20px;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #00ff41;
+			text-decoration: none;
+			font-family: 'Courier New', monospace;
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			padding: 8px 15px;
+			border: 2px solid #00ff41;
+			background: #001a00;
+			transition: all 0.2s;
+			box-shadow: 0 0 10px rgba(0,255,65,0.3);
+		}
+
+		.back-link:hover {
+			background: #00ff41;
+			color: #000;
+			box-shadow: 0 0 20px #00ff41;
+		}
+
+		.back-link::before {
+			content: "← ";
 		}
 
 		.title-text {
-			font-size: 24px;
-			letter-spacing: 6px;
+			font-size: 32px;
+			font-weight: bold;
+			letter-spacing: 8px;
 			text-transform: uppercase;
 			color: #00ff41;
-			text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
-			font-weight: bold;
-			display: inline-block;
-			margin-right: 20px;
+			text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 30px #00ff41, 0 2px 0 #003311;
+			margin-bottom: 5px;
 		}
 
-		.subtitle {
+		.title-subtitle {
 			font-size: 11px;
+			letter-spacing: 4px;
 			color: #00ff4199;
-			letter-spacing: 2px;
+			text-transform: uppercase;
 		}
 
-		.controls {
+		.main-container {
+			display: flex;
+			flex: 1;
+			overflow: hidden;
+		}
+
+		.sidebar {
+			background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+			width: 280px;
+			overflow-y: auto;
+			border-right: 2px solid #00ff41;
+			box-shadow: 5px 0 30px rgba(0,255,65,0.2);
+		}
+
+		.sidebar-content {
+			padding: 20px;
+		}
+
+		.sidebar-section {
+			padding: 15px;
+			margin-bottom: 20px;
 			background: #001a00;
-			border-bottom: 1px solid #00ff4133;
-			padding: 12px 20px;
+			border-radius: 4px;
+			border: 2px solid #00ff4140;
+		}
+
+		.sidebar h2 {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			color: #00ff41;
+			text-shadow: 0 0 10px #00ff41;
+			margin-bottom: 15px;
+			border-bottom: 1px solid #00ff4140;
+			padding-bottom: 8px;
+		}
+
+		.sidebar p {
+			font-size: 11px;
+			line-height: 1.6;
+			color: #00ff41aa;
+			margin-bottom: 12px;
+		}
+
+		.sidebar code {
+			background: #000;
+			padding: 2px 6px;
+			border: 1px solid #00ff4140;
+			border-radius: 2px;
+			font-size: 10px;
+			color: #00ff41;
+		}
+
+		.sidebar ul {
+			margin-left: 20px;
+			margin-bottom: 12px;
+		}
+
+		.sidebar li {
+			font-size: 11px;
+			line-height: 1.6;
+			color: #00ff41aa;
+			margin-bottom: 8px;
+		}
+
+		.canvas-wrapper {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			position: relative;
+		}
+
+		.canvas-container {
+			flex: 1;
+			position: relative;
+			overflow: hidden;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #000;
+		}
+
+		canvas {
+			display: block;
+			max-width: 100%;
+			max-height: 100%;
+			image-rendering: pixelated;
+		}
+
+		.control-panel {
+			background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+			border-top: 2px solid #00ff41;
+			padding: 15px 20px;
+			box-shadow: 0 -5px 30px rgba(0,255,65,0.3);
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 16px;
-			font-size: 12px;
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			gap: 15px;
 		}
 
 		.control-group {
@@ -62,20 +181,23 @@
 		}
 
 		label {
-			color: #00ff4199;
+			color: #00ff41;
 			font-size: 11px;
 			text-transform: uppercase;
 			letter-spacing: 1px;
-			min-width: 100px;
+			min-width: 90px;
+			text-shadow: 0 0 5px #00ff41;
+			font-weight: bold;
 		}
 
 		input[type="range"] {
 			flex: 1;
 			height: 4px;
-			background: #00ff4133;
-			border: none;
+			background: #001a00;
+			border: 1px solid #00ff41;
 			outline: none;
 			-webkit-appearance: none;
+			box-shadow: 0 0 10px rgba(0,255,65,0.2);
 		}
 
 		input[type="range"]::-webkit-slider-thumb {
@@ -99,11 +221,12 @@
 		}
 
 		.value-display {
-			color: #00ff41;
+			color: #0f0;
 			font-weight: bold;
 			min-width: 50px;
 			text-align: right;
 			font-size: 11px;
+			text-shadow: 0 0 8px #00ff41;
 		}
 
 		select, input[type="number"] {
@@ -133,33 +256,17 @@
 			letter-spacing: 1px;
 			transition: all 0.15s;
 			border-radius: 3px;
+			box-shadow: 0 0 10px rgba(0,255,65,0.3);
 		}
 
 		button:hover {
 			background: #00ff41;
-			color: #001;
-			box-shadow: 0 0 15px rgba(0,255,65,0.4);
+			color: #000;
+			box-shadow: 0 0 20px #00ff41;
 		}
 
 		button:active {
 			transform: scale(0.97);
-		}
-
-		.canvas-container {
-			flex: 1;
-			position: relative;
-			overflow: hidden;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: #000;
-		}
-
-		canvas {
-			display: block;
-			max-width: 100%;
-			max-height: 100%;
-			image-rendering: pixelated;
 		}
 
 		.stats {
@@ -190,125 +297,180 @@
 			font-weight: bold;
 		}
 
-		@keyframes scanline {
-			0% { transform: translateY(-100%); }
-			100% { transform: translateY(100%); }
-		}
-
-		.scanline {
-			position: absolute;
+		body::before {
+			content: "";
+			position: fixed;
 			top: 0;
 			left: 0;
-			right: 0;
-			height: 2px;
-			background: linear-gradient(transparent, #00ff4133, transparent);
+			width: 100%;
+			height: 100%;
+			background: repeating-linear-gradient(
+				0deg,
+				rgba(0,255,65,0.03) 0px,
+				transparent 1px,
+				transparent 2px,
+				rgba(0,255,65,0.03) 3px
+			);
 			pointer-events: none;
-			animation: scanline 8s linear infinite;
-		}
-
-		input[type="checkbox"] {
-			width: 16px;
-			height: 16px;
-			cursor: pointer;
+			z-index: 1000;
 		}
 	</style>
 </head>
 <body>
 	<div class="title-bar">
-		<span class="title-text">Perlin/Simplex Noise</span>
-		<span class="subtitle">Procedural noise generation with fractal brownian motion</span>
+		<a href="index.html" class="back-link">Experiments</a>
+		<div class="title-text">Perlin/Simplex Noise</div>
+		<div class="title-subtitle">Procedural noise generation with fractal brownian motion</div>
 	</div>
 
-	<div class="controls">
-		<div class="control-group">
-			<div class="control-row">
-				<label>Noise Type</label>
-				<select id="noiseType">
-					<option value="perlin">Perlin</option>
-					<option value="simplex" selected>Simplex</option>
-				</select>
-			</div>
-			<div class="control-row">
-				<label>Color Mode</label>
-				<select id="colorMode">
-					<option value="grayscale">Grayscale</option>
-					<option value="green">Green Terminal</option>
-					<option value="terrain" selected>Terrain</option>
-					<option value="fire">Fire</option>
-					<option value="water">Water</option>
-					<option value="vaporwave">Vaporwave</option>
-					<option value="turbo">Turbo</option>
-					<option value="miami-vice">Miami Vice</option>
-					<option value="plasma">Plasma</option>
-					<option value="inferno">Inferno</option>
-					<option value="viridis">Viridis</option>
-					<option value="magma">Magma</option>
-					<option value="ocean-deep">Ocean Deep</option>
-					<option value="sunset">Sunset</option>
-					<option value="neon">Neon</option>
-					<option value="earth">Earth</option>
-					<option value="rainbow">Rainbow</option>
-					<option value="ice">Ice</option>
-					<option value="cyberpunk">Cyberpunk</option>
-				</select>
+	<div class="main-container">
+		<div class="sidebar">
+			<div class="sidebar-content">
+				<div class="sidebar-section">
+					<h2>What is Procedural Noise?</h2>
+					<p>
+						Procedural noise generates pseudo-random patterns that appear natural and organic. Unlike pure randomness, noise functions produce smooth, continuous values.
+					</p>
+					<p>
+						Used extensively in computer graphics for terrain generation, textures, clouds, fire effects, and artistic visualizations.
+					</p>
+				</div>
+
+				<div class="sidebar-section">
+					<h2>Perlin vs Simplex</h2>
+					<p>
+						<strong>Perlin noise</strong> was invented by Ken Perlin in 1983 for the movie TRON. It uses a regular grid and interpolation.
+					</p>
+					<p>
+						<strong>Simplex noise</strong> (2001) is Perlin's improved algorithm. It uses a simplex grid (triangles in 2D, tetrahedra in 3D) for better performance and fewer artifacts.
+					</p>
+				</div>
+
+				<div class="sidebar-section">
+					<h2>Fractal Brownian Motion</h2>
+					<p>
+						fBm layers multiple octaves of noise at different frequencies and amplitudes to create rich, detailed patterns:
+					</p>
+					<ul>
+						<li><strong>Octaves:</strong> Number of noise layers to combine</li>
+						<li><strong>Persistence:</strong> How much each octave's amplitude decreases</li>
+						<li><strong>Lacunarity:</strong> How much each octave's frequency increases</li>
+					</ul>
+				</div>
+
+				<div class="sidebar-section">
+					<h2>Controls Guide</h2>
+					<p>
+						<strong>Scale</strong> controls the zoom level - higher values create larger features.
+					</p>
+					<p>
+						<strong>Resolution</strong> trades quality for performance. Lower values render faster but appear more pixelated.
+					</p>
+					<p>
+						<strong>Speed</strong> controls how fast the noise evolves through the third dimension (time).
+					</p>
+				</div>
+
+				<div class="sidebar-section">
+					<h2>Color Palettes</h2>
+					<p>
+						Choose from 19 color palettes including scientific colormaps (Viridis, Inferno, Plasma), artistic themes (Cyberpunk, Vaporwave), and natural palettes (Terrain, Ocean, Earth).
+					</p>
+				</div>
 			</div>
 		</div>
 
-		<div class="control-group">
-			<div class="control-row">
-				<label>Scale</label>
-				<input type="range" id="scale" min="10" max="500" value="100" step="10">
-				<span class="value-display" id="scaleVal">100</span>
+		<div class="canvas-wrapper">
+			<div class="canvas-container">
+				<canvas id="canvas"></canvas>
+				<div class="stats">
+					<div><span class="label">Resolution:</span><span class="value" id="statRes">512x512</span></div>
+					<div><span class="label">FPS:</span><span class="value" id="statFps">60</span></div>
+				</div>
 			</div>
-			<div class="control-row">
-				<label>Octaves</label>
-				<input type="range" id="octaves" min="1" max="8" value="4" step="1">
-				<span class="value-display" id="octavesVal">4</span>
-			</div>
-		</div>
 
-		<div class="control-group">
-			<div class="control-row">
-				<label>Persistence</label>
-				<input type="range" id="persistence" min="0.1" max="1" value="0.5" step="0.05">
-				<span class="value-display" id="persistenceVal">0.5</span>
-			</div>
-			<div class="control-row">
-				<label>Lacunarity</label>
-				<input type="range" id="lacunarity" min="1" max="4" value="2" step="0.1">
-				<span class="value-display" id="lacunarityVal">2</span>
-			</div>
-		</div>
+			<div class="control-panel">
+				<div class="control-group">
+					<div class="control-row">
+						<label>Noise Type</label>
+						<select id="noiseType">
+							<option value="perlin">Perlin</option>
+							<option value="simplex" selected>Simplex</option>
+						</select>
+					</div>
+					<div class="control-row">
+						<label>Color Mode</label>
+						<select id="colorMode">
+							<option value="grayscale">Grayscale</option>
+							<option value="green">Green Terminal</option>
+							<option value="terrain" selected>Terrain</option>
+							<option value="fire">Fire</option>
+							<option value="water">Water</option>
+							<option value="vaporwave">Vaporwave</option>
+							<option value="turbo">Turbo</option>
+							<option value="miami-vice">Miami Vice</option>
+							<option value="plasma">Plasma</option>
+							<option value="inferno">Inferno</option>
+							<option value="viridis">Viridis</option>
+							<option value="magma">Magma</option>
+							<option value="ocean-deep">Ocean Deep</option>
+							<option value="sunset">Sunset</option>
+							<option value="neon">Neon</option>
+							<option value="earth">Earth</option>
+							<option value="rainbow">Rainbow</option>
+							<option value="ice">Ice</option>
+							<option value="cyberpunk">Cyberpunk</option>
+						</select>
+					</div>
+				</div>
 
-		<div class="control-group">
-			<div class="control-row">
-				<label>Resolution</label>
-				<input type="range" id="resolution" min="0.1" max="1" value="0.25" step="0.05">
-				<span class="value-display" id="resolutionVal">0.25</span>
-			</div>
-			<div class="control-row">
-				<label>Speed</label>
-				<input type="range" id="speed" min="0.1" max="2" value="0.5" step="0.1">
-				<span class="value-display" id="speedVal">0.5</span>
-			</div>
-		</div>
+				<div class="control-group">
+					<div class="control-row">
+						<label>Scale</label>
+						<input type="range" id="scale" min="10" max="500" value="100" step="10">
+						<span class="value-display" id="scaleVal">100</span>
+					</div>
+					<div class="control-row">
+						<label>Octaves</label>
+						<input type="range" id="octaves" min="1" max="8" value="4" step="1">
+						<span class="value-display" id="octavesVal">4</span>
+					</div>
+				</div>
 
-		<div class="control-group">
-			<div class="control-row">
-				<label>Seed</label>
-				<input type="number" id="seed" value="12345" min="0" max="999999">
-				<button id="randomSeed">Random</button>
+				<div class="control-group">
+					<div class="control-row">
+						<label>Persistence</label>
+						<input type="range" id="persistence" min="0.1" max="1" value="0.5" step="0.05">
+						<span class="value-display" id="persistenceVal">0.5</span>
+					</div>
+					<div class="control-row">
+						<label>Lacunarity</label>
+						<input type="range" id="lacunarity" min="1" max="4" value="2" step="0.1">
+						<span class="value-display" id="lacunarityVal">2</span>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="control-row">
+						<label>Resolution</label>
+						<input type="range" id="resolution" min="0.1" max="1" value="0.25" step="0.05">
+						<span class="value-display" id="resolutionVal">0.25</span>
+					</div>
+					<div class="control-row">
+						<label>Speed</label>
+						<input type="range" id="speed" min="0.1" max="2" value="0.5" step="0.1">
+						<span class="value-display" id="speedVal">0.5</span>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="control-row">
+						<label>Seed</label>
+						<input type="number" id="seed" value="12345" min="0" max="999999">
+						<button id="randomSeed">Random</button>
+					</div>
+				</div>
 			</div>
-		</div>
-	</div>
-
-	<div class="canvas-container">
-		<canvas id="canvas"></canvas>
-		<div class="scanline"></div>
-
-		<div class="stats">
-			<div><span class="label">Resolution:</span><span class="value" id="statRes">512x512</span></div>
-			<div><span class="label">FPS:</span><span class="value" id="statFps">60</span></div>
 		</div>
 	</div>
 
@@ -316,11 +478,12 @@
 		const canvas = document.getElementById('canvas');
 		const ctx = canvas.getContext('2d');
 
-		// Calculate display size (CSS size)
+		// Calculate display size based on canvas container
 		function calculateDisplaySize() {
-			const width = Math.min(window.innerWidth - 40, 1600);
-			const height = Math.min(window.innerHeight - 200, 1200);
-			return { width, height };
+			const container = document.querySelector('.canvas-container');
+			const width = container.clientWidth - 20;
+			const height = container.clientHeight - 20;
+			return { width: Math.max(width, 100), height: Math.max(height, 100) };
 		}
 
 		// Parameters
@@ -337,8 +500,8 @@
 			resolution: 0.25  // Render at 25% resolution for performance
 		};
 
-		// Set initial canvas size
-		let displaySize = calculateDisplaySize();
+		// Set initial canvas size (defer until DOM is ready)
+		let displaySize = { width: 800, height: 600 };
 		let renderWidth = Math.floor(displaySize.width * params.resolution);
 		let renderHeight = Math.floor(displaySize.height * params.resolution);
 		canvas.width = renderWidth;
@@ -1139,11 +1302,17 @@
 
 		window.addEventListener('resize', handleResize);
 
-		// Initialize
-		setupControls();
-		updateStats();
-		render();
-		animate(0);
+		// Initialize after DOM is ready
+		function init() {
+			updateCanvasSize();
+			setupControls();
+			updateStats();
+			render();
+			animate(0);
+		}
+
+		// Use requestAnimationFrame to ensure layout is complete
+		requestAnimationFrame(init);
 	</script>
 </body>
 </html>
