@@ -479,6 +479,7 @@
         let visitedOrder = [];
         const showSplits = true;
         let nodeId = 0;
+        let resizeRaf = null;
 
         function randomPoint() {
             const padding = 30;
@@ -498,6 +499,31 @@
             });
             updateStats();
             runQuery();
+        }
+
+        function resizeCanvas() {
+            const rect = field.getBoundingClientRect();
+            const nextWidth = Math.max(1, Math.floor(rect.width));
+            const nextHeight = Math.max(1, Math.floor(rect.height));
+            if (field.width === nextWidth && field.height === nextHeight) return;
+            const prevWidth = field.width || nextWidth;
+            const prevHeight = field.height || nextHeight;
+            field.width = nextWidth;
+            field.height = nextHeight;
+            if (!points.length) return;
+            const scaleX = nextWidth / prevWidth;
+            const scaleY = nextHeight / prevHeight;
+            points = points.map((point) => ({
+                x: point.x * scaleX,
+                y: point.y * scaleY
+            }));
+            if (queryPoint) {
+                queryPoint = {
+                    x: queryPoint.x * scaleX,
+                    y: queryPoint.y * scaleY
+                };
+            }
+            rebuildTree();
         }
 
         function buildKdTree(list, depth, bounds) {
@@ -794,11 +820,20 @@
         });
 
         function init() {
+            resizeCanvas();
             kLabel.textContent = kInput.value;
             points = Array.from({ length: defaultCount }, randomPoint);
             rebuildTree();
             animate();
         }
+
+        window.addEventListener('resize', () => {
+            if (resizeRaf) return;
+            resizeRaf = requestAnimationFrame(() => {
+                resizeRaf = null;
+                resizeCanvas();
+            });
+        });
 
         init();
     </script>
