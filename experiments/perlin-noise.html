@@ -240,6 +240,16 @@
 					<option value="turbo">Turbo</option>
 					<option value="miami-vice">Miami Vice</option>
 					<option value="plasma">Plasma</option>
+					<option value="inferno">Inferno</option>
+					<option value="viridis">Viridis</option>
+					<option value="magma">Magma</option>
+					<option value="ocean-deep">Ocean Deep</option>
+					<option value="sunset">Sunset</option>
+					<option value="neon">Neon</option>
+					<option value="earth">Earth</option>
+					<option value="rainbow">Rainbow</option>
+					<option value="ice">Ice</option>
+					<option value="cyberpunk">Cyberpunk</option>
 				</select>
 			</div>
 		</div>
@@ -734,6 +744,259 @@
 						r = Math.floor(241 + (252 - 241) * t);
 						g = Math.floor(130 + (255 - 130) * t);
 						b = Math.floor(60 + (164 - 60) * t);
+					}
+					break;
+
+				case 'inferno':
+					if (value < 0.25) {
+						// Black → Dark purple
+						const t = value / 0.25;
+						r = Math.floor(0 + 60 * t);
+						g = Math.floor(0 + 10 * t);
+						b = Math.floor(4 + 50 * t);
+					} else if (value < 0.5) {
+						// Dark purple → Red-orange
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(60 + 140 * t);
+						g = Math.floor(10 + 40 * t);
+						b = Math.floor(54 - 30 * t);
+					} else if (value < 0.75) {
+						// Red-orange → Orange
+						const t = (value - 0.5) / 0.25;
+						r = Math.floor(200 + 52 * t);
+						g = Math.floor(50 + 100 * t);
+						b = Math.floor(24 + 10 * t);
+					} else {
+						// Orange → Yellow-white
+						const t = (value - 0.75) / 0.25;
+						r = Math.floor(252 + 3 * t);
+						g = Math.floor(150 + 105 * t);
+						b = Math.floor(34 + 180 * t);
+					}
+					break;
+
+				case 'viridis':
+					if (value < 0.25) {
+						// Dark purple → Teal
+						const t = value / 0.25;
+						r = Math.floor(68 - 30 * t);
+						g = Math.floor(1 + 70 * t);
+						b = Math.floor(84 + 30 * t);
+					} else if (value < 0.5) {
+						// Teal → Green
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(38 - 5 * t);
+						g = Math.floor(71 + 60 * t);
+						b = Math.floor(114 - 30 * t);
+					} else if (value < 0.75) {
+						// Green → Yellow-green
+						const t = (value - 0.5) / 0.25;
+						r = Math.floor(33 + 90 * t);
+						g = Math.floor(131 + 50 * t);
+						b = Math.floor(84 - 40 * t);
+					} else {
+						// Yellow-green → Yellow
+						const t = (value - 0.75) / 0.25;
+						r = Math.floor(123 + 130 * t);
+						g = Math.floor(181 + 74 * t);
+						b = Math.floor(44 - 20 * t);
+					}
+					break;
+
+				case 'magma':
+					if (value < 0.25) {
+						// Black → Dark purple
+						const t = value / 0.25;
+						r = Math.floor(0 + 50 * t);
+						g = Math.floor(0 + 10 * t);
+						b = Math.floor(4 + 60 * t);
+					} else if (value < 0.5) {
+						// Dark purple → Magenta
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(50 + 130 * t);
+						g = Math.floor(10 + 20 * t);
+						b = Math.floor(64 + 60 * t);
+					} else if (value < 0.75) {
+						// Magenta → Salmon
+						const t = (value - 0.5) / 0.25;
+						r = Math.floor(180 + 60 * t);
+						g = Math.floor(30 + 100 * t);
+						b = Math.floor(124 - 20 * t);
+					} else {
+						// Salmon → Light yellow
+						const t = (value - 0.75) / 0.25;
+						r = Math.floor(240 + 15 * t);
+						g = Math.floor(130 + 120 * t);
+						b = Math.floor(104 + 100 * t);
+					}
+					break;
+
+				case 'ocean-deep':
+					// Single-toned deep ocean blues
+					if (value < 0.3) {
+						const t = value / 0.3;
+						r = Math.floor(2 + 8 * t);
+						g = Math.floor(10 + 25 * t);
+						b = Math.floor(30 + 50 * t);
+					} else if (value < 0.6) {
+						const t = (value - 0.3) / 0.3;
+						r = Math.floor(10 + 20 * t);
+						g = Math.floor(35 + 50 * t);
+						b = Math.floor(80 + 60 * t);
+					} else {
+						const t = (value - 0.6) / 0.4;
+						r = Math.floor(30 + 50 * t);
+						g = Math.floor(85 + 100 * t);
+						b = Math.floor(140 + 80 * t);
+					}
+					break;
+
+				case 'sunset':
+					if (value < 0.2) {
+						// Deep purple
+						const t = value / 0.2;
+						r = Math.floor(40 + 50 * t);
+						g = Math.floor(20 + 10 * t);
+						b = Math.floor(80 + 40 * t);
+					} else if (value < 0.4) {
+						// Purple → Pink
+						const t = (value - 0.2) / 0.2;
+						r = Math.floor(90 + 130 * t);
+						g = Math.floor(30 + 40 * t);
+						b = Math.floor(120 - 10 * t);
+					} else if (value < 0.6) {
+						// Pink → Orange
+						const t = (value - 0.4) / 0.2;
+						r = Math.floor(220 + 35 * t);
+						g = Math.floor(70 + 80 * t);
+						b = Math.floor(110 - 70 * t);
+					} else if (value < 0.8) {
+						// Orange → Gold
+						const t = (value - 0.6) / 0.2;
+						r = 255;
+						g = Math.floor(150 + 60 * t);
+						b = Math.floor(40 + 20 * t);
+					} else {
+						// Gold → Light yellow
+						const t = (value - 0.8) / 0.2;
+						r = 255;
+						g = Math.floor(210 + 45 * t);
+						b = Math.floor(60 + 140 * t);
+					}
+					break;
+
+				case 'neon':
+					// Categorical/noisy with bright contrasting bands
+					const neonBand = Math.floor(value * 8) % 8;
+					switch(neonBand) {
+						case 0: r = 255; g = 0; b = 100; break;    // Hot pink
+						case 1: r = 0; g = 255; b = 200; break;    // Cyan
+						case 2: r = 255; g = 255; b = 0; break;    // Yellow
+						case 3: r = 150; g = 0; b = 255; break;    // Purple
+						case 4: r = 0; g = 255; b = 50; break;     // Green
+						case 5: r = 255; g = 100; b = 0; break;    // Orange
+						case 6: r = 0; g = 150; b = 255; break;    // Blue
+						case 7: r = 255; g = 0; b = 255; break;    // Magenta
+					}
+					break;
+
+				case 'earth':
+					// Muted natural earth tones
+					if (value < 0.25) {
+						// Dark brown
+						const t = value / 0.25;
+						r = Math.floor(40 + 50 * t);
+						g = Math.floor(30 + 30 * t);
+						b = Math.floor(20 + 15 * t);
+					} else if (value < 0.5) {
+						// Brown → Olive
+						const t = (value - 0.25) / 0.25;
+						r = Math.floor(90 + 20 * t);
+						g = Math.floor(60 + 50 * t);
+						b = Math.floor(35 + 10 * t);
+					} else if (value < 0.75) {
+						// Olive → Tan
+						const t = (value - 0.5) / 0.25;
+						r = Math.floor(110 + 80 * t);
+						g = Math.floor(110 + 60 * t);
+						b = Math.floor(45 + 60 * t);
+					} else {
+						// Tan → Sandy beige
+						const t = (value - 0.75) / 0.25;
+						r = Math.floor(190 + 50 * t);
+						g = Math.floor(170 + 60 * t);
+						b = Math.floor(105 + 80 * t);
+					}
+					break;
+
+				case 'rainbow':
+					// Classic rainbow - many toned
+					const hue = value * 360;
+					const s = 1, l = 0.5;
+					const c = (1 - Math.abs(2 * l - 1)) * s;
+					const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
+					const m = l - c / 2;
+					let r1, g1, b1;
+					if (hue < 60) { r1 = c; g1 = x; b1 = 0; }
+					else if (hue < 120) { r1 = x; g1 = c; b1 = 0; }
+					else if (hue < 180) { r1 = 0; g1 = c; b1 = x; }
+					else if (hue < 240) { r1 = 0; g1 = x; b1 = c; }
+					else if (hue < 300) { r1 = x; g1 = 0; b1 = c; }
+					else { r1 = c; g1 = 0; b1 = x; }
+					r = Math.floor((r1 + m) * 255);
+					g = Math.floor((g1 + m) * 255);
+					b = Math.floor((b1 + m) * 255);
+					break;
+
+				case 'ice':
+					// Two-toned cool blues and whites
+					if (value < 0.5) {
+						// Deep blue → Light blue
+						const t = value / 0.5;
+						r = Math.floor(20 + 100 * t);
+						g = Math.floor(50 + 130 * t);
+						b = Math.floor(120 + 100 * t);
+					} else {
+						// Light blue → White with hint of blue
+						const t = (value - 0.5) / 0.5;
+						r = Math.floor(120 + 130 * t);
+						g = Math.floor(180 + 70 * t);
+						b = Math.floor(220 + 35 * t);
+					}
+					break;
+
+				case 'cyberpunk':
+					// Two-toned cyan and magenta
+					if (value < 0.15) {
+						// Black → Dark cyan
+						const t = value / 0.15;
+						r = Math.floor(5 * t);
+						g = Math.floor(20 + 30 * t);
+						b = Math.floor(30 + 40 * t);
+					} else if (value < 0.45) {
+						// Dark cyan → Bright cyan
+						const t = (value - 0.15) / 0.3;
+						r = Math.floor(5 + 10 * t);
+						g = Math.floor(50 + 205 * t);
+						b = Math.floor(70 + 185 * t);
+					} else if (value < 0.55) {
+						// Cyan → Magenta transition
+						const t = (value - 0.45) / 0.1;
+						r = Math.floor(15 + 240 * t);
+						g = Math.floor(255 - 200 * t);
+						b = Math.floor(255 - 25 * t);
+					} else if (value < 0.85) {
+						// Magenta
+						const t = (value - 0.55) / 0.3;
+						r = 255;
+						g = Math.floor(55 + 20 * t);
+						b = Math.floor(230 + 25 * t);
+					} else {
+						// Magenta → White-pink
+						const t = (value - 0.85) / 0.15;
+						r = 255;
+						g = Math.floor(75 + 150 * t);
+						b = 255;
 					}
 					break;
 
