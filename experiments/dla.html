@@ -21,23 +21,113 @@
             flex-direction: column;
         }
 
-        #header {
-            padding: 20px;
-            background: rgba(0, 255, 65, 0.05);
-            border-bottom: 2px solid #00ff41;
-            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
         }
 
-        h1 {
-            font-size: 24px;
-            text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
-            margin-bottom: 10px;
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
         }
 
         #main {
             display: flex;
             flex: 1;
             overflow: hidden;
+        }
+
+        #info-sidebar {
+            width: 320px;
+            padding: 20px;
+            background: rgba(0, 255, 65, 0.05);
+            border-right: 2px solid #00ff41;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        #info-sidebar h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+        }
+
+        #info-sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        #info-sidebar ul {
+            font-size: 11px;
+            line-height: 1.8;
+            margin-left: 15px;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        #info-sidebar .section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        #info-sidebar .section:last-child {
+            border-bottom: none;
         }
 
         #canvas-container {
@@ -173,15 +263,69 @@
             );
             pointer-events: none;
         }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
-    <div id="header">
-        <h1>[ DIFFUSION LIMITED AGGREGATION ]</h1>
-        <div style="font-size: 11px; opacity: 0.7;">Brownian Tree Growth Simulation</div>
+    <div class="title-bar">
+        <a href="index.html" class="back-link">Experiments</a>
+        <div class="title-text">DIFFUSION LIMITED AGGREGATION</div>
+        <div class="title-subtitle">Brownian Tree Growth Simulation</div>
     </div>
 
     <div id="main">
+        <div id="info-sidebar">
+            <div class="section">
+                <h3>[ WHAT IS DLA? ]</h3>
+                <p>Diffusion Limited Aggregation is a process where particles undergoing random walks stick together to form branching, fractal-like structures called Brownian trees.</p>
+                <p>DLA was first simulated by Witten and Sander in 1981 and appears in many natural phenomena.</p>
+            </div>
+
+            <div class="section">
+                <h3>[ HOW IT WORKS ]</h3>
+                <p>1. Start with a seed particle at the center</p>
+                <p>2. Release particles that perform random walks</p>
+                <p>3. When a walker touches the structure, it sticks</p>
+                <p>4. Repeat to grow the tree</p>
+            </div>
+
+            <div class="section">
+                <h3>[ NATURAL EXAMPLES ]</h3>
+                <ul>
+                    <li>Electrodeposition</li>
+                    <li>Coral growth</li>
+                    <li>Mineral dendrites</li>
+                    <li>Lightning patterns</li>
+                    <li>Blood vessel formation</li>
+                    <li>Snowflake formation</li>
+                    <li>Bacterial colonies</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>[ PROPERTIES ]</h3>
+                <p>DLA structures are fractals with a dimension typically around 1.7 in 2D. They exhibit self-similarity at different scales and have a characteristic branching pattern.</p>
+                <p>The structures are highly sensitive to initial conditions and stochastic in nature.</p>
+            </div>
+        </div>
+
         <div id="canvas-container">
             <canvas id="canvas"></canvas>
         </div>
@@ -268,6 +412,7 @@
                     <div><span class="stat-label">Current Spawn R:</span><span class="stat-value" id="currentSpawnRadius">0</span></div>
                     <div><span class="stat-label">Particles/Sec:</span><span class="stat-value" id="particlesPerSec">0</span></div>
                     <div><span class="stat-label">Bounding Radius:</span><span class="stat-value" id="boundingRadius">0</span></div>
+                    <div><span class="stat-label">Zoom Level:</span><span class="stat-value" id="zoomLevel">100%</span></div>
                     <div><span class="stat-label">FPS:</span><span class="stat-value" id="fps">0</span></div>
                 </div>
             </div>
@@ -287,11 +432,20 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // Simulation state
+        // Camera/viewport system
+        let camera = {
+            x: 0,           // Center of view in simulation space
+            y: 0,
+            zoom: 10,       // Start very zoomed in (pixels per simulation unit)
+            targetZoom: 10,
+            minZoom: 0.5,   // Maximum zoom out
+            maxZoom: 20     // Maximum zoom in
+        };
+
+        // Simulation state - now in simulation space with (0,0) at center
         let particles = [];
         let walkers = [];
         let grid = new Map(); // Spatial hash grid
-        let centerX, centerY;
         let maxRadius = 0;
         let isPaused = false;
         let frameCount = 0;
@@ -311,7 +465,7 @@
             showWalkers: false
         };
 
-        // Grid cell size for spatial hashing
+        // Grid cell size for spatial hashing (in simulation units)
         const CELL_SIZE = 4;
 
         // Helper functions
@@ -356,41 +510,40 @@
             particles = [];
             grid.clear();
             maxRadius = 0;
-            centerX = canvas.width / 2;
-            centerY = canvas.height / 2;
 
+            // Simulation space is centered at (0, 0)
             switch (settings.seedPattern) {
                 case 'center':
-                    addParticle(centerX, centerY, 0);
+                    addParticle(0, 0, 0);
                     break;
 
                 case 'hline':
                     for (let i = -20; i <= 20; i += 2) {
-                        addParticle(centerX + i, centerY, 0);
+                        addParticle(i, 0, 0);
                     }
                     break;
 
                 case 'vline':
                     for (let i = -20; i <= 20; i += 2) {
-                        addParticle(centerX, centerY + i, 0);
+                        addParticle(0, i, 0);
                     }
                     break;
 
                 case 'circle':
                     const circleRadius = 30;
                     for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
-                        const x = centerX + Math.cos(angle) * circleRadius;
-                        const y = centerY + Math.sin(angle) * circleRadius;
+                        const x = Math.cos(angle) * circleRadius;
+                        const y = Math.sin(angle) * circleRadius;
                         addParticle(x, y, 0);
                     }
                     break;
 
                 case 'multi':
                     const positions = [
-                        [centerX - 40, centerY],
-                        [centerX + 40, centerY],
-                        [centerX, centerY - 40],
-                        [centerX, centerY + 40]
+                        [-40, 0],
+                        [40, 0],
+                        [0, -40],
+                        [0, 40]
                     ];
                     for (const [x, y] of positions) {
                         addParticle(x, y, 0);
@@ -404,7 +557,7 @@
             particles.push(particle);
             addToGrid(x, y, particle);
 
-            const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+            const dist = Math.sqrt(x * x + y * y);
             maxRadius = Math.max(maxRadius, dist);
         }
 
@@ -416,8 +569,8 @@
             respawn() {
                 const spawnRadius = (maxRadius + 10) * settings.spawnRadiusMult;
                 const angle = Math.random() * Math.PI * 2;
-                this.x = centerX + Math.cos(angle) * spawnRadius;
-                this.y = centerY + Math.sin(angle) * spawnRadius;
+                this.x = Math.cos(angle) * spawnRadius;
+                this.y = Math.sin(angle) * spawnRadius;
             }
 
             walk() {
@@ -445,7 +598,7 @@
                 }
 
                 // Check if too far away
-                const dist = Math.sqrt((this.x - centerX) ** 2 + (this.y - centerY) ** 2);
+                const dist = Math.sqrt(this.x * this.x + this.y * this.y);
                 const killRadius = (maxRadius + 10) * settings.killRadiusMult;
                 if (dist > killRadius) {
                     this.respawn();
@@ -456,7 +609,7 @@
         }
 
         function getParticleColor(particle) {
-            const dist = Math.sqrt((particle.x - centerX) ** 2 + (particle.y - centerY) ** 2);
+            const dist = Math.sqrt(particle.x * particle.x + particle.y * particle.y);
 
             switch (settings.colorScheme) {
                 case 'distance':
@@ -477,28 +630,66 @@
             }
         }
 
+        // Transform simulation coordinates to screen coordinates
+        function simToScreen(simX, simY) {
+            const screenX = (simX - camera.x) * camera.zoom + canvas.width / 2;
+            const screenY = (simY - camera.y) * camera.zoom + canvas.height / 2;
+            return { x: screenX, y: screenY };
+        }
+
+        function updateCamera() {
+            // Smoothly interpolate zoom
+            camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
+
+            // Auto-adjust zoom to keep structure in view
+            if (maxRadius > 0) {
+                // Calculate zoom needed to fit structure with some padding
+                const padding = 1.5; // 50% padding
+                const structureSize = maxRadius * 2 * padding;
+                const canvasSize = Math.min(canvas.width, canvas.height);
+                const neededZoom = canvasSize / structureSize;
+
+                // Gradually zoom out as structure grows
+                if (neededZoom < camera.targetZoom) {
+                    camera.targetZoom = Math.max(neededZoom, camera.minZoom);
+                }
+            }
+        }
+
         function render() {
             // Clear canvas
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Update camera
+            updateCamera();
+
             // Draw particles
             for (const particle of particles) {
+                const screen = simToScreen(particle.x, particle.y);
+
+                // Calculate particle size based on zoom (min 1px, max 4px)
+                const particleSize = Math.max(1, Math.min(4, camera.zoom * 0.5));
+
                 ctx.fillStyle = getParticleColor(particle);
-                ctx.fillRect(particle.x - 1, particle.y - 1, 2, 2);
+                ctx.fillRect(screen.x - particleSize/2, screen.y - particleSize/2, particleSize, particleSize);
 
                 // Add glow effect
-                ctx.shadowBlur = 3;
-                ctx.shadowColor = ctx.fillStyle;
-                ctx.fillRect(particle.x - 1, particle.y - 1, 2, 2);
-                ctx.shadowBlur = 0;
+                if (camera.zoom > 2) {
+                    ctx.shadowBlur = Math.min(3, camera.zoom * 0.3);
+                    ctx.shadowColor = ctx.fillStyle;
+                    ctx.fillRect(screen.x - particleSize/2, screen.y - particleSize/2, particleSize, particleSize);
+                    ctx.shadowBlur = 0;
+                }
             }
 
             // Draw walkers if enabled
             if (settings.showWalkers) {
                 ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
                 for (const walker of walkers) {
-                    ctx.fillRect(walker.x - 1, walker.y - 1, 2, 2);
+                    const screen = simToScreen(walker.x, walker.y);
+                    const walkerSize = Math.max(1, Math.min(3, camera.zoom * 0.4));
+                    ctx.fillRect(screen.x - walkerSize/2, screen.y - walkerSize/2, walkerSize, walkerSize);
                 }
             }
         }
@@ -541,6 +732,7 @@
             document.getElementById('activeWalkers').textContent = walkers.length;
             document.getElementById('currentSpawnRadius').textContent = Math.round((maxRadius + 10) * settings.spawnRadiusMult);
             document.getElementById('boundingRadius').textContent = Math.round(maxRadius);
+            document.getElementById('zoomLevel').textContent = Math.round(camera.zoom * 10) + '%';
 
             requestAnimationFrame(animate);
         }
@@ -559,6 +751,8 @@
             }
             frameCount = 0;
             particlesAddedLastSec = 0;
+            camera.zoom = 10;
+            camera.targetZoom = 10;
         });
 
         document.getElementById('particlesPerFrame').addEventListener('input', (e) => {
