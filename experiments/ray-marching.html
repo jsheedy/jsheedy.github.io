@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ray Marching & Signed Distance Fields</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-right: 2px solid #00ff41;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 5px 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: #000;
+            border: none;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        .stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff41;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            padding: 15px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-row label {
+            min-width: 120px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        .value {
+            min-width: 50px;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            font-size: 11px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+
+        select, button {
+            background: #001a00;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        select:hover, button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        select {
+            width: 100%;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .sidebar h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .sidebar p {
+            color: #00ff41;
+            margin-bottom: 12px;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            line-height: 1.6;
+        }
+
+        .sidebar strong {
+            color: #0f0;
+            text-shadow: 0 0 5px #00ff41;
+        }
+
+        .sidebar code {
+            background: #001a00;
+            padding: 2px 6px;
+            border: 1px solid #003311;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+            text-shadow: 0 0 5px #00ff41;
+            font-size: 9px;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a href="index.html" class="back-link">Experiments</a>
+        <div class="title-text">RAY MARCHING</div>
+        <div class="title-subtitle">Signed Distance Fields - Drag to rotate, scroll to zoom</div>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <h3>About Ray Marching</h3>
+            <p>
+                Ray marching is a rendering technique that traces rays through a scene defined by <strong>Signed Distance Fields (SDFs)</strong>.
+                Unlike traditional polygon rendering, SDFs describe geometry mathematically - a function that returns the distance to the nearest surface.
+            </p>
+            <p>
+                The algorithm marches along each ray in steps, where the step size equals the distance to the nearest surface (guaranteed safe).
+                This continues until we hit a surface (distance &lt; threshold) or exceed the maximum distance.
+            </p>
+            <p>
+                <strong>SDF Primitives:</strong><br>
+                <code>sphere</code> <code>box</code> <code>torus</code> <code>cylinder</code>
+            </p>
+            <p>
+                <strong>Operations:</strong><br>
+                <code>union</code> <code>subtract</code> <code>intersect</code> <code>smooth blend</code>
+            </p>
+            <p>
+                <strong>Lighting:</strong><br>
+                Phong shading, soft shadows via secondary ray marching, ambient occlusion from step count, distance fog.
+            </p>
+        </div>
+
+        <div class="content-area">
+            <div class="canvas-container">
+                <canvas id="canvas" width="800" height="600"></canvas>
+                <div class="stats" id="stats"></div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <button onclick="loadPreset('spheres')">Spheres</button>
+                        <button onclick="loadPreset('smoothBlend')">Blend</button>
+                        <button onclick="loadPreset('subtraction')">Subtract</button>
+                        <button onclick="loadPreset('torus')">Torus</button>
+                        <button onclick="loadPreset('boxes')">Boxes</button>
+                        <button onclick="loadPreset('complex')">Complex</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Ray March</h3>
+                    <div class="control-row">
+                        <label>Max Steps:</label>
+                        <input type="range" id="maxSteps" min="16" max="256" value="128" step="16">
+                        <span class="value" id="maxStepsValue">128</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Max Distance:</label>
+                        <input type="range" id="maxDist" min="10" max="100" value="50" step="5">
+                        <span class="value" id="maxDistValue">50</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Rendering</h3>
+                    <div class="control-row">
+                        <label>Smooth Blend:</label>
+                        <input type="range" id="smoothBlend" min="0" max="2" value="0.3" step="0.1">
+                        <span class="value" id="smoothBlendValue">0.3</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Shadow Soft:</label>
+                        <input type="range" id="shadowSoft" min="1" max="64" value="8" step="1">
+                        <span class="value" id="shadowSoftValue">8</span>
+                    </div>
+                    <div class="control-row">
+                        <label>AO Strength:</label>
+                        <input type="range" id="aoStrength" min="0" max="1" value="0.5" step="0.05">
+                        <span class="value" id="aoStrengthValue">0.5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Light Position</h3>
+                    <div class="control-row">
+                        <label>X:</label>
+                        <input type="range" id="lightX" min="-10" max="10" value="3" step="0.5">
+                        <span class="value" id="lightXValue">3</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Y:</label>
+                        <input type="range" id="lightY" min="-10" max="10" value="4" step="0.5">
+                        <span class="value" id="lightYValue">4</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Z:</label>
+                        <input type="range" id="lightZ" min="-10" max="10" value="3" step="0.5">
+                        <span class="value" id="lightZValue">3</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Extras</h3>
+                    <div class="control-row">
+                        <label>Anim Speed:</label>
+                        <input type="range" id="animSpeed" min="0" max="2" value="1" step="0.1">
+                        <span class="value" id="animSpeedValue">1</span>
+                    </div>
+                    <div class="control-row">
+                        <label>Debug Mode:</label>
+                        <select id="debugMode" onchange="updateUniforms()">
+                            <option value="0">Normal</option>
+                            <option value="1">Steps</option>
+                            <option value="2">Normals</option>
+                            <option value="3">Distance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Advanced</h3>
+                    <div class="control-row">
+                        <label>Threshold:</label>
+                        <input type="range" id="threshold" min="0.0001" max="0.01" value="0.001" step="0.0001">
+                        <span class="value" id="thresholdValue">0.001</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision highp float;
+
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform vec3 u_cameraPos;
+        uniform vec3 u_cameraTarget;
+        uniform vec3 u_lightPos;
+        uniform float u_maxSteps;
+        uniform float u_maxDist;
+        uniform float u_threshold;
+        uniform float u_smoothBlend;
+        uniform float u_shadowSoft;
+        uniform float u_aoStrength;
+        uniform int u_debugMode;
+        uniform int u_sceneType;
+
+        #define PI 3.14159265359
+
+        // SDF Primitives
+        float sdSphere(vec3 p, float r) {
+            return length(p) - r;
+        }
+
+        float sdBox(vec3 p, vec3 b) {
+            vec3 q = abs(p) - b;
+            return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+        }
+
+        float sdTorus(vec3 p, vec2 t) {
+            vec2 q = vec2(length(p.xz) - t.x, p.y);
+            return length(q) - t.y;
+        }
+
+        float sdCylinder(vec3 p, float h, float r) {
+            vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+            return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+        }
+
+        float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+            vec3 pa = p - a, ba = b - a;
+            float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+            return length(pa - ba * h) - r;
+        }
+
+        // SDF Operations
+        float opUnion(float d1, float d2) {
+            return min(d1, d2);
+        }
+
+        float opSubtraction(float d1, float d2) {
+            return max(-d1, d2);
+        }
+
+        float opIntersection(float d1, float d2) {
+            return max(d1, d2);
+        }
+
+        // Smooth minimum for smooth blending
+        float opSmoothUnion(float d1, float d2, float k) {
+            float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+            return mix(d2, d1, h) - k * h * (1.0 - h);
+        }
+
+        float opSmoothSubtraction(float d1, float d2, float k) {
+            float h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);
+            return mix(d2, -d1, h) + k * h * (1.0 - h);
+        }
+
+        // Scene definition
+        float scene(vec3 p) {
+            if (u_sceneType == 0) {
+                // Spheres
+                float s1 = sdSphere(p - vec3(0.0, 0.0, 0.0), 1.0);
+                float s2 = sdSphere(p - vec3(1.5, 0.0, 0.0), 0.8);
+                float s3 = sdSphere(p - vec3(-1.5, 0.0, 0.0), 0.8);
+                return opUnion(opUnion(s1, s2), s3);
+            } else if (u_sceneType == 1) {
+                // Smooth blend
+                float s1 = sdSphere(p - vec3(-0.5, 0.0, 0.0), 1.0);
+                float s2 = sdSphere(p - vec3(0.5, 0.0, 0.0), 1.0);
+                return opSmoothUnion(s1, s2, u_smoothBlend);
+            } else if (u_sceneType == 2) {
+                // Subtraction
+                float box = sdBox(p, vec3(1.0, 1.0, 1.0));
+                float sphere = sdSphere(p, 1.3);
+                return opSubtraction(sphere, box);
+            } else if (u_sceneType == 3) {
+                // Torus
+                return sdTorus(p, vec2(1.0, 0.3));
+            } else if (u_sceneType == 4) {
+                // Boxes
+                float b1 = sdBox(p - vec3(0.0, 0.0, 0.0), vec3(0.8, 0.8, 0.8));
+                float b2 = sdBox(p - vec3(1.2, 0.0, 0.0), vec3(0.5, 1.0, 0.5));
+                float b3 = sdBox(p - vec3(-1.2, 0.0, 0.0), vec3(0.5, 1.0, 0.5));
+                return opUnion(opUnion(b1, b2), b3);
+            } else {
+                // Complex scene
+                float ground = p.y + 1.5;
+
+                // Animated rotating torus
+                vec3 p1 = p;
+                float angle = u_time * 0.5;
+                p1.xz = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * p1.xz;
+                float torus = sdTorus(p1 - vec3(0.0, 0.0, 0.0), vec2(1.0, 0.3));
+
+                // Sphere
+                float sphere = sdSphere(p - vec3(0.0, 0.0, 0.0), 0.5);
+
+                // Box
+                float box = sdBox(p - vec3(2.0, -0.5, 0.0), vec3(0.5, 0.5, 0.5));
+
+                // Capsule
+                float capsule = sdCapsule(p, vec3(-2.0, -1.0, 0.0), vec3(-2.0, 0.5, 0.0), 0.3);
+
+                float objects = opUnion(opUnion(opUnion(sphere, torus), box), capsule);
+                return opUnion(ground, objects);
+            }
+        }
+
+        // Calculate normal using finite differences
+        vec3 calcNormal(vec3 p) {
+            vec2 e = vec2(0.001, 0.0);
+            return normalize(vec3(
+                scene(p + e.xyy) - scene(p - e.xyy),
+                scene(p + e.yxy) - scene(p - e.yxy),
+                scene(p + e.yyx) - scene(p - e.yyx)
+            ));
+        }
+
+        // Soft shadow calculation
+        float calcShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
+            float res = 1.0;
+            float t = mint;
+            for (int i = 0; i < 50; i++) {
+                float h = scene(ro + rd * t);
+                if (h < 0.001) return 0.0;
+                res = min(res, k * h / t);
+                t += h;
+                if (t > maxt) break;
+            }
+            return res;
+        }
+
+        // Ambient occlusion
+        float calcAO(vec3 p, vec3 n) {
+            float occ = 0.0;
+            float sca = 1.0;
+            for (int i = 0; i < 5; i++) {
+                float h = 0.01 + 0.12 * float(i) / 4.0;
+                float d = scene(p + h * n);
+                occ += (h - d) * sca;
+                sca *= 0.95;
+            }
+            return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
+        }
+
+        // Ray marching
+        vec4 rayMarch(vec3 ro, vec3 rd) {
+            float t = 0.0;
+            float steps = 0.0;
+
+            for (float i = 0.0; i < 256.0; i++) {
+                if (i >= u_maxSteps) break;
+
+                vec3 p = ro + rd * t;
+                float d = scene(p);
+
+                if (d < u_threshold) {
+                    return vec4(t, steps, d, 1.0);
+                }
+
+                if (t > u_maxDist) {
+                    return vec4(t, steps, d, 0.0);
+                }
+
+                t += d;
+                steps += 1.0;
+            }
+
+            return vec4(t, steps, 0.0, 0.0);
+        }
+
+        // Camera setup
+        mat3 setCamera(vec3 ro, vec3 ta, float cr) {
+            vec3 cw = normalize(ta - ro);
+            vec3 cp = vec3(sin(cr), cos(cr), 0.0);
+            vec3 cu = normalize(cross(cw, cp));
+            vec3 cv = cross(cu, cw);
+            return mat3(cu, cv, cw);
+        }
+
+        void main() {
+            // Normalized pixel coordinates
+            vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+
+            // Camera setup
+            vec3 ro = u_cameraPos;
+            vec3 ta = u_cameraTarget;
+            mat3 ca = setCamera(ro, ta, 0.0);
+
+            // Ray direction
+            vec3 rd = ca * normalize(vec3(uv, 2.0));
+
+            // Ray march
+            vec4 result = rayMarch(ro, rd);
+            float t = result.x;
+            float steps = result.y;
+            float hit = result.w;
+
+            vec3 col = vec3(0.0);
+
+            if (u_debugMode == 1) {
+                // Show steps as heatmap
+                float ratio = steps / u_maxSteps;
+                col = vec3(ratio, 1.0 - ratio, 0.0);
+            } else if (u_debugMode == 2) {
+                // Show normals
+                if (hit > 0.5) {
+                    vec3 p = ro + rd * t;
+                    vec3 nor = calcNormal(p);
+                    col = nor * 0.5 + 0.5;
+                }
+            } else if (u_debugMode == 3) {
+                // Show distance field
+                vec3 p = ro + rd * t;
+                float d = scene(p);
+                col = vec3(sin(d * 10.0) * 0.5 + 0.5);
+            } else {
+                // Normal rendering
+                if (hit > 0.5) {
+                    vec3 p = ro + rd * t;
+                    vec3 nor = calcNormal(p);
+
+                    // Lighting
+                    vec3 lightDir = normalize(u_lightPos - p);
+
+                    // Diffuse
+                    float diff = max(dot(nor, lightDir), 0.0);
+
+                    // Specular
+                    vec3 viewDir = normalize(ro - p);
+                    vec3 halfDir = normalize(lightDir + viewDir);
+                    float spec = pow(max(dot(nor, halfDir), 0.0), 32.0);
+
+                    // Shadow
+                    float shadow = calcShadow(p + nor * 0.01, lightDir, 0.01, 10.0, u_shadowSoft);
+
+                    // Ambient occlusion
+                    float ao = calcAO(p, nor);
+
+                    // Material color based on position
+                    vec3 matCol = vec3(0.6, 0.7, 0.9);
+                    if (u_sceneType == 5) {
+                        matCol = 0.5 + 0.5 * sin(vec3(1.0, 2.0, 3.0) * 3.0 + p.y * 2.0);
+                    }
+
+                    // Combine lighting
+                    vec3 ambient = vec3(0.2, 0.3, 0.4) * ao;
+                    vec3 diffuse = matCol * diff * shadow;
+                    vec3 specular = vec3(1.0) * spec * shadow;
+
+                    col = ambient + diffuse + specular;
+
+                    // Apply AO
+                    col = mix(col, col * ao, u_aoStrength);
+
+                    // Fog
+                    float fogAmount = 1.0 - exp(-t * 0.05);
+                    vec3 fogColor = vec3(0.2, 0.3, 0.5);
+                    col = mix(col, fogColor, fogAmount);
+                } else {
+                    // Background gradient
+                    col = mix(vec3(0.2, 0.3, 0.5), vec3(0.05, 0.1, 0.2), uv.y * 0.5 + 0.5);
+                }
+            }
+
+            // Gamma correction
+            col = pow(col, vec3(0.4545));
+
+            gl_FragColor = vec4(col, 1.0);
+        }
+    </script>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+        if (!gl) {
+            alert('WebGL not supported');
+            throw new Error('WebGL not supported');
+        }
+
+        // Compile shader
+        function compileShader(source, type) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+
+        // Create program
+        function createProgram(vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(program));
+                gl.deleteProgram(program);
+                return null;
+            }
+
+            return program;
+        }
+
+        // Get shader source from script tags
+        const vertexShaderSource = document.getElementById('vertex-shader').textContent;
+        const fragmentShaderSource = document.getElementById('fragment-shader').textContent;
+
+        // Compile shaders
+        const vertexShader = compileShader(vertexShaderSource, gl.VERTEX_SHADER);
+        const fragmentShader = compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
+
+        // Create program
+        const program = createProgram(vertexShader, fragmentShader);
+        gl.useProgram(program);
+
+        // Set up fullscreen quad
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1,
+             1, -1,
+            -1,  1,
+             1,  1
+        ]), gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(program, 'a_position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        // Get uniform locations
+        const uniforms = {
+            resolution: gl.getUniformLocation(program, 'u_resolution'),
+            time: gl.getUniformLocation(program, 'u_time'),
+            cameraPos: gl.getUniformLocation(program, 'u_cameraPos'),
+            cameraTarget: gl.getUniformLocation(program, 'u_cameraTarget'),
+            lightPos: gl.getUniformLocation(program, 'u_lightPos'),
+            maxSteps: gl.getUniformLocation(program, 'u_maxSteps'),
+            maxDist: gl.getUniformLocation(program, 'u_maxDist'),
+            threshold: gl.getUniformLocation(program, 'u_threshold'),
+            smoothBlend: gl.getUniformLocation(program, 'u_smoothBlend'),
+            shadowSoft: gl.getUniformLocation(program, 'u_shadowSoft'),
+            aoStrength: gl.getUniformLocation(program, 'u_aoStrength'),
+            debugMode: gl.getUniformLocation(program, 'u_debugMode'),
+            sceneType: gl.getUniformLocation(program, 'u_sceneType')
+        };
+
+        // State
+        let state = {
+            cameraAngle: 0,
+            cameraElevation: 0.3,
+            cameraDistance: 5,
+            sceneType: 0,
+            isDragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            frameCount: 0,
+            lastTime: performance.now(),
+            fps: 0
+        };
+
+        // Camera controls
+        canvas.addEventListener('mousedown', (e) => {
+            state.isDragging = true;
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!state.isDragging) return;
+
+            const dx = e.clientX - state.lastMouseX;
+            const dy = e.clientY - state.lastMouseY;
+
+            state.cameraAngle += dx * 0.005;
+            state.cameraElevation += dy * 0.005;
+            state.cameraElevation = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, state.cameraElevation));
+
+            state.lastMouseX = e.clientX;
+            state.lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            state.isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            state.isDragging = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            state.cameraDistance += e.deltaY * 0.01;
+            state.cameraDistance = Math.max(2, Math.min(20, state.cameraDistance));
+        });
+
+        // Control bindings
+        function bindControl(id, uniformKey) {
+            const slider = document.getElementById(id);
+            const value = document.getElementById(id + 'Value');
+
+            slider.addEventListener('input', () => {
+                const val = parseFloat(slider.value);
+                value.textContent = val.toFixed(slider.step < 0.01 ? 4 : slider.step < 0.1 ? 2 : slider.step < 1 ? 1 : 0);
+                updateUniforms();
+            });
+
+            // Initial value
+            value.textContent = parseFloat(slider.value).toFixed(slider.step < 0.01 ? 4 : slider.step < 0.1 ? 2 : slider.step < 1 ? 1 : 0);
+        }
+
+        bindControl('maxSteps', 'maxSteps');
+        bindControl('maxDist', 'maxDist');
+        bindControl('threshold', 'threshold');
+        bindControl('smoothBlend', 'smoothBlend');
+        bindControl('shadowSoft', 'shadowSoft');
+        bindControl('aoStrength', 'aoStrength');
+        bindControl('animSpeed', 'animSpeed');
+        bindControl('lightX', 'lightPos');
+        bindControl('lightY', 'lightPos');
+        bindControl('lightZ', 'lightPos');
+
+        // Preset scenes
+        window.loadPreset = function(preset) {
+            const presets = {
+                'spheres': 0,
+                'smoothBlend': 1,
+                'subtraction': 2,
+                'torus': 3,
+                'boxes': 4,
+                'complex': 5
+            };
+            state.sceneType = presets[preset];
+            updateUniforms();
+        };
+
+        // Update uniforms
+        function updateUniforms() {
+            // Camera position (orbital)
+            const camX = Math.cos(state.cameraAngle) * Math.cos(state.cameraElevation) * state.cameraDistance;
+            const camY = Math.sin(state.cameraElevation) * state.cameraDistance;
+            const camZ = Math.sin(state.cameraAngle) * Math.cos(state.cameraElevation) * state.cameraDistance;
+
+            gl.uniform3f(uniforms.cameraPos, camX, camY, camZ);
+            gl.uniform3f(uniforms.cameraTarget, 0, 0, 0);
+
+            // Light position
+            const lightX = parseFloat(document.getElementById('lightX').value);
+            const lightY = parseFloat(document.getElementById('lightY').value);
+            const lightZ = parseFloat(document.getElementById('lightZ').value);
+            gl.uniform3f(uniforms.lightPos, lightX, lightY, lightZ);
+
+            // Ray marching parameters
+            gl.uniform1f(uniforms.maxSteps, parseFloat(document.getElementById('maxSteps').value));
+            gl.uniform1f(uniforms.maxDist, parseFloat(document.getElementById('maxDist').value));
+            gl.uniform1f(uniforms.threshold, parseFloat(document.getElementById('threshold').value));
+            gl.uniform1f(uniforms.smoothBlend, parseFloat(document.getElementById('smoothBlend').value));
+            gl.uniform1f(uniforms.shadowSoft, parseFloat(document.getElementById('shadowSoft').value));
+            gl.uniform1f(uniforms.aoStrength, parseFloat(document.getElementById('aoStrength').value));
+
+            // Debug mode
+            gl.uniform1i(uniforms.debugMode, parseInt(document.getElementById('debugMode').value));
+
+            // Scene type
+            gl.uniform1i(uniforms.sceneType, state.sceneType);
+        }
+
+        // Render loop
+        function render(time) {
+            time *= 0.001; // Convert to seconds
+
+            // Calculate FPS
+            state.frameCount++;
+            const now = performance.now();
+            if (now - state.lastTime >= 1000) {
+                state.fps = Math.round(state.frameCount * 1000 / (now - state.lastTime));
+                state.frameCount = 0;
+                state.lastTime = now;
+            }
+
+            // Update stats
+            const steps = document.getElementById('maxSteps').value;
+            document.getElementById('stats').innerHTML = `
+                FPS: ${state.fps}<br>
+                Max Steps: ${steps}<br>
+                Camera Dist: ${state.cameraDistance.toFixed(1)}<br>
+                Resolution: ${canvas.width}x${canvas.height}
+            `;
+
+            // Set uniforms
+            gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
+            gl.uniform1f(uniforms.time, time * parseFloat(document.getElementById('animSpeed').value));
+
+            updateUniforms();
+
+            // Draw
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            requestAnimationFrame(render);
+        }
+
+        // Start rendering
+        requestAnimationFrame(render);
+
+        // Handle resize
+        function resize() {
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Initial load
+        loadPreset('spheres');
+    </script>
+</body>
+</html>
