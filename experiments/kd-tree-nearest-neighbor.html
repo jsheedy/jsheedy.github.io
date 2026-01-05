@@ -5,106 +5,170 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-d Tree Nearest Neighbor</title>
     <style>
-        :root {
-            color-scheme: light;
-            --bg-deep: #0f1f2b;
-            --bg-mid: #2c3a4a;
-            --panel: #f6f2e9;
-            --panel-strong: #ffffff;
-            --ink: #1a2b34;
-            --accent: #f05d5e;
-            --accent-2: #3a86ff;
-            --accent-3: #ffbe0b;
-            --muted: #6b7a86;
-            --grid: rgba(15, 31, 43, 0.08);
-            --shadow: 0 20px 45px rgba(10, 20, 30, 0.25);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        * { box-sizing: border-box; }
 
         body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: "Futura", "Trebuchet MS", "Avenir Next", sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at 15% 20%, rgba(255, 190, 11, 0.35), transparent 50%),
-                radial-gradient(circle at 80% 10%, rgba(58, 134, 255, 0.25), transparent 55%),
-                linear-gradient(160deg, var(--bg-deep), var(--bg-mid));
-            display: flex;
-            justify-content: center;
-            padding: 32px 18px 48px;
-        }
-
-        .frame {
-            width: min(1200px, 100%);
-            background: var(--panel);
-            border-radius: 24px;
-            box-shadow: var(--shadow);
-            padding: 28px;
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 20px;
         }
 
-        header {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
         }
 
-        h1 {
-            margin: 0;
-            font-size: clamp(26px, 3vw, 34px);
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
             letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
         }
 
-        .subtitle {
-            color: var(--muted);
-            font-size: 15px;
-            line-height: 1.5;
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
         }
 
-        .layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr);
-            gap: 24px;
-            align-items: start;
+        .back-link::before {
+            content: "← ";
         }
 
-        .panel {
-            background: var(--panel-strong);
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: inset 0 0 0 1px rgba(15, 31, 43, 0.06);
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 4px;
+            text-transform: uppercase;
         }
 
-        canvas {
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #canvas {
             display: block;
+            background: #000;
+            flex: 1;
             width: 100%;
-            height: auto;
-            border-radius: 16px;
-            border: 1px solid rgba(15, 31, 43, 0.1);
-            background: repeating-linear-gradient(
-                0deg,
-                #fdfbf7 0,
-                #fdfbf7 24px,
-                var(--grid) 24px,
-                var(--grid) 25px
-            );
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+            animation: flicker 0.15s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 260px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .right-sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 260px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff41;
+            box-shadow: -5px 0 30px rgba(0, 255, 65, 0.2);
+            padding: 15px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar-section.highlighted {
+            background: #001a00;
+            border-color: #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .sidebar h2,
+        .right-sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+        }
+
+        .sidebar p,
+        .right-sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
         }
 
         .legend {
+            font-size: 11px;
+            color: #00ff41aa;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            margin-top: 12px;
-            font-size: 12px;
-            color: var(--muted);
+            gap: 8px;
         }
 
         .legend span {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 8px;
         }
@@ -114,39 +178,103 @@
             height: 10px;
             border-radius: 50%;
             display: inline-block;
+            box-shadow: 0 0 8px currentColor;
         }
 
-        .controls {
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
             display: grid;
-            gap: 14px;
-        }
-
-        .control-card {
-            background: var(--panel-strong);
-            border-radius: 16px;
-            padding: 14px;
-            box-shadow: inset 0 0 0 1px rgba(15, 31, 43, 0.08);
-        }
-
-        .control-card h2 {
-            margin: 0 0 10px;
-            font-size: 15px;
-            letter-spacing: 0.5px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
         }
 
         .control-group {
-            display: grid;
-            gap: 8px;
-            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
         label {
-            font-size: 13px;
-            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
         }
 
         input[type="range"] {
             width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button-group button {
+            flex: 1;
         }
 
         .toggle-row {
@@ -155,205 +283,201 @@
             gap: 8px;
         }
 
-        .toggle {
-            flex: 1 1 auto;
-            padding: 8px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(15, 31, 43, 0.2);
-            background: transparent;
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--ink);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .toggle.active {
-            background: var(--accent-2);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 8px 18px rgba(58, 134, 255, 0.25);
-        }
-
-        .toggle:active {
-            transform: scale(0.98);
-        }
-
-        .actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 8px;
-        }
-
-        .action {
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            background: var(--accent);
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .action.secondary {
-            background: var(--accent-3);
-            color: #2e2a1e;
-        }
-
-        .action:active {
-            transform: translateY(1px);
+        .toggle-row button.active {
+            background: #00ff41;
+            color: #000;
         }
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
             gap: 10px;
         }
 
         .stat {
-            background: rgba(15, 31, 43, 0.05);
-            border-radius: 12px;
-            padding: 10px;
             text-align: center;
         }
 
-        .stat strong {
-            display: block;
-            font-size: 20px;
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .tree-panel {
-            display: none;
-            margin-top: 14px;
-        }
-
-        .tree-panel.active {
             display: block;
         }
 
-        .tree-panel canvas {
-            background: #ffffff;
+        #tree {
+            width: 100%;
+            background: #000;
+            border: 2px solid #00ff41;
+            box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
         }
 
-        @media (max-width: 900px) {
-            .layout {
-                grid-template-columns: 1fr;
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        @media (max-width: 1100px) {
+            .sidebar,
+            .right-sidebar {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="frame">
-        <header>
-            <h1>K-d Tree Nearest Neighbor</h1>
-            <div class="subtitle">
-                Build a k-d tree, switch between add and query modes, and compare the search path against brute force. Splitting planes alternate by axis, while search visits animate through the tree.
-            </div>
-        </header>
+    <div class="title-bar">
+        <a class="back-link" href="index.html">experiments</a>
+        <div class="title-text">K-D TREE</div>
+        <div class="title-subtitle">Nearest Neighbor Search</div>
+    </div>
 
-        <div class="layout">
-            <div class="panel">
-                <canvas id="field" width="900" height="600"></canvas>
-                <div class="legend">
-                    <span><i class="dot" style="background: var(--accent);"></i>query point</span>
-                    <span><i class="dot" style="background: var(--accent-2);"></i>nearest neighbors</span>
-                    <span><i class="dot" style="background: var(--accent-3);"></i>visited nodes</span>
-                    <span><i class="dot" style="background: #ef476f;"></i>x-axis split</span>
-                    <span><i class="dot" style="background: #3a86ff;"></i>y-axis split</span>
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section highlighted">
+                    <h2>How it works</h2>
+                    <p>A k-d tree is a binary space-partitioning tree that alternates x/y splits to keep points balanced for fast neighbor searches. Here, each node is a point and each split is drawn as a red or blue line across its bounds.</p>
+                    <p>Click to add points. Hover to reveal the nearest neighbor search path.</p>
+                </div>
+                <div class="sidebar-section">
+                    <h2>Legend</h2>
+                    <div class="legend">
+                        <span><i class="dot" style="color:#ffdd57;background:#ffdd57;"></i>query point</span>
+                        <span><i class="dot" style="color:#00d4ff;background:#00d4ff;"></i>nearest neighbors</span>
+                        <span><i class="dot" style="color:#ff6b6b;background:#ff6b6b;"></i>x-axis split</span>
+                        <span><i class="dot" style="color:#4dabf7;background:#4dabf7;"></i>y-axis split</span>
+                        <span><i class="dot" style="color:#ffd166;background:#ffd166;"></i>visited nodes</span>
+                    </div>
                 </div>
             </div>
+        </aside>
 
-            <div class="controls">
-                <div class="control-card">
-                    <h2>Interaction</h2>
-                    <div class="toggle-row" id="modeToggles">
-                        <button class="toggle active" data-mode="add">Add points</button>
-                        <button class="toggle" data-mode="query">Query nearest</button>
-                    </div>
-                    <div class="actions" style="margin-top: 10px;">
-                        <button class="action" id="randomize">Randomize</button>
-                        <button class="action secondary" id="clear">Clear</button>
-                    </div>
+        <div class="canvas-wrapper">
+            <canvas id="canvas" width="900" height="600"></canvas>
+        </div>
+
+        <aside class="right-sidebar">
+            <div class="sidebar-section">
+                <h2>Points</h2>
+                <div class="button-group" style="margin-top: 12px;">
+                    <button id="randomize">Randomize</button>
+                    <button id="clear">Clear</button>
                 </div>
-
-                <div class="control-card">
-                    <h2>Parameters</h2>
-                    <div class="control-group">
-                        <label>Point count: <span id="countLabel">120</span></label>
-                        <input id="count" type="range" min="10" max="500" step="10" value="120">
-                    </div>
-                    <div class="control-group">
-                        <label>K nearest: <span id="kLabel">1</span></label>
-                        <input id="k" type="range" min="1" max="8" step="1" value="1">
-                    </div>
-                    <div class="control-group">
-                        <label>Animation speed: <span id="speedLabel">140</span> ms/node</label>
-                        <input id="speed" type="range" min="40" max="400" step="10" value="140">
-                    </div>
+                <div class="button-group" style="margin-top: 10px;">
+                    <button id="add100">Add 100</button>
+                    <button id="add1000">Add 1000</button>
                 </div>
-
-                <div class="control-card">
-                    <h2>Visualization</h2>
-                    <div class="toggle-row">
-                        <button class="toggle active" id="splitToggle">Splitting planes</button>
-                        <button class="toggle" id="treeToggle">Tree view</button>
-                    </div>
+                <div class="control-group" style="margin-top: 12px;">
+                    <label>K nearest <span class="value-display" id="kLabel">25</span></label>
+                    <input id="k" type="range" min="1" max="50" step="1" value="25">
                 </div>
+            </div>
 
-                <div class="control-card">
-                    <h2>Stats</h2>
-                    <div class="stats">
-                        <div class="stat"><strong id="statPoints">0</strong>points</div>
-                        <div class="stat"><strong id="statDepth">0</strong>depth</div>
-                        <div class="stat"><strong id="statBalance">0</strong>balance</div>
-                        <div class="stat"><strong id="statVisited">0</strong>kd visits</div>
-                        <div class="stat"><strong id="statBrute">0</strong>brute checks</div>
-                    </div>
+            <div class="sidebar-section">
+                <h2>View</h2>
+                <p>Splitting planes and the tree diagram are always visible.</p>
+            </div>
+
+            <div class="sidebar-section tree-panel" id="treePanel">
+                <h2>Tree Structure</h2>
+                <canvas id="tree" width="220" height="280"></canvas>
+            </div>
+        </aside>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-group" style="grid-column: 1 / -1;">
+            <label>Stats</label>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="statPoints">0</div>
+                    <div class="stat-label">Points</div>
                 </div>
-
-                <div class="control-card tree-panel" id="treePanel">
-                    <h2>Tree Structure</h2>
-                    <canvas id="tree" width="360" height="420"></canvas>
+                <div class="stat">
+                    <div class="stat-value" id="statDepth">0</div>
+                    <div class="stat-label">Depth</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statBalance">0</div>
+                    <div class="stat-label">Balance</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statVisited">0</div>
+                    <div class="stat-label">KD Visits</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const field = document.getElementById('field');
+        const field = document.getElementById('canvas');
         const ctx = field.getContext('2d');
         const treeCanvas = document.getElementById('tree');
         const treeCtx = treeCanvas.getContext('2d');
 
-        const countInput = document.getElementById('count');
         const kInput = document.getElementById('k');
-        const speedInput = document.getElementById('speed');
-        const countLabel = document.getElementById('countLabel');
         const kLabel = document.getElementById('kLabel');
-        const speedLabel = document.getElementById('speedLabel');
-        const splitToggle = document.getElementById('splitToggle');
-        const treeToggle = document.getElementById('treeToggle');
-        const treePanel = document.getElementById('treePanel');
-        const modeToggles = document.getElementById('modeToggles');
 
         const statPoints = document.getElementById('statPoints');
         const statDepth = document.getElementById('statDepth');
         const statBalance = document.getElementById('statBalance');
         const statVisited = document.getElementById('statVisited');
-        const statBrute = document.getElementById('statBrute');
 
         const randomizeButton = document.getElementById('randomize');
         const clearButton = document.getElementById('clear');
+        const add100Button = document.getElementById('add100');
+        const add1000Button = document.getElementById('add1000');
+
+        const colors = {
+            point: '#00ff41',
+            query: '#ffdd57',
+            neighbor: '#00d4ff',
+            visited: '#ffd166',
+            splitX: '#ff6b6b',
+            splitY: '#4dabf7'
+        };
+
+        const defaultCount = 120;
 
         let points = [];
         let root = null;
         let queryPoint = null;
         let neighborResult = [];
         let visitedOrder = [];
-        let animationStart = 0;
-        let mode = 'add';
-        let showSplits = true;
-        let showTree = false;
+        const showSplits = true;
         let nodeId = 0;
 
         function randomPoint() {
@@ -443,16 +567,6 @@
             }
         }
 
-        function bruteForce(target, k) {
-            const results = points.map((point) => {
-                const dx = point.x - target.x;
-                const dy = point.y - target.y;
-                return { point, dist: dx * dx + dy * dy };
-            });
-            results.sort((a, b) => a.dist - b.dist);
-            return results.slice(0, k);
-        }
-
         function runQuery() {
             if (!queryPoint || !root) {
                 neighborResult = [];
@@ -465,10 +579,7 @@
             kdSearch(root, queryPoint, Number(kInput.value), result, visited);
             neighborResult = result;
             visitedOrder = visited;
-            animationStart = performance.now();
-            const brute = bruteForce(queryPoint, Number(kInput.value));
             statVisited.textContent = visitedOrder.length;
-            statBrute.textContent = brute.length ? points.length : 0;
         }
 
         function updateStats() {
@@ -479,7 +590,6 @@
             statBalance.textContent = balance;
             if (!queryPoint) {
                 statVisited.textContent = 0;
-                statBrute.textContent = 0;
             }
         }
 
@@ -500,7 +610,7 @@
         function drawSplits(node) {
             if (!node) return;
             const { point, bounds, axis } = node;
-            ctx.strokeStyle = axis === 0 ? '#ef476f' : '#3a86ff';
+            ctx.strokeStyle = axis === 0 ? colors.splitX : colors.splitY;
             ctx.lineWidth = 1;
             ctx.beginPath();
             if (axis === 0) {
@@ -516,7 +626,7 @@
         }
 
         function drawPoints() {
-            ctx.fillStyle = '#1f2d3a';
+            ctx.fillStyle = colors.point;
             points.forEach((point) => {
                 ctx.beginPath();
                 ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
@@ -526,7 +636,7 @@
 
         function drawQuery() {
             if (!queryPoint) return;
-            ctx.fillStyle = '#f05d5e';
+            ctx.fillStyle = colors.query;
             ctx.beginPath();
             ctx.arc(queryPoint.x, queryPoint.y, 6, 0, Math.PI * 2);
             ctx.fill();
@@ -535,7 +645,7 @@
                 ? Math.sqrt(neighborResult[neighborResult.length - 1].dist)
                 : 0;
             if (radius) {
-                ctx.strokeStyle = 'rgba(240, 93, 94, 0.3)';
+                ctx.strokeStyle = 'rgba(255, 221, 87, 0.35)';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(queryPoint.x, queryPoint.y, radius, 0, Math.PI * 2);
@@ -545,7 +655,7 @@
 
         function drawNeighbors() {
             if (!queryPoint) return;
-            ctx.strokeStyle = 'rgba(58, 134, 255, 0.45)';
+            ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
             ctx.lineWidth = 2;
             neighborResult.forEach((entry) => {
                 const point = entry.node.point;
@@ -553,7 +663,7 @@
                 ctx.moveTo(queryPoint.x, queryPoint.y);
                 ctx.lineTo(point.x, point.y);
                 ctx.stroke();
-                ctx.fillStyle = '#3a86ff';
+                ctx.fillStyle = colors.neighbor;
                 ctx.beginPath();
                 ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
                 ctx.fill();
@@ -562,14 +672,8 @@
 
         function drawVisited() {
             if (!visitedOrder.length) return;
-            const interval = Number(speedInput.value);
-            const revealed = Math.min(
-                visitedOrder.length,
-                Math.floor((performance.now() - animationStart) / interval) + 1
-            );
-            ctx.fillStyle = '#ffbe0b';
-            for (let i = 0; i < revealed; i++) {
-                const node = visitedOrder[i];
+            ctx.fillStyle = colors.visited;
+            for (const node of visitedOrder) {
                 ctx.beginPath();
                 ctx.arc(node.point.x, node.point.y, 7, 0, Math.PI * 2);
                 ctx.fill();
@@ -595,23 +699,18 @@
         }
 
         function drawTree() {
-            if (!showTree) return;
             treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
             if (!root) return;
             const positions = new Map();
-            const levelHeight = 50;
+            const { maxDepth } = computeDepthStats(root);
+            const levelHeight = Math.max(16, (treeCanvas.height - 40) / Math.max(1, maxDepth + 1));
             layoutTree(root, 20, treeCanvas.width - 20, levelHeight, positions);
-            const interval = Number(speedInput.value);
-            const revealed = Math.min(
-                visitedOrder.length,
-                Math.floor((performance.now() - animationStart) / interval) + 1
-            );
-            const visitedSet = new Set(visitedOrder.slice(0, revealed).map((node) => node.id));
+            const visitedSet = new Set(visitedOrder.map((node) => node.id));
 
             positions.forEach(({ node, x, y }) => {
                 if (node.left) {
                     const child = positions.get(node.left.id);
-                    treeCtx.strokeStyle = 'rgba(26, 43, 52, 0.2)';
+                    treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
                     treeCtx.beginPath();
                     treeCtx.moveTo(x, y);
                     treeCtx.lineTo(child.x, child.y);
@@ -619,7 +718,7 @@
                 }
                 if (node.right) {
                     const child = positions.get(node.right.id);
-                    treeCtx.strokeStyle = 'rgba(26, 43, 52, 0.2)';
+                    treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
                     treeCtx.beginPath();
                     treeCtx.moveTo(x, y);
                     treeCtx.lineTo(child.x, child.y);
@@ -629,9 +728,13 @@
 
             positions.forEach(({ node, x, y }) => {
                 const isVisited = visitedSet.has(node.id);
-                treeCtx.fillStyle = isVisited ? '#ffbe0b' : (node.axis === 0 ? '#ef476f' : '#3a86ff');
+                if (isVisited) {
+                    treeCtx.fillStyle = colors.visited;
+                } else {
+                    treeCtx.fillStyle = node.axis === 0 ? colors.splitX : colors.splitY;
+                }
                 treeCtx.beginPath();
-                treeCtx.arc(x, y, 8, 0, Math.PI * 2);
+                treeCtx.arc(x, y, 6, 0, Math.PI * 2);
                 treeCtx.fill();
             });
         }
@@ -642,45 +745,29 @@
             requestAnimationFrame(animate);
         }
 
-        function setMode(newMode) {
-            mode = newMode;
-            [...modeToggles.children].forEach((btn) => {
-                btn.classList.toggle('active', btn.dataset.mode === newMode);
-            });
+        function getPointerPosition(event) {
+            const rect = field.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (field.width / rect.width),
+                y: (event.clientY - rect.top) * (field.height / rect.height)
+            };
         }
 
-        field.addEventListener('click', (event) => {
-            const rect = field.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * (field.width / rect.width);
-            const y = (event.clientY - rect.top) * (field.height / rect.height);
-            if (mode === 'add') {
-                points.push({ x, y });
-                rebuildTree();
-            } else {
-                queryPoint = { x, y };
-                runQuery();
-            }
+        field.addEventListener('pointerdown', (event) => {
+            const position = getPointerPosition(event);
+            points.push(position);
+            rebuildTree();
         });
 
-        modeToggles.addEventListener('click', (event) => {
-            const target = event.target.closest('button');
-            if (!target) return;
-            setMode(target.dataset.mode);
-        });
-
-        splitToggle.addEventListener('click', () => {
-            showSplits = !showSplits;
-            splitToggle.classList.toggle('active', showSplits);
-        });
-
-        treeToggle.addEventListener('click', () => {
-            showTree = !showTree;
-            treeToggle.classList.toggle('active', showTree);
-            treePanel.classList.toggle('active', showTree);
+        field.addEventListener('pointermove', (event) => {
+            if (event.pointerType === 'touch') return;
+            queryPoint = getPointerPosition(event);
+            runQuery();
         });
 
         randomizeButton.addEventListener('click', () => {
-            points = Array.from({ length: Number(countInput.value) }, randomPoint);
+            const targetCount = points.length || defaultCount;
+            points = Array.from({ length: targetCount }, randomPoint);
             queryPoint = null;
             rebuildTree();
         });
@@ -691,13 +778,13 @@
             rebuildTree();
         });
 
-        countInput.addEventListener('input', () => {
-            countLabel.textContent = countInput.value;
+        add100Button.addEventListener('click', () => {
+            points = points.concat(Array.from({ length: 100 }, randomPoint));
+            rebuildTree();
         });
 
-        countInput.addEventListener('change', () => {
-            points = Array.from({ length: Number(countInput.value) }, randomPoint);
-            queryPoint = null;
+        add1000Button.addEventListener('click', () => {
+            points = points.concat(Array.from({ length: 1000 }, randomPoint));
             rebuildTree();
         });
 
@@ -706,15 +793,9 @@
             runQuery();
         });
 
-        speedInput.addEventListener('input', () => {
-            speedLabel.textContent = speedInput.value;
-        });
-
         function init() {
-            countLabel.textContent = countInput.value;
             kLabel.textContent = kInput.value;
-            speedLabel.textContent = speedInput.value;
-            points = Array.from({ length: Number(countInput.value) }, randomPoint);
+            points = Array.from({ length: defaultCount }, randomPoint);
             rebuildTree();
             animate();
         }
