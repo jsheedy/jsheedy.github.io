@@ -4,226 +4,378 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fourier Epicycles Drawing Machine</title>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <style>
-:root {
-  --bg-1: #0b1020;
-  --bg-2: #111a2f;
-  --panel: rgba(255, 255, 255, 0.08);
-  --panel-strong: rgba(255, 255, 255, 0.14);
-  --text: #e9f0ff;
-  --muted: rgba(233, 240, 255, 0.65);
-  --accent: #6cf6ff;
-  --accent-2: #ff8bd1;
-  --accent-3: #ffd36c;
-  --stroke: rgba(108, 246, 255, 0.45);
-}
-
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: "Avenir Next", "Futura", "Gill Sans", sans-serif;
-  color: var(--text);
-  background: radial-gradient(circle at top, #1f2c5c, var(--bg-1) 50%),
-    radial-gradient(circle at 20% 80%, #2a1458, transparent 55%),
-    linear-gradient(135deg, var(--bg-1), var(--bg-2));
+  font-family: 'Courier New', monospace;
+  background: #0a0e0a;
+  color: #00ff41;
   overflow: hidden;
-}
-
-main {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) 1fr;
-  gap: 18px;
-  padding: 18px;
   height: 100vh;
-}
-
-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
 }
 
-header h1 {
-  font-size: 1.4rem;
-  margin: 0;
-  letter-spacing: 0.04em;
+.title-bar {
+  background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+  border-bottom: 3px solid #00ff41;
+  padding: 15px 20px;
+  text-align: center;
+  box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+  position: relative;
 }
 
-header p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+.back-link {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #00ff41;
+  text-decoration: none;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 15px;
+  border: 2px solid #00ff41;
+  background: #001a00;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
-.controls {
+.back-link:hover {
+  background: #00ff41;
+  color: #000;
+  box-shadow: 0 0 20px #00ff41;
+}
+
+.back-link::before {
+  content: "<- ";
+}
+
+.title-text {
+  font-family: 'Courier New', monospace;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  color: #00ff41;
+  text-shadow:
+    0 0 10px #00ff41,
+    0 0 20px #00ff41,
+    0 0 30px #00ff41,
+    0 2px 0 #003311;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.title-subtitle {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: #00ff4199;
+  text-transform: uppercase;
+  font-weight: normal;
+}
+
+#canvas {
+  display: block;
+  background: #000;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+}
+
+.main-area {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: var(--panel);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  padding: 16px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 280px;
+  border-left: 2px solid #00ff41;
+  background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+  padding: 16px 14px;
+  box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.15);
+}
+
+.sidebar h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  text-shadow: 0 0 8px #00ff41;
+}
+
+.sidebar p {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #00ff41cc;
+  margin-bottom: 10px;
+}
+
+.sidebar .callout {
+  border: 1px solid #00ff4160;
+  padding: 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #00ff4199;
+  background: #001a00;
+}
+
+.control-panel {
+  background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+  border-top: 2px solid #00ff41;
+  padding: 12px 18px 14px;
+  box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
 }
 
 .control-group {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 label {
-  font-size: 0.82rem;
-  color: var(--muted);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 1px;
+  color: #00ff41;
+  text-shadow: 0 0 5px #00ff41;
+  font-weight: bold;
 }
 
-input[type="range"],
+.value-display {
+  color: #0f0;
+  font-size: 13px;
+  text-shadow: 0 0 8px #00ff41;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  background: #001a00;
+  border: 1px solid #00ff41;
+  outline: none;
+  -webkit-appearance: none;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #00ff41;
+  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00ff41;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #00ff41;
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 0 10px #00ff41;
+}
+
 select,
 input[type="text"] {
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: var(--panel-strong);
-  color: var(--text);
-  padding: 8px 10px;
+  background: #001a00;
+  color: #00ff41;
+  border: 2px solid #00ff41;
+  padding: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
 }
 
 input[type="text"]::placeholder {
-  color: rgba(233, 240, 255, 0.4);
+  color: #00ff4170;
 }
 
 button {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  background: #001a00;
+  color: #00ff41;
+  border: 2px solid #00ff41;
+  padding: 10px 20px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  color: #06121c;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 10px 20px rgba(108, 246, 255, 0.25);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
-button.secondary {
-  background: linear-gradient(135deg, rgba(255, 211, 108, 0.9), rgba(255, 139, 209, 0.9));
-}
-
-button.ghost {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text);
-  box-shadow: none;
+button:hover {
+  background: #00ff41;
+  color: #000;
+  box-shadow: 0 0 20px #00ff41;
 }
 
 button:active {
-  transform: scale(0.98);
-}
-
-.toggle-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.toggle-row label {
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text);
+  transform: scale(0.95);
 }
 
 .stats {
-  background: rgba(9, 14, 34, 0.6);
-  border-radius: 14px;
-  padding: 12px;
   display: grid;
-  gap: 6px;
-  font-size: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #00ff4140;
 }
 
-.stats div {
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0f0;
+  text-shadow: 0 0 10px #00ff41;
+  font-family: 'Courier New', monospace;
+}
+
+.stat-label {
+  font-size: 9px;
+  color: #00ff4199;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.button-group {
   display: flex;
-  justify-content: space-between;
-  color: var(--muted);
+  gap: 10px;
+  grid-column: span 2;
 }
 
-.stats span {
-  color: var(--text);
-  font-weight: 600;
+.button-group button {
+  flex: 1;
 }
 
-.canvas-wrap {
-  position: relative;
-  border-radius: 22px;
-  overflow: hidden;
-  background: linear-gradient(160deg, rgba(108, 246, 255, 0.08), transparent 60%),
-    linear-gradient(320deg, rgba(255, 139, 209, 0.12), transparent 55%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 120px rgba(6, 8, 18, 0.9), 0 20px 50px rgba(0, 0, 0, 0.35);
-}
-
-canvas#stage {
-  width: 100%;
-  height: 100%;
-  display: block;
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #00ff41;
+  filter: brightness(1.2);
 }
 
 canvas#spectrum {
   width: 100%;
-  height: 90px;
-  border-radius: 14px;
-  background: rgba(8, 12, 24, 0.8);
+  height: 100px;
+  background: #001a00;
+  border: 1px solid #00ff41;
+  box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.2);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 65, 0.03) 0px,
+    transparent 1px,
+    transparent 2px,
+    rgba(0, 255, 65, 0.03) 3px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.98; }
+  50% { opacity: 1; }
+  100% { opacity: 0.98; }
+}
+
+#canvas {
+  animation: flicker 0.15s infinite;
 }
 
 .tip {
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.3;
+  color: #00ff4199;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
 }
 
 @media (max-width: 900px) {
-  main {
-    grid-template-columns: 1fr;
+  .main-area {
+    flex-direction: column;
   }
 
-  .controls {
-    order: 2;
-  }
-
-  .canvas-wrap {
-    min-height: 56vh;
+  .sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 2px solid #00ff41;
+    box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.12);
   }
 }
 </style>
 </head>
 <body>
-<main>
-  <section class="controls">
-    <header>
-      <h1>Fourier Epicycles</h1>
-      <p>Draw or pick a preset. Watch rotating circles rebuild the path.</p>
-    </header>
+  <div class="title-bar">
+    <a href="index.html" class="back-link">Experiments</a>
+    <div class="title-text">FOURIER EPICYCLES</div>
+    <div class="title-subtitle">ROTATING VECTORS DRAWING MACHINE</div>
+  </div>
+
+  <div class="main-area">
+    <canvas id="canvas"></canvas>
+    <aside class="sidebar">
+      <h2>Fourier Epicycles</h2>
+      <p>Any closed path can be rebuilt by spinning vectors. Each vector is a Fourier coefficient with a frequency, radius, and phase.</p>
+      <p>Stack the circles tip-to-tail and the final point draws the original shape as time advances through one cycle.</p>
+      <p>The Discrete Fourier Transform converts the sampled path into complex coefficients: f(t) = x(t) + i·y(t), cₙ = Σ f(t)e^(-2πint/N).</p>
+      <p>Each cₙ becomes an epicycle with radius |cₙ| and angular velocity n. Summing them reconstructs the path.</p>
+      <div class="callout">Lower frequencies capture the big shape. Higher frequencies add detail.</div>
+    </aside>
+  </div>
+
+  <div class="control-panel">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="statFps">0</div>
+        <div class="stat-label">FPS</div>
+      </div>
+    </div>
 
     <div class="control-group">
       <label for="preset">Preset</label>
       <select id="preset">
+        <option value="infinity" selected>Infinity</option>
+        <option value="usa">USA States</option>
         <option value="draw">Draw on canvas</option>
         <option value="circle">Circle</option>
         <option value="heart">Heart</option>
         <option value="star">Star</option>
         <option value="spiral">Spiral</option>
-        <option value="infinity">Infinity</option>
         <option value="text">Text (scanline)</option>
       </select>
     </div>
@@ -234,17 +386,17 @@ canvas#spectrum {
     </div>
 
     <div class="control-group">
-      <label for="epicycles">Epicycles</label>
-      <input id="epicycles" type="range" min="8" max="200" value="80" />
+      <label for="epicycles">Epicycles: <span class="value-display" id="epicyclesValue">80</span></label>
+      <input id="epicycles" type="range" min="1" max="500" value="80" />
     </div>
 
     <div class="control-group">
-      <label for="samples">Samples</label>
-      <input id="samples" type="range" min="64" max="512" step="64" value="256" />
+      <label for="samples">Samples: <span class="value-display" id="samplesValue">256</span></label>
+      <input id="samples" type="range" min="10" max="1000" step="10" value="256" />
     </div>
 
     <div class="control-group">
-      <label for="speed">Speed</label>
+      <label for="speed">Speed: <span class="value-display" id="speedValue">1.0</span></label>
       <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1" />
     </div>
 
@@ -256,50 +408,40 @@ canvas#spectrum {
       </select>
     </div>
 
-    <div class="toggle-row">
-      <label><input id="showOriginal" type="checkbox" checked /> Original path</label>
-      <label><input id="showCircles" type="checkbox" checked /> Circles</label>
-      <label><input id="showLines" type="checkbox" checked /> Lines</label>
+    <div class="control-group">
+      <label style="display: flex; align-items: center; gap: 8px;">
+        <input id="showOriginal" type="checkbox" checked />
+        <span>Original path</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px;">
+        <input id="showCircles" type="checkbox" checked />
+        <span>Circles</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px;">
+        <input id="showLines" type="checkbox" checked />
+        <span>Lines</span>
+      </label>
     </div>
 
-    <div class="toggle-row">
+    <div class="button-group">
       <button id="play">Pause</button>
-      <button id="clear" class="ghost">Clear Trace</button>
-      <button id="capture" class="secondary">Use Current Path</button>
+      <button id="clear">Clear Trace</button>
+      <button id="capture">Use Current Path</button>
     </div>
 
     <div class="control-group">
-      <label for="scrub">Timeline</label>
+      <label for="scrub">Timeline: <span class="value-display" id="scrubValue">0.00</span></label>
       <input id="scrub" type="range" min="0" max="1" step="0.001" value="0" />
     </div>
 
-    <div class="control-group">
-      <label>Spectrum</label>
-      <canvas id="spectrum" width="320" height="90"></canvas>
+    <div class="control-group" style="grid-column: 1 / -1;">
+      <div class="tip">Tip: Draw slowly for smoother curves. Text preset uses scanline hatching.</div>
     </div>
-
-    <div class="stats">
-      <div>Epicycles <span id="statEpicycles">0</span></div>
-      <div>Samples <span id="statSamples">0</span></div>
-      <div>DFT ms <span id="statDft">0</span></div>
-      <div>FPS <span id="statFps">0</span></div>
-      <div>Cycle t <span id="statTime">0</span></div>
-    </div>
-
-    <p class="tip">Tip: Draw slowly for smoother curves. The text preset uses scanline hatching.</p>
-  </section>
-
-  <section class="canvas-wrap">
-    <canvas id="stage"></canvas>
-  </section>
-</main>
+  </div>
 
 <script>
-const canvas = document.getElementById("stage");
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const spectrum = document.getElementById("spectrum");
-const spectrumCtx = spectrum.getContext("2d");
-
 const presetSelect = document.getElementById("preset");
 const textInputWrap = document.getElementById("textInputWrap");
 const textInput = document.getElementById("textInput");
@@ -315,11 +457,11 @@ const clearButton = document.getElementById("clear");
 const captureButton = document.getElementById("capture");
 const scrubInput = document.getElementById("scrub");
 
-const statEpicycles = document.getElementById("statEpicycles");
-const statSamples = document.getElementById("statSamples");
-const statDft = document.getElementById("statDft");
 const statFps = document.getElementById("statFps");
-const statTime = document.getElementById("statTime");
+const epicyclesValue = document.getElementById("epicyclesValue");
+const samplesValue = document.getElementById("samplesValue");
+const speedValue = document.getElementById("speedValue");
+const scrubValue = document.getElementById("scrubValue");
 
 let width = 0;
 let height = 0;
@@ -336,9 +478,9 @@ let drawing = false;
 let scrubbing = false;
 let lastFrame = performance.now();
 let fps = 0;
-let lastDftMs = 0;
-
-const palette = ["#6cf6ff", "#ff8bd1", "#ffd36c", "#8bffb3", "#8ba6ff"];
+const usaTopoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
+let usaPath = null;
+let usaLoading = false;
 
 function resize() {
   width = canvas.clientWidth;
@@ -428,10 +570,7 @@ function dft(points) {
 }
 
 function buildFourier(points) {
-  const start = performance.now();
   const coefficients = dft(points);
-  const end = performance.now();
-  lastDftMs = (end - start).toFixed(1);
   return coefficients;
 }
 
@@ -447,16 +586,16 @@ function epicycles(x, y, rotation, coeffs, count) {
 
     if (showCirclesInput.checked) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(108, 246, 255, 0.18)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(0, 255, 65, 0.28)";
+      ctx.lineWidth = 1.6;
       ctx.arc(vx, vy, radius, 0, Math.PI * 2);
       ctx.stroke();
     }
 
     if (showLinesInput.checked) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(255, 139, 209, 0.45)";
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(0, 255, 65, 0.65)";
+      ctx.lineWidth = 2;
       ctx.moveTo(vx, vy);
       ctx.lineTo(nx, ny);
       ctx.stroke();
@@ -471,19 +610,28 @@ function epicycles(x, y, rotation, coeffs, count) {
 function drawTrace() {
   if (trace.length < 2) return;
   ctx.beginPath();
-  ctx.strokeStyle = "rgba(255, 211, 108, 0.85)";
-  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = "rgba(0, 255, 65, 0.55)";
+  ctx.lineWidth = 3;
+  ctx.shadowColor = "rgba(0, 255, 65, 0.5)";
+  ctx.shadowBlur = 10;
   ctx.moveTo(trace[0].x, trace[0].y);
+  const breakDistance = Math.min(width, height) * 0.25;
   for (let i = 1; i < trace.length; i++) {
-    ctx.lineTo(trace[i].x, trace[i].y);
+    const jump = distance(trace[i - 1], trace[i]);
+    if (jump > breakDistance) {
+      ctx.moveTo(trace[i].x, trace[i].y);
+    } else {
+      ctx.lineTo(trace[i].x, trace[i].y);
+    }
   }
   ctx.stroke();
+  ctx.shadowBlur = 0;
 }
 
 function drawOriginal() {
   if (!showOriginalInput.checked || resampled.length < 2) return;
   ctx.beginPath();
-  ctx.strokeStyle = "rgba(108, 246, 255, 0.25)";
+  ctx.strokeStyle = "rgba(0, 255, 65, 0.15)";
   ctx.lineWidth = 1.2;
   ctx.moveTo(center.x + resampled[0].x, center.y + resampled[0].y);
   for (let i = 1; i < resampled.length; i++) {
@@ -492,28 +640,12 @@ function drawOriginal() {
   ctx.stroke();
 }
 
-function drawSpectrum() {
-  spectrumCtx.clearRect(0, 0, spectrum.width, spectrum.height);
-  if (!fourier.length) return;
-  const coeffs = [...fourier].sort((a, b) => Math.abs(a.freq) - Math.abs(b.freq));
-  const maxAmp = Math.max(...coeffs.map((c) => c.amp), 1e-6);
-  const barWidth = spectrum.width / coeffs.length;
-  for (let i = 0; i < coeffs.length; i++) {
-    const c = coeffs[i];
-    const height = (c.amp / maxAmp) * (spectrum.height - 10);
-    const x = i * barWidth;
-    const y = spectrum.height - height;
-    spectrumCtx.fillStyle = palette[i % palette.length];
-    spectrumCtx.fillRect(x, y, Math.max(1, barWidth - 1), height);
-  }
-}
-
 function updateStats() {
-  statEpicycles.textContent = Math.min(parseInt(epicyclesInput.value, 10), fourier.length);
-  statSamples.textContent = resampled.length;
-  statDft.textContent = lastDftMs;
   statFps.textContent = fps.toFixed(0);
-  statTime.textContent = (time % (Math.PI * 2)).toFixed(2);
+  epicyclesValue.textContent = epicyclesInput.value;
+  samplesValue.textContent = samplesInput.value;
+  speedValue.textContent = parseFloat(speedInput.value).toFixed(1);
+  scrubValue.textContent = parseFloat(scrubInput.value).toFixed(2);
 }
 
 function render() {
@@ -532,6 +664,13 @@ function render() {
     const maxTrace = resampled.length ? resampled.length : 600;
     if (trace.length > maxTrace) trace.pop();
     drawTrace();
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0, 255, 65, 0.95)";
+    ctx.shadowColor = "rgba(0, 255, 65, 0.9)";
+    ctx.shadowBlur = 18;
+    ctx.arc(tip.x, tip.y, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
     if (!scrubbing && playing) {
       const dt = (Math.PI * 2) / resampled.length;
@@ -558,7 +697,6 @@ function useSource(points) {
   trace = [];
   time = 0;
   scrubInput.value = 0;
-  drawSpectrum();
 }
 
 function getPointerPosition(event) {
@@ -684,13 +822,111 @@ function createTextPath(text) {
       rowIndex += 1;
     }
   }
-  const centered = centerAndScale(pts, Math.min(width, height) * 0.65);
+  const centered = centerAndScale(pts, Math.min(width, height) * 0.8);
   return centered;
+}
+
+function ringArea(ring) {
+  let area = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    area += a[0] * b[1] - b[0] * a[1];
+  }
+  return area * 0.5;
+}
+
+function ringCentroid(ring) {
+  let cx = 0;
+  let cy = 0;
+  let area = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
+    const cross = a[0] * b[1] - b[0] * a[1];
+    area += cross;
+    cx += (a[0] + b[0]) * cross;
+    cy += (a[1] + b[1]) * cross;
+  }
+  area *= 0.5;
+  const factor = area === 0 ? 1 : 1 / (6 * area);
+  return { x: cx * factor, y: cy * factor };
+}
+
+function pickConusRing(geometry, bbox) {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  let bestRing = null;
+  let bestArea = -Infinity;
+
+  const considerRing = (ring) => {
+    const centroid = ringCentroid(ring);
+    if (
+      centroid.x < minLon ||
+      centroid.x > maxLon ||
+      centroid.y < minLat ||
+      centroid.y > maxLat
+    ) {
+      return;
+    }
+    const area = Math.abs(ringArea(ring));
+    if (area > bestArea) {
+      bestArea = area;
+      bestRing = ring;
+    }
+  };
+
+  if (!geometry) return null;
+  if (geometry.type === "Polygon") {
+    if (geometry.coordinates[0]) considerRing(geometry.coordinates[0]);
+  } else if (geometry.type === "MultiPolygon") {
+    geometry.coordinates.forEach((polygon) => {
+      if (polygon[0]) considerRing(polygon[0]);
+    });
+  }
+
+  return bestRing;
+}
+
+async function loadUsaPreset() {
+  if (usaPath) {
+    useSource(usaPath);
+    return;
+  }
+  if (usaLoading) return;
+  usaLoading = true;
+  try {
+    const response = await fetch(usaTopoUrl);
+    if (!response.ok) throw new Error("Failed to load USA topology.");
+    const topo = await response.json();
+    if (!window.topojson || !topo.objects || !topo.objects.states) {
+      throw new Error("TopoJSON client missing.");
+    }
+    const bbox = [-125, 24, -66, 50];
+    const nation = topojson.merge(topo, topo.objects.states.geometries);
+    const ring = nation ? pickConusRing(nation, bbox) : null;
+    if (!ring) {
+      throw new Error("Unable to find CONUS outline.");
+    }
+    const projected = ring.map(([lon, lat]) => ({ x: lon, y: -lat }));
+    usaPath = centerAndScale(projected, Math.min(width, height) * 0.9);
+    samplesInput.value = "512";
+    useSource(usaPath);
+  } catch (error) {
+    console.error(error);
+    presetSelect.value = "infinity";
+    loadPreset();
+  } finally {
+    usaLoading = false;
+  }
 }
 
 function loadPreset() {
   const preset = presetSelect.value;
   textInputWrap.style.display = preset === "text" ? "block" : "none";
+  if (preset === "usa") {
+    loadUsaPreset();
+    return;
+  }
   if (preset === "draw") return;
 
   const count = parseInt(samplesInput.value, 10);
@@ -703,7 +939,7 @@ function loadPreset() {
   if (preset === "text") points = createTextPath(textInput.value || "HI");
 
   if (points.length) {
-    points = centerAndScale(points, Math.min(width, height) * 0.65);
+    points = centerAndScale(points, Math.min(width, height) * 0.8);
     useSource(points);
   }
 }
@@ -772,6 +1008,7 @@ scrubInput.addEventListener("input", (event) => {
   const value = parseFloat(event.target.value);
   time = value * Math.PI * 2;
   trace = [];
+  updateStats();
 });
 
 resize();
