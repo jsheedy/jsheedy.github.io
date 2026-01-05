@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Barnes-Hut Galaxy</title>
+	<style>
+		:root {
+			--space-0: #050805;
+			--space-1: #0a120a;
+			--space-2: #0f1c10;
+			--accent: #00ff41;
+			--accent-2: #9bff65;
+			--accent-3: #b6ff8a;
+			--panel: rgba(6, 12, 8, 0.85);
+			--panel-border: rgba(0, 255, 65, 0.35);
+			--text: #c9ffd7;
+			--muted: #6b9f79;
+		}
+
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			min-height: 100vh;
+			background: radial-gradient(circle at 20% 20%, #0f2412 0%, var(--space-1) 45%, var(--space-0) 100%);
+			color: var(--text);
+			font-family: "Courier New", monospace;
+			overflow: hidden;
+		}
+
+		body::before {
+			content: "";
+			position: fixed;
+			inset: 0;
+			background-image:
+				radial-gradient(1px 1px at 15% 30%, rgba(0,255,65,0.6) 0, rgba(0,255,65,0) 2px),
+				radial-gradient(1px 1px at 60% 20%, rgba(0,255,65,0.35) 0, rgba(0,255,65,0) 2px),
+				radial-gradient(1px 1px at 70% 70%, rgba(155,255,101,0.4) 0, rgba(0,255,65,0) 2px),
+				radial-gradient(1px 1px at 35% 80%, rgba(0,255,65,0.3) 0, rgba(0,255,65,0) 2px);
+			opacity: 0.5;
+			pointer-events: none;
+		}
+
+		canvas {
+			position: fixed;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.top-bar {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 64px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+			border-bottom: 3px solid var(--accent);
+			box-shadow: 0 5px 30px rgba(0,255,65,0.25), inset 0 1px 0 rgba(0,255,65,0.15);
+			z-index: 2;
+		}
+
+		.top-title {
+			font-size: 22px;
+			letter-spacing: 6px;
+			text-transform: uppercase;
+			color: var(--accent);
+			text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 2px 0 #003311;
+			font-family: "Courier New", monospace;
+			font-weight: bold;
+		}
+
+		.top-link {
+			position: absolute;
+			left: 20px;
+			font-size: 12px;
+			letter-spacing: 2px;
+			text-transform: uppercase;
+			color: var(--accent);
+			text-decoration: none;
+			font-family: "Courier New", monospace;
+		}
+
+		.top-link:hover {
+			color: var(--accent-3);
+		}
+
+		#ui {
+			position: fixed;
+			left: 24px;
+			top: 88px;
+			width: 310px;
+			background: var(--panel);
+			border: 1px solid var(--panel-border);
+			border-radius: 16px;
+			padding: 16px;
+			backdrop-filter: blur(4px);
+			box-shadow: 0 0 25px rgba(0,255,65,0.15);
+			max-height: calc(100vh - 48px);
+			overflow: auto;
+		}
+
+		.group {
+			border-bottom: 1px solid rgba(0,255,65,0.15);
+			padding-bottom: 12px;
+			margin-bottom: 12px;
+		}
+
+		.group:last-child {
+			border-bottom: none;
+			margin-bottom: 0;
+			padding-bottom: 0;
+		}
+
+		.group h3 {
+			font-size: 13px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			color: var(--accent);
+			margin: 0 0 8px;
+		}
+
+		label {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			font-size: 13px;
+			color: var(--text);
+			margin-bottom: 8px;
+		}
+
+		label span.value {
+			color: var(--accent-2);
+			font-variant-numeric: tabular-nums;
+		}
+
+		input[type="range"] {
+			width: 100%;
+			appearance: none;
+			height: 6px;
+			border-radius: 999px;
+			background: linear-gradient(90deg, rgba(0,255,65,0.2), rgba(0,255,65,0.6));
+			outline: none;
+		}
+
+		input[type="range"]::-webkit-slider-thumb {
+			appearance: none;
+			width: 16px;
+			height: 16px;
+			border-radius: 50%;
+			background: var(--accent);
+			border: 2px solid rgba(5,12,6,0.9);
+			box-shadow: 0 0 10px rgba(0,255,65,0.6);
+			cursor: pointer;
+		}
+
+		select, button {
+			width: 100%;
+			padding: 8px 10px;
+			border-radius: 10px;
+			border: 1px solid rgba(0,255,65,0.3);
+			background: rgba(5,10,6,0.85);
+			color: var(--text);
+			font-size: 13px;
+		}
+
+		button {
+			cursor: pointer;
+			transition: transform 0.15s ease, box-shadow 0.15s ease;
+		}
+
+		button:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 0 20px rgba(0,255,65,0.3);
+		}
+
+		.toggle-row {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		.toggle {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 12px;
+			color: var(--muted);
+		}
+
+		#stats {
+			position: fixed;
+			bottom: 22px;
+			left: 24px;
+			background: rgba(5,10,6,0.7);
+			border: 1px solid rgba(0,255,65,0.25);
+			border-radius: 12px;
+			padding: 10px 14px;
+			font-size: 12px;
+			color: var(--muted);
+			letter-spacing: 0.5px;
+		}
+
+		#hint {
+			position: fixed;
+			bottom: 24px;
+			right: 24px;
+			max-width: 280px;
+			background: rgba(5,10,6,0.6);
+			border: 1px solid rgba(0,255,65,0.2);
+			border-radius: 12px;
+			padding: 12px 14px;
+			font-size: 12px;
+			color: var(--muted);
+			line-height: 1.4;
+		}
+
+		#sidebar {
+			position: fixed;
+			top: 88px;
+			right: 24px;
+			width: 300px;
+			background: var(--panel);
+			border: 1px solid var(--panel-border);
+			border-radius: 16px;
+			padding: 16px;
+			backdrop-filter: blur(4px);
+			box-shadow: 0 0 25px rgba(0,255,65,0.12);
+			font-size: 12px;
+			line-height: 1.45;
+			color: var(--muted);
+			max-height: calc(100vh - 160px);
+			overflow: auto;
+		}
+
+		#sidebar h3 {
+			margin: 0 0 8px;
+			color: var(--accent);
+			font-size: 13px;
+			letter-spacing: 2px;
+			text-transform: uppercase;
+		}
+
+		#sidebar p {
+			margin: 0 0 10px;
+		}
+
+		@media (max-width: 900px) {
+			#ui {
+				width: 88vw;
+				top: auto;
+				bottom: 110px;
+				left: 6vw;
+			}
+
+			#sidebar {
+				display: none;
+			}
+
+			.top-title { font-size: 16px; }
+			.top-link { font-size: 10px; }
+		}
+	</style>
+</head>
+<body>
+	<canvas id="sim"></canvas>
+	<header class="top-bar">
+		<a class="top-link" href="index.html">Back</a>
+		<div class="top-title">Barnes-Hut Galaxy</div>
+	</header>
+	<div id="ui">
+		<div class="group">
+			<h3>Scenario</h3>
+			<select id="preset">
+				<option value="galaxy">Galaxy collision</option>
+				<option value="spiral">Spiral galaxy</option>
+				<option value="solar">Solar system</option>
+				<option value="binary">Binary stars</option>
+				<option value="cluster">Globular cluster</option>
+			</select>
+			<button id="loadPreset" style="margin-top:8px;">Load preset</button>
+			<button id="clear" style="margin-top:8px;">Clear</button>
+		</div>
+		<div class="group">
+			<h3>Simulation</h3>
+			<label>Theta <span class="value" id="thetaValue"></span></label>
+			<input id="theta" type="range" min="0.2" max="1.2" step="0.05" value="0.6">
+			<label>Gravity <span class="value" id="gValue"></span></label>
+			<input id="grav" type="range" min="0.05" max="1" step="0.01" value="0.35">
+			<label>Time step <span class="value" id="dtValue"></span></label>
+			<input id="dt" type="range" min="0.004" max="0.4" step="0.002" value="0.016">
+			<label>Softening <span class="value" id="softValue"></span></label>
+			<input id="soft" type="range" min="1" max="20" step="1" value="6">
+			<label>Trail length <span class="value" id="trailValue"></span></label>
+			<input id="trail" type="range" min="0" max="1" step="0.05" value="0.65">
+			<div class="toggle-row" style="margin-top:8px;">
+				<label class="toggle"><input type="checkbox" id="pause"> Pause</label>
+				<label class="toggle"><input type="checkbox" id="showTree"> Quadtree</label>
+				<label class="toggle"><input type="checkbox" id="follow"> Follow core</label>
+			</div>
+		</div>
+		<div class="group">
+			<h3>Spawn</h3>
+			<label>Mass <span class="value" id="massValue"></span></label>
+			<input id="spawnMass" type="range" min="1" max="60" step="1" value="12">
+			<label>Paint rate <span class="value" id="paintValue"></span></label>
+			<input id="paintRate" type="range" min="4" max="40" step="1" value="18">
+			<label>Paint spin <span class="value" id="spinValue"></span></label>
+			<input id="paintSpin" type="range" min="0.2" max="1.5" step="0.05" value="0.8">
+			<div class="toggle-row" style="margin-top:8px;">
+				<label class="toggle"><input type="checkbox" id="paintMode"> Paint mode</label>
+				<label class="toggle"><input type="checkbox" id="colorMode"> Color by speed</label>
+			</div>
+			<button id="resetPaint" style="margin-top:8px;">Reset paint center</button>
+		</div>
+	</div>
+	<aside id="sidebar">
+		<h3>Barnes-Hut</h3>
+		<p>The Barnes-Hut algorithm speeds up gravity by grouping far-away bodies into a single center of mass. If a quadrant is distant enough (size / distance &lt; theta), we treat it like one big mass instead of summing every star.</p>
+		<p>Here the simulation rebuilds a quadtree each frame, stores mass and center-of-mass per node, and walks the tree to approximate forces. Smaller theta is more accurate but slower; larger theta is faster but blurrier.</p>
+		<p>Toggle quadtree to see the spatial buckets used for the approximation.</p>
+	</aside>
+	<div id="stats"></div>
+	<div id="hint">Click to place a body. Drag to give it velocity. Hold space and drag to pan, scroll to zoom. Paint mode draws spiral arms around a chosen center.</div>
+
+	<script>
+		const canvas = document.getElementById('sim');
+		const ctx = canvas.getContext('2d');
+		const presetSelect = document.getElementById('preset');
+		const loadPresetBtn = document.getElementById('loadPreset');
+		const clearBtn = document.getElementById('clear');
+		const thetaInput = document.getElementById('theta');
+		const gInput = document.getElementById('grav');
+		const dtInput = document.getElementById('dt');
+		const softInput = document.getElementById('soft');
+		const trailInput = document.getElementById('trail');
+		const pauseInput = document.getElementById('pause');
+		const showTreeInput = document.getElementById('showTree');
+		const followInput = document.getElementById('follow');
+		const massInput = document.getElementById('spawnMass');
+		const paintRateInput = document.getElementById('paintRate');
+		const paintSpinInput = document.getElementById('paintSpin');
+		const paintModeInput = document.getElementById('paintMode');
+		const colorModeInput = document.getElementById('colorMode');
+		const resetPaintBtn = document.getElementById('resetPaint');
+		const statsEl = document.getElementById('stats');
+
+		const valueMap = [
+			[thetaInput, 'thetaValue', (v) => v.toFixed(2)],
+			[gInput, 'gValue', (v) => v.toFixed(2)],
+			[dtInput, 'dtValue', (v) => v.toFixed(3)],
+			[softInput, 'softValue', (v) => `${Math.round(v)}px`],
+			[trailInput, 'trailValue', (v) => v === 0 ? 'off' : v.toFixed(2)],
+			[massInput, 'massValue', (v) => Math.round(v)],
+			[paintRateInput, 'paintValue', (v) => Math.round(v)],
+			[paintSpinInput, 'spinValue', (v) => v.toFixed(2)]
+		];
+
+		valueMap.forEach(([input, id, fmt]) => {
+			const el = document.getElementById(id);
+			const update = () => { el.textContent = fmt(parseFloat(input.value)); };
+			input.addEventListener('input', update);
+			update();
+		});
+
+		let width = 0;
+		let height = 0;
+		const bodies = [];
+		const MIN_NODE = 2;
+		let camera = { x: 0, y: 0, zoom: 1.1 };
+		let dragging = false;
+		let dragStart = null;
+		let dragCurrent = null;
+		let panning = false;
+		let panStart = null;
+		let lastTime = performance.now();
+		let fps = 0;
+		let forceChecks = 0;
+		let treeDepth = 0;
+		let paintCenter = { x: 0, y: 0 };
+		let paintHasCenter = false;
+		let paintAccumulator = 0;
+		let paintDirection = 1;
+		let lastPaintWorld = null;
+		let lastPointer = null;
+		let spaceDown = false;
+
+		class QuadNode {
+			constructor(cx, cy, halfSize, depth) {
+				this.cx = cx;
+				this.cy = cy;
+				this.half = halfSize;
+				this.mass = 0;
+				this.comX = 0;
+				this.comY = 0;
+				this.body = null;
+				this.bodies = null;
+				this.children = null;
+				this.depth = depth;
+			}
+
+			contains(body) {
+				return (
+					body.x >= this.cx - this.half &&
+					body.x <= this.cx + this.half &&
+					body.y >= this.cy - this.half &&
+					body.y <= this.cy + this.half
+				);
+			}
+
+			insert(body) {
+				if (!this.contains(body)) return false;
+
+				const totalMass = this.mass + body.mass;
+				this.comX = (this.comX * this.mass + body.mass * body.x) / totalMass;
+				this.comY = (this.comY * this.mass + body.mass * body.y) / totalMass;
+				this.mass = totalMass;
+
+				if (this.children) {
+					return this._insertToChildren(body);
+				}
+
+				if (this.body === null && this.bodies === null) {
+					this.body = body;
+					return true;
+				}
+
+				if (this.half <= MIN_NODE) {
+					if (!this.bodies) {
+						this.bodies = [];
+						if (this.body) {
+							this.bodies.push(this.body);
+							this.body = null;
+						}
+					}
+					this.bodies.push(body);
+					return true;
+				}
+
+				this.subdivide();
+				if (this.body) {
+					this._insertToChildren(this.body);
+					this.body = null;
+				}
+				return this._insertToChildren(body);
+			}
+
+			subdivide() {
+				const h = this.half / 2;
+				const d = this.depth + 1;
+				this.children = [
+					new QuadNode(this.cx - h, this.cy - h, h, d),
+					new QuadNode(this.cx + h, this.cy - h, h, d),
+					new QuadNode(this.cx - h, this.cy + h, h, d),
+					new QuadNode(this.cx + h, this.cy + h, h, d)
+				];
+			}
+
+			_insertToChildren(body) {
+				for (const child of this.children) {
+					if (child.insert(body)) return true;
+				}
+				return false;
+			}
+		}
+
+		function resize() {
+			width = window.innerWidth;
+			height = window.innerHeight;
+			canvas.width = Math.floor(width * devicePixelRatio);
+			canvas.height = Math.floor(height * devicePixelRatio);
+			ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+		}
+
+		function toWorld(x, y) {
+			return {
+				x: (x - width / 2) / camera.zoom + camera.x,
+				y: (y - height / 2) / camera.zoom + camera.y
+			};
+		}
+
+		function toScreen(x, y) {
+			return {
+				x: (x - camera.x) * camera.zoom + width / 2,
+				y: (y - camera.y) * camera.zoom + height / 2
+			};
+		}
+
+		function addBody(x, y, vx, vy, mass) {
+			bodies.push({ x, y, vx, vy, ax: 0, ay: 0, mass });
+		}
+
+		function buildTree() {
+			if (!bodies.length) return null;
+			let minX = bodies[0].x;
+			let maxX = bodies[0].x;
+			let minY = bodies[0].y;
+			let maxY = bodies[0].y;
+
+			for (const b of bodies) {
+				minX = Math.min(minX, b.x);
+				maxX = Math.max(maxX, b.x);
+				minY = Math.min(minY, b.y);
+				maxY = Math.max(maxY, b.y);
+			}
+
+			let size = Math.max(maxX - minX, maxY - minY);
+			size = Math.max(size, 200);
+			const cx = (minX + maxX) / 2;
+			const cy = (minY + maxY) / 2;
+			const root = new QuadNode(cx, cy, size / 2 + 60, 0);
+
+			for (const b of bodies) root.insert(b);
+
+			treeDepth = 0;
+			const stack = [root];
+			while (stack.length) {
+				const node = stack.pop();
+				if (!node) continue;
+				treeDepth = Math.max(treeDepth, node.depth);
+				if (node.children) stack.push(...node.children);
+			}
+
+			return root;
+		}
+
+		function applyForce(body, dx, dy, mass, softening, G) {
+			const distSq = dx * dx + dy * dy + softening * softening;
+			const dist = Math.sqrt(distSq);
+			const force = (G * mass) / (distSq * dist);
+			body.ax += dx * force;
+			body.ay += dy * force;
+		}
+
+		function calcForce(body, node, theta, softening, G) {
+			if (!node || node.mass === 0) return;
+			const dx = node.comX - body.x;
+			const dy = node.comY - body.y;
+			const dist = Math.sqrt(dx * dx + dy * dy + softening * softening);
+
+			if (node.children) {
+				const size = node.half * 2;
+				if (size / dist < theta) {
+					forceChecks += 1;
+					applyForce(body, dx, dy, node.mass, softening, G);
+				} else {
+					for (const child of node.children) {
+						calcForce(body, child, theta, softening, G);
+					}
+				}
+				return;
+			}
+
+			if (node.bodies) {
+				for (const other of node.bodies) {
+					if (other === body) continue;
+					forceChecks += 1;
+					applyForce(body, other.x - body.x, other.y - body.y, other.mass, softening, G);
+				}
+				return;
+			}
+
+			if (node.body && node.body !== body) {
+				forceChecks += 1;
+				applyForce(body, node.body.x - body.x, node.body.y - body.y, node.body.mass, softening, G);
+			}
+		}
+
+		function stepSimulation(dt) {
+			if (!bodies.length) return;
+			const theta = parseFloat(thetaInput.value);
+			const softening = parseFloat(softInput.value);
+			const G = parseFloat(gInput.value);
+			const root = buildTree();
+
+			forceChecks = 0;
+			for (const b of bodies) {
+				b.ax = 0;
+				b.ay = 0;
+				calcForce(b, root, theta, softening, G);
+			}
+
+			for (const b of bodies) {
+				b.x += b.vx * dt + 0.5 * b.ax * dt * dt;
+				b.y += b.vy * dt + 0.5 * b.ay * dt * dt;
+			}
+
+			const rootAfter = buildTree();
+			for (const b of bodies) {
+				const axOld = b.ax;
+				const ayOld = b.ay;
+				b.ax = 0;
+				b.ay = 0;
+				calcForce(b, rootAfter, theta, softening, G);
+				b.vx += 0.5 * (axOld + b.ax) * dt;
+				b.vy += 0.5 * (ayOld + b.ay) * dt;
+			}
+		}
+
+		function drawTree(node) {
+			if (!node) return;
+			const topLeft = toScreen(node.cx - node.half, node.cy - node.half);
+			const size = node.half * 2 * camera.zoom;
+			ctx.strokeStyle = 'rgba(0,255,65,0.15)';
+			ctx.strokeRect(topLeft.x, topLeft.y, size, size);
+			if (node.children) node.children.forEach(drawTree);
+		}
+
+		function colorFor(body) {
+			if (colorModeInput.checked) {
+				const speed = Math.sqrt(body.vx * body.vx + body.vy * body.vy);
+				const hue = Math.max(60, 140 - speed * 18);
+				return `hsl(${hue}, 85%, 65%)`;
+			}
+			const mass = Math.min(60, body.mass);
+			const hue = 140 - mass * 0.8;
+			return `hsl(${hue}, 80%, 65%)`;
+		}
+
+		function render() {
+			const trail = parseFloat(trailInput.value);
+			const fade = trail === 0 ? 1 : 0.18 - 0.16 * trail;
+			ctx.fillStyle = `rgba(6, 8, 18, ${fade})`;
+			ctx.fillRect(0, 0, width, height);
+
+			for (const b of bodies) {
+				const screen = toScreen(b.x, b.y);
+				const radius = Math.max(1.2, Math.sqrt(b.mass) * 0.6) * camera.zoom;
+				ctx.beginPath();
+				ctx.fillStyle = colorFor(b);
+				ctx.shadowColor = ctx.fillStyle;
+				ctx.shadowBlur = Math.min(25, 6 + b.mass * 0.2);
+				ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.shadowBlur = 0;
+
+			if (showTreeInput.checked) {
+				const root = buildTree();
+				drawTree(root);
+			}
+
+			if (dragging && dragStart && dragCurrent) {
+				ctx.strokeStyle = 'rgba(255,227,138,0.9)';
+				ctx.lineWidth = 1.5;
+				ctx.beginPath();
+				ctx.moveTo(dragStart.x, dragStart.y);
+				ctx.lineTo(dragCurrent.x, dragCurrent.y);
+				ctx.stroke();
+			}
+		}
+
+		function updateStats() {
+			const approxBrute = bodies.length * bodies.length;
+			statsEl.textContent = `bodies ${bodies.length} | force checks ${forceChecks} | quadtree depth ${treeDepth} | fps ${fps.toFixed(1)} | brute ${approxBrute}`;
+		}
+
+		function loop(now) {
+			const delta = (now - lastTime) / 1000;
+			fps = fps * 0.9 + (1 / Math.max(delta, 0.001)) * 0.1;
+			lastTime = now;
+
+			if (followInput.checked && bodies.length) {
+				let core = bodies[0];
+				for (const b of bodies) if (b.mass > core.mass) core = b;
+				camera.x = core.x;
+				camera.y = core.y;
+			}
+
+			if (!pauseInput.checked) {
+				const dt = parseFloat(dtInput.value);
+				stepSimulation(dt);
+			}
+
+			render();
+			updateStats();
+			requestAnimationFrame(loop);
+		}
+
+		function clearBodies() {
+			bodies.length = 0;
+			paintHasCenter = false;
+			paintCenter = { x: 0, y: 0 };
+			paintDirection = 1;
+			lastPaintWorld = null;
+		}
+
+		function loadPreset(name) {
+			clearBodies();
+			camera.x = 0;
+			camera.y = 0;
+			camera.zoom = 1.1;
+
+			if (name === 'solar') {
+				const sunMass = 2000;
+				addBody(0, 0, 0, 0, sunMass);
+				const radii = [60, 100, 150, 220, 300];
+				const masses = [4, 6, 10, 18, 24];
+				const G = parseFloat(gInput.value);
+				for (let i = 0; i < radii.length; i++) {
+					const r = radii[i];
+					const speed = Math.sqrt((G * sunMass) / r);
+					addBody(r, 0, 0, speed, masses[i]);
+				}
+				return;
+			}
+
+			if (name === 'binary') {
+				const mass = 800;
+				const dist = 140;
+				const G = parseFloat(gInput.value);
+				const speed = Math.sqrt((G * mass) / dist);
+				addBody(-dist / 2, 0, 0, -speed, mass);
+				addBody(dist / 2, 0, 0, speed, mass);
+				for (let i = 0; i < 80; i++) {
+					const angle = Math.random() * Math.PI * 2;
+					const radius = 40 + Math.random() * 220;
+					const vx = Math.cos(angle + Math.PI / 2) * speed * 0.5;
+					const vy = Math.sin(angle + Math.PI / 2) * speed * 0.5;
+					addBody(Math.cos(angle) * radius, Math.sin(angle) * radius, vx, vy, 3 + Math.random() * 8);
+				}
+				return;
+			}
+
+			if (name === 'cluster') {
+				const count = 400;
+				for (let i = 0; i < count; i++) {
+					const angle = Math.random() * Math.PI * 2;
+					const radius = Math.pow(Math.random(), 0.6) * 280;
+					const x = Math.cos(angle) * radius;
+					const y = Math.sin(angle) * radius;
+					const vx = (Math.random() - 0.5) * 0.4;
+					const vy = (Math.random() - 0.5) * 0.4;
+					addBody(x, y, vx, vy, 3 + Math.random() * 12);
+				}
+				addBody(0, 0, 0, 0, 1200);
+				return;
+			}
+
+			const createSpiral = (cx, cy, count, coreMass, dir, driftX, driftY) => {
+				addBody(cx, cy, driftX, driftY, coreMass);
+				const G = parseFloat(gInput.value);
+				for (let i = 0; i < count; i++) {
+					const arm = i % 2;
+					const radius = 30 + Math.random() * 260;
+					const angle = (radius * 0.04 + arm * Math.PI) * dir + (Math.random() - 0.5) * 0.6;
+					const x = cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 8;
+					const y = cy + Math.sin(angle) * radius + (Math.random() - 0.5) * 8;
+					const speed = Math.sqrt((G * coreMass) / (radius + 20)) * 0.7;
+				const vx = driftX + Math.sin(angle) * speed * dir;
+				const vy = driftY + -Math.cos(angle) * speed * dir;
+				addBody(x, y, vx, vy, 2 + Math.random() * 8);
+			}
+		};
+
+			if (name === 'spiral') {
+				createSpiral(0, 0, 420, 1800, 1, 0, 0);
+				return;
+			}
+
+			createSpiral(-220, 0, 320, 1500, -1, 0.4, 0.2);
+			createSpiral(220, 0, 320, 1500, 1, -0.4, -0.2);
+		}
+
+		function spawnPaintBody(world, dtSeconds) {
+			if (!paintHasCenter) {
+				paintCenter = { x: world.x, y: world.y };
+				paintHasCenter = true;
+			}
+			const rate = parseFloat(paintRateInput.value);
+			paintAccumulator += dtSeconds * rate;
+			while (paintAccumulator >= 1) {
+				paintAccumulator -= 1;
+				const mass = parseFloat(massInput.value);
+				const dx = world.x - paintCenter.x;
+				const dy = world.y - paintCenter.y;
+				const radius = Math.sqrt(dx * dx + dy * dy) + 0.01;
+				const spin = parseFloat(paintSpinInput.value);
+				const G = parseFloat(gInput.value);
+				const coreMass = Math.max(500, mass * 50);
+				const speed = Math.sqrt((G * coreMass) / (radius + 10)) * spin;
+				const vx = -dy / radius * speed * paintDirection;
+				const vy = dx / radius * speed * paintDirection;
+				addBody(world.x, world.y, vx, vy, mass);
+			}
+		}
+
+		function handlePointerDown(event) {
+			const point = toWorld(event.clientX, event.clientY);
+			lastPointer = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+
+			if (event.button === 1 || spaceDown) {
+				panning = true;
+				panStart = { x: event.clientX, y: event.clientY, camX: camera.x, camY: camera.y };
+				return;
+			}
+
+			if (paintModeInput.checked) {
+				spawnPaintBody(point, 0.016);
+				lastPaintWorld = { ...point };
+				return;
+			}
+
+			dragging = true;
+			dragStart = toScreen(point.x, point.y);
+			dragCurrent = { ...dragStart };
+		}
+
+		function handlePointerMove(event) {
+			const point = toWorld(event.clientX, event.clientY);
+			if (panning && panStart) {
+				const dx = (event.clientX - panStart.x) / camera.zoom;
+				const dy = (event.clientY - panStart.y) / camera.zoom;
+				camera.x = panStart.camX - dx;
+				camera.y = panStart.camY - dy;
+				return;
+			}
+
+			if (paintModeInput.checked && event.buttons === 1) {
+				if (lastPaintWorld && paintHasCenter) {
+					const moveX = point.x - lastPaintWorld.x;
+					const moveY = point.y - lastPaintWorld.y;
+					const dx = point.x - paintCenter.x;
+					const dy = point.y - paintCenter.y;
+					const cross = dx * moveY - dy * moveX;
+					if (Math.abs(cross) > 0.001) paintDirection = cross > 0 ? 1 : -1;
+				}
+				const dtSeconds = lastPointer ? Math.min(0.05, (event.timeStamp - lastPointer.time) / 1000) : 0.016;
+				spawnPaintBody(point, dtSeconds);
+				lastPaintWorld = { ...point };
+			}
+
+			if (dragging && dragCurrent) {
+				dragCurrent = { x: event.clientX, y: event.clientY };
+			}
+
+			lastPointer = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+		}
+
+		function handlePointerUp(event) {
+			if (panning) {
+				panning = false;
+				panStart = null;
+				return;
+			}
+
+			if (paintModeInput.checked) {
+				lastPaintWorld = null;
+				return;
+			}
+			if (!dragging || !dragStart || !dragCurrent) return;
+
+			const startWorld = toWorld(dragStart.x, dragStart.y);
+			const endWorld = toWorld(dragCurrent.x, dragCurrent.y);
+			const dx = endWorld.x - startWorld.x;
+			const dy = endWorld.y - startWorld.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			const mass = parseFloat(massInput.value);
+			const velocityScale = 0.2;
+			if (dist < 6 / camera.zoom) {
+				addBody(startWorld.x, startWorld.y, 0, 0, mass);
+			} else {
+				addBody(startWorld.x, startWorld.y, dx * velocityScale, dy * velocityScale, mass);
+			}
+
+			dragging = false;
+			dragStart = null;
+			dragCurrent = null;
+		}
+
+		canvas.addEventListener('mousedown', handlePointerDown);
+		canvas.addEventListener('mousemove', handlePointerMove);
+		canvas.addEventListener('mouseup', handlePointerUp);
+		canvas.addEventListener('mouseleave', handlePointerUp);
+
+		window.addEventListener('keydown', (event) => {
+			if (event.code === 'Space') spaceDown = true;
+		});
+
+		window.addEventListener('keyup', (event) => {
+			if (event.code === 'Space') spaceDown = false;
+		});
+
+		canvas.addEventListener('wheel', (event) => {
+			event.preventDefault();
+			const zoomFactor = event.deltaY > 0 ? 0.92 : 1.08;
+			const before = toWorld(event.clientX, event.clientY);
+			camera.zoom = Math.min(4, Math.max(0.25, camera.zoom * zoomFactor));
+			const after = toWorld(event.clientX, event.clientY);
+			camera.x += before.x - after.x;
+			camera.y += before.y - after.y;
+		}, { passive: false });
+
+		canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+
+		loadPresetBtn.addEventListener('click', () => loadPreset(presetSelect.value));
+		clearBtn.addEventListener('click', clearBodies);
+		resetPaintBtn.addEventListener('click', () => {
+			paintHasCenter = false;
+			paintCenter = { x: 0, y: 0 };
+			paintDirection = 1;
+			lastPaintWorld = null;
+		});
+
+		window.addEventListener('resize', resize);
+		resize();
+		loadPreset('galaxy');
+		requestAnimationFrame(loop);
+	</script>
+</body>
+</html>
