@@ -345,17 +345,17 @@
             <div class="control-group">
                 <label>
                     Simulation Speed
-                    <span class="value-display" id="speedValue">1.0x</span>
+                    <span class="value-display" id="speedValue">5.0x</span>
                 </label>
-                <input type="range" id="speed" min="1" max="50" value="10">
+                <input type="range" id="speed" min="1" max="200" value="50">
             </div>
 
             <div class="control-group">
                 <label>
                     Particles/Frame
-                    <span class="value-display" id="particlesPerFrameValue">50</span>
+                    <span class="value-display" id="particlesPerFrameValue">100</span>
                 </label>
-                <input type="range" id="particlesPerFrame" min="1" max="200" value="50">
+                <input type="range" id="particlesPerFrame" min="1" max="300" value="100">
             </div>
 
             <div class="control-group">
@@ -369,9 +369,9 @@
             <div class="control-group">
                 <label>
                     Simultaneous Walkers
-                    <span class="value-display" id="walkerCountValue">100</span>
+                    <span class="value-display" id="walkerCountValue">200</span>
                 </label>
-                <input type="range" id="walkerCount" min="1" max="200" value="100">
+                <input type="range" id="walkerCount" min="1" max="500" value="200">
             </div>
 
             <div class="control-group">
@@ -469,10 +469,10 @@
 
         // Settings
         let settings = {
-            speed: 1.0,
-            particlesPerFrame: 50,
+            speed: 5.0,
+            particlesPerFrame: 100,
             stickProbability: 1.0,
-            walkerCount: 100,
+            walkerCount: 200,
             spawnRadiusMult: 1.2,
             killRadiusMult: 3.0,
             seedPattern: 'center',
