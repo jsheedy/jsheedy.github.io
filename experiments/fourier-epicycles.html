@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fourier Epicycles Drawing Machine</title>
+<style>
+:root {
+  --bg-1: #0b1020;
+  --bg-2: #111a2f;
+  --panel: rgba(255, 255, 255, 0.08);
+  --panel-strong: rgba(255, 255, 255, 0.14);
+  --text: #e9f0ff;
+  --muted: rgba(233, 240, 255, 0.65);
+  --accent: #6cf6ff;
+  --accent-2: #ff8bd1;
+  --accent-3: #ffd36c;
+  --stroke: rgba(108, 246, 255, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Avenir Next", "Futura", "Gill Sans", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top, #1f2c5c, var(--bg-1) 50%),
+    radial-gradient(circle at 20% 80%, #2a1458, transparent 55%),
+    linear-gradient(135deg, var(--bg-1), var(--bg-2));
+  overflow: hidden;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) 1fr;
+  gap: 18px;
+  padding: 18px;
+  height: 100vh;
+}
+
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+.control-group {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+input[type="range"],
+select,
+input[type="text"] {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--panel-strong);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+input[type="text"]::placeholder {
+  color: rgba(233, 240, 255, 0.4);
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: #06121c;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 20px rgba(108, 246, 255, 0.25);
+}
+
+button.secondary {
+  background: linear-gradient(135deg, rgba(255, 211, 108, 0.9), rgba(255, 139, 209, 0.9));
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text);
+  box-shadow: none;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.toggle-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toggle-row label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+.stats {
+  background: rgba(9, 14, 34, 0.6);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.stats div {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.stats span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.canvas-wrap {
+  position: relative;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(108, 246, 255, 0.08), transparent 60%),
+    linear-gradient(320deg, rgba(255, 139, 209, 0.12), transparent 55%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 120px rgba(6, 8, 18, 0.9), 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+canvas#stage {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+canvas#spectrum {
+  width: 100%;
+  height: 90px;
+  border-radius: 14px;
+  background: rgba(8, 12, 24, 0.8);
+}
+
+.tip {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    order: 2;
+  }
+
+  .canvas-wrap {
+    min-height: 56vh;
+  }
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="controls">
+    <header>
+      <h1>Fourier Epicycles</h1>
+      <p>Draw or pick a preset. Watch rotating circles rebuild the path.</p>
+    </header>
+
+    <div class="control-group">
+      <label for="preset">Preset</label>
+      <select id="preset">
+        <option value="draw">Draw on canvas</option>
+        <option value="circle">Circle</option>
+        <option value="heart">Heart</option>
+        <option value="star">Star</option>
+        <option value="spiral">Spiral</option>
+        <option value="infinity">Infinity</option>
+        <option value="text">Text (scanline)</option>
+      </select>
+    </div>
+
+    <div class="control-group" id="textInputWrap" style="display:none;">
+      <label for="textInput">Text</label>
+      <input id="textInput" type="text" placeholder="Type something" value="HELLO" />
+    </div>
+
+    <div class="control-group">
+      <label for="epicycles">Epicycles</label>
+      <input id="epicycles" type="range" min="8" max="200" value="80" />
+    </div>
+
+    <div class="control-group">
+      <label for="samples">Samples</label>
+      <input id="samples" type="range" min="64" max="512" step="64" value="256" />
+    </div>
+
+    <div class="control-group">
+      <label for="speed">Speed</label>
+      <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1" />
+    </div>
+
+    <div class="control-group">
+      <label for="sort">Sort</label>
+      <select id="sort">
+        <option value="magnitude">Magnitude</option>
+        <option value="frequency">Frequency</option>
+      </select>
+    </div>
+
+    <div class="toggle-row">
+      <label><input id="showOriginal" type="checkbox" checked /> Original path</label>
+      <label><input id="showCircles" type="checkbox" checked /> Circles</label>
+      <label><input id="showLines" type="checkbox" checked /> Lines</label>
+    </div>
+
+    <div class="toggle-row">
+      <button id="play">Pause</button>
+      <button id="clear" class="ghost">Clear Trace</button>
+      <button id="capture" class="secondary">Use Current Path</button>
+    </div>
+
+    <div class="control-group">
+      <label for="scrub">Timeline</label>
+      <input id="scrub" type="range" min="0" max="1" step="0.001" value="0" />
+    </div>
+
+    <div class="control-group">
+      <label>Spectrum</label>
+      <canvas id="spectrum" width="320" height="90"></canvas>
+    </div>
+
+    <div class="stats">
+      <div>Epicycles <span id="statEpicycles">0</span></div>
+      <div>Samples <span id="statSamples">0</span></div>
+      <div>DFT ms <span id="statDft">0</span></div>
+      <div>FPS <span id="statFps">0</span></div>
+      <div>Cycle t <span id="statTime">0</span></div>
+    </div>
+
+    <p class="tip">Tip: Draw slowly for smoother curves. The text preset uses scanline hatching.</p>
+  </section>
+
+  <section class="canvas-wrap">
+    <canvas id="stage"></canvas>
+  </section>
+</main>
+
+<script>
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+const spectrum = document.getElementById("spectrum");
+const spectrumCtx = spectrum.getContext("2d");
+
+const presetSelect = document.getElementById("preset");
+const textInputWrap = document.getElementById("textInputWrap");
+const textInput = document.getElementById("textInput");
+const epicyclesInput = document.getElementById("epicycles");
+const samplesInput = document.getElementById("samples");
+const speedInput = document.getElementById("speed");
+const sortInput = document.getElementById("sort");
+const showOriginalInput = document.getElementById("showOriginal");
+const showCirclesInput = document.getElementById("showCircles");
+const showLinesInput = document.getElementById("showLines");
+const playButton = document.getElementById("play");
+const clearButton = document.getElementById("clear");
+const captureButton = document.getElementById("capture");
+const scrubInput = document.getElementById("scrub");
+
+const statEpicycles = document.getElementById("statEpicycles");
+const statSamples = document.getElementById("statSamples");
+const statDft = document.getElementById("statDft");
+const statFps = document.getElementById("statFps");
+const statTime = document.getElementById("statTime");
+
+let width = 0;
+let height = 0;
+let center = { x: 0, y: 0 };
+
+let drawPoints = [];
+let sourcePoints = [];
+let resampled = [];
+let fourier = [];
+let trace = [];
+let time = 0;
+let playing = true;
+let drawing = false;
+let scrubbing = false;
+let lastFrame = performance.now();
+let fps = 0;
+let lastDftMs = 0;
+
+const palette = ["#6cf6ff", "#ff8bd1", "#ffd36c", "#8bffb3", "#8ba6ff"];
+
+function resize() {
+  width = canvas.clientWidth;
+  height = canvas.clientHeight;
+  canvas.width = Math.floor(width * devicePixelRatio);
+  canvas.height = Math.floor(height * devicePixelRatio);
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  center = { x: width / 2, y: height / 2 };
+}
+
+function distance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy);
+}
+
+function resample(points, targetCount) {
+  if (points.length < 2) return [];
+  const distances = [0];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += distance(points[i - 1], points[i]);
+    distances.push(total);
+  }
+  const step = total / targetCount;
+  const result = [points[0]];
+  let target = step;
+  for (let i = 1; i < points.length; i++) {
+    while (target <= distances[i]) {
+      const t = (target - distances[i - 1]) / (distances[i] - distances[i - 1] || 1);
+      result.push({
+        x: points[i - 1].x + (points[i].x - points[i - 1].x) * t,
+        y: points[i - 1].y + (points[i].y - points[i - 1].y) * t
+      });
+      target += step;
+    }
+  }
+  return result.length > targetCount ? result.slice(0, targetCount) : result;
+}
+
+function centerAndScale(points, targetSize) {
+  const bounds = points.reduce(
+    (acc, p) => {
+      acc.minX = Math.min(acc.minX, p.x);
+      acc.maxX = Math.max(acc.maxX, p.x);
+      acc.minY = Math.min(acc.minY, p.y);
+      acc.maxY = Math.max(acc.maxY, p.y);
+      return acc;
+    },
+    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+  );
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const scale = targetSize / Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY, 1);
+  return points.map((p) => ({
+    x: (p.x - cx) * scale,
+    y: (p.y - cy) * scale
+  }));
+}
+
+function dft(points) {
+  const N = points.length;
+  const out = [];
+  const twoPi = Math.PI * 2;
+  for (let k = 0; k < N; k++) {
+    let re = 0;
+    let im = 0;
+    for (let n = 0; n < N; n++) {
+      const phi = (twoPi * k * n) / N;
+      const cos = Math.cos(phi);
+      const sin = Math.sin(phi);
+      re += points[n].x * cos + points[n].y * sin;
+      im += points[n].y * cos - points[n].x * sin;
+    }
+    re /= N;
+    im /= N;
+    const freq = k <= N / 2 ? k : k - N;
+    out.push({
+      re,
+      im,
+      freq,
+      amp: Math.hypot(re, im),
+      phase: Math.atan2(im, re)
+    });
+  }
+  return out;
+}
+
+function buildFourier(points) {
+  const start = performance.now();
+  const coefficients = dft(points);
+  const end = performance.now();
+  lastDftMs = (end - start).toFixed(1);
+  return coefficients;
+}
+
+function epicycles(x, y, rotation, coeffs, count) {
+  let vx = x;
+  let vy = y;
+  for (let i = 0; i < count; i++) {
+    const c = coeffs[i];
+    const radius = c.amp;
+    const angle = c.freq * time + c.phase + rotation;
+    const nx = vx + radius * Math.cos(angle);
+    const ny = vy + radius * Math.sin(angle);
+
+    if (showCirclesInput.checked) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(108, 246, 255, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.arc(vx, vy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (showLinesInput.checked) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(255, 139, 209, 0.45)";
+      ctx.lineWidth = 1.2;
+      ctx.moveTo(vx, vy);
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+    }
+
+    vx = nx;
+    vy = ny;
+  }
+  return { x: vx, y: vy };
+}
+
+function drawTrace() {
+  if (trace.length < 2) return;
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(255, 211, 108, 0.85)";
+  ctx.lineWidth = 2.2;
+  ctx.moveTo(trace[0].x, trace[0].y);
+  for (let i = 1; i < trace.length; i++) {
+    ctx.lineTo(trace[i].x, trace[i].y);
+  }
+  ctx.stroke();
+}
+
+function drawOriginal() {
+  if (!showOriginalInput.checked || resampled.length < 2) return;
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(108, 246, 255, 0.25)";
+  ctx.lineWidth = 1.2;
+  ctx.moveTo(center.x + resampled[0].x, center.y + resampled[0].y);
+  for (let i = 1; i < resampled.length; i++) {
+    ctx.lineTo(center.x + resampled[i].x, center.y + resampled[i].y);
+  }
+  ctx.stroke();
+}
+
+function drawSpectrum() {
+  spectrumCtx.clearRect(0, 0, spectrum.width, spectrum.height);
+  if (!fourier.length) return;
+  const coeffs = [...fourier].sort((a, b) => Math.abs(a.freq) - Math.abs(b.freq));
+  const maxAmp = Math.max(...coeffs.map((c) => c.amp), 1e-6);
+  const barWidth = spectrum.width / coeffs.length;
+  for (let i = 0; i < coeffs.length; i++) {
+    const c = coeffs[i];
+    const height = (c.amp / maxAmp) * (spectrum.height - 10);
+    const x = i * barWidth;
+    const y = spectrum.height - height;
+    spectrumCtx.fillStyle = palette[i % palette.length];
+    spectrumCtx.fillRect(x, y, Math.max(1, barWidth - 1), height);
+  }
+}
+
+function updateStats() {
+  statEpicycles.textContent = Math.min(parseInt(epicyclesInput.value, 10), fourier.length);
+  statSamples.textContent = resampled.length;
+  statDft.textContent = lastDftMs;
+  statFps.textContent = fps.toFixed(0);
+  statTime.textContent = (time % (Math.PI * 2)).toFixed(2);
+}
+
+function render() {
+  const now = performance.now();
+  fps = 1000 / (now - lastFrame + 0.001);
+  lastFrame = now;
+
+  ctx.clearRect(0, 0, width, height);
+
+  drawOriginal();
+
+  if (fourier.length) {
+    const count = Math.min(parseInt(epicyclesInput.value, 10), fourier.length);
+    const tip = epicycles(center.x, center.y, 0, fourier, count);
+    trace.unshift(tip);
+    const maxTrace = resampled.length ? resampled.length : 600;
+    if (trace.length > maxTrace) trace.pop();
+    drawTrace();
+
+    if (!scrubbing && playing) {
+      const dt = (Math.PI * 2) / resampled.length;
+      time += dt * parseFloat(speedInput.value);
+      scrubInput.value = (time % (Math.PI * 2)) / (Math.PI * 2);
+    }
+  }
+
+  updateStats();
+  requestAnimationFrame(render);
+}
+
+function useSource(points) {
+  sourcePoints = points;
+  resampled = resample(points, parseInt(samplesInput.value, 10));
+  if (resampled.length < 2) return;
+  const sortMode = sortInput.value;
+  fourier = buildFourier(resampled);
+  if (sortMode === "magnitude") {
+    fourier.sort((a, b) => b.amp - a.amp);
+  } else {
+    fourier.sort((a, b) => a.freq - b.freq);
+  }
+  trace = [];
+  time = 0;
+  scrubInput.value = 0;
+  drawSpectrum();
+}
+
+function getPointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left - center.x,
+    y: event.clientY - rect.top - center.y
+  };
+}
+
+function startDrawing(event) {
+  if (presetSelect.value !== "draw") return;
+  drawing = true;
+  drawPoints = [];
+  const point = getPointerPosition(event);
+  drawPoints.push(point);
+}
+
+function moveDrawing(event) {
+  if (!drawing) return;
+  const point = getPointerPosition(event);
+  const last = drawPoints[drawPoints.length - 1];
+  if (!last || distance(point, last) > 2) {
+    drawPoints.push(point);
+  }
+}
+
+function endDrawing() {
+  if (!drawing) return;
+  drawing = false;
+  if (drawPoints.length > 10) {
+    useSource(drawPoints);
+  }
+}
+
+function createCircle(count) {
+  const pts = [];
+  const radius = Math.min(width, height) * 0.25;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count;
+    pts.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+  }
+  return pts;
+}
+
+function createHeart(count) {
+  const pts = [];
+  for (let i = 0; i < count; i++) {
+    const t = (Math.PI * 2 * i) / count;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    pts.push({ x: x * 12, y: y * 12 });
+  }
+  return pts;
+}
+
+function createStar(points) {
+  const pts = [];
+  const outer = 220;
+  const inner = 90;
+  const spikes = 5;
+  for (let i = 0; i <= spikes * 2; i++) {
+    const radius = i % 2 === 0 ? outer : inner;
+    const angle = (Math.PI * i) / spikes;
+    pts.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+  }
+  return resample(pts, points);
+}
+
+function createSpiral(count) {
+  const pts = [];
+  const turns = 4;
+  const maxR = 240;
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const angle = turns * Math.PI * 2 * t;
+    const radius = maxR * t;
+    pts.push({ x: radius * Math.cos(angle), y: radius * Math.sin(angle) });
+  }
+  return pts;
+}
+
+function createInfinity(count) {
+  const pts = [];
+  for (let i = 0; i < count; i++) {
+    const t = (Math.PI * 2 * i) / count;
+    const denom = 1 + Math.pow(Math.sin(t), 2);
+    const x = (Math.cos(t) / denom) * 260;
+    const y = (Math.sin(t) * Math.cos(t) / denom) * 160;
+    pts.push({ x, y });
+  }
+  return pts;
+}
+
+function createTextPath(text) {
+  const off = document.createElement("canvas");
+  const size = 512;
+  off.width = size;
+  off.height = size;
+  const octx = off.getContext("2d");
+  octx.clearRect(0, 0, size, size);
+  octx.fillStyle = "white";
+  octx.textAlign = "center";
+  octx.textBaseline = "middle";
+  octx.font = "bold 200px 'Avenir Next', 'Futura', sans-serif";
+  octx.fillText(text, size / 2, size / 2);
+
+  const data = octx.getImageData(0, 0, size, size).data;
+  const step = 4;
+  const pts = [];
+  let rowIndex = 0;
+  for (let y = 0; y < size; y += step) {
+    const row = [];
+    for (let x = 0; x < size; x += step) {
+      const idx = (y * size + x) * 4 + 3;
+      if (data[idx] > 30) {
+        row.push({ x, y });
+      }
+    }
+    if (row.length) {
+      if (rowIndex % 2 === 1) row.reverse();
+      pts.push(...row);
+      rowIndex += 1;
+    }
+  }
+  const centered = centerAndScale(pts, Math.min(width, height) * 0.65);
+  return centered;
+}
+
+function loadPreset() {
+  const preset = presetSelect.value;
+  textInputWrap.style.display = preset === "text" ? "block" : "none";
+  if (preset === "draw") return;
+
+  const count = parseInt(samplesInput.value, 10);
+  let points = [];
+  if (preset === "circle") points = createCircle(count);
+  if (preset === "heart") points = createHeart(count);
+  if (preset === "star") points = createStar(count);
+  if (preset === "spiral") points = createSpiral(count);
+  if (preset === "infinity") points = createInfinity(count);
+  if (preset === "text") points = createTextPath(textInput.value || "HI");
+
+  if (points.length) {
+    points = centerAndScale(points, Math.min(width, height) * 0.65);
+    useSource(points);
+  }
+}
+
+function clearTrace() {
+  trace = [];
+  time = 0;
+  scrubInput.value = 0;
+}
+
+function togglePlay() {
+  playing = !playing;
+  playButton.textContent = playing ? "Pause" : "Play";
+}
+
+function applyCurrentPath() {
+  if (resampled.length) {
+    useSource(resampled);
+  }
+}
+
+window.addEventListener("resize", () => {
+  resize();
+  loadPreset();
+});
+
+canvas.addEventListener("pointerdown", (event) => {
+  canvas.setPointerCapture(event.pointerId);
+  startDrawing(event);
+});
+
+canvas.addEventListener("pointermove", moveDrawing);
+canvas.addEventListener("pointerup", () => endDrawing());
+canvas.addEventListener("pointerleave", () => endDrawing());
+
+presetSelect.addEventListener("change", loadPreset);
+textInput.addEventListener("change", loadPreset);
+
+samplesInput.addEventListener("input", () => {
+  if (sourcePoints.length) useSource(sourcePoints);
+});
+
+sortInput.addEventListener("change", () => {
+  if (sourcePoints.length) useSource(sourcePoints);
+});
+
+epicyclesInput.addEventListener("input", updateStats);
+
+speedInput.addEventListener("input", updateStats);
+
+playButton.addEventListener("click", togglePlay);
+clearButton.addEventListener("click", clearTrace);
+captureButton.addEventListener("click", applyCurrentPath);
+
+scrubInput.addEventListener("pointerdown", () => {
+  scrubbing = true;
+  playing = false;
+  playButton.textContent = "Play";
+});
+
+scrubInput.addEventListener("pointerup", () => {
+  scrubbing = false;
+});
+
+scrubInput.addEventListener("input", (event) => {
+  const value = parseFloat(event.target.value);
+  time = value * Math.PI * 2;
+  trace = [];
+});
+
+resize();
+loadPreset();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
