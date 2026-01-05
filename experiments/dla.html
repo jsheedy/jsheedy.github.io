@@ -509,9 +509,12 @@
                     const cell = grid.get(key);
                     if (cell && cell.length > 0) {
                         // Check actual distance to particles in cell
+                        // Use squared distance to avoid expensive sqrt
                         for (const p of cell) {
-                            const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
-                            if (dist < 2) {
+                            const dx = x - p.x;
+                            const dy = y - p.y;
+                            const distSquared = dx * dx + dy * dy;
+                            if (distSquared < 4) { // dist < 2, so dist^2 < 4
                                 return true;
                             }
                         }
@@ -568,11 +571,17 @@
         }
 
         function addParticle(x, y, age) {
-            const particle = { x, y, age };
+            const particle = {
+                x,
+                y,
+                age,
+                color: null // Will be calculated lazily
+            };
             particles.push(particle);
             addToGrid(x, y, particle);
 
-            const dist = Math.sqrt(x * x + y * y);
+            const distSquared = x * x + y * y;
+            const dist = Math.sqrt(distSquared);
             maxRadius = Math.max(maxRadius, dist);
         }
 
@@ -612,10 +621,11 @@
                     }
                 }
 
-                // Check if too far away
-                const dist = Math.sqrt(this.x * this.x + this.y * this.y);
+                // Check if too far away (use squared distance)
+                const distSquared = this.x * this.x + this.y * this.y;
                 const killRadius = (maxRadius + 10) * settings.killRadiusMult;
-                if (dist > killRadius) {
+                const killRadiusSquared = killRadius * killRadius;
+                if (distSquared > killRadiusSquared) {
                     this.respawn();
                 }
 
@@ -624,24 +634,46 @@
         }
 
         function getParticleColor(particle) {
-            const dist = Math.sqrt(particle.x * particle.x + particle.y * particle.y);
+            // Return cached color if available and color scheme is cacheable
+            if (particle.color && settings.colorScheme !== 'age') {
+                return particle.color;
+            }
+
+            let color;
+            const distSquared = particle.x * particle.x + particle.y * particle.y;
 
             switch (settings.colorScheme) {
                 case 'distance':
+                    const dist = Math.sqrt(distSquared);
                     const hue = (dist / maxRadius) * 120;
-                    return `hsl(${120 - hue}, 100%, 50%)`;
+                    color = `hsl(${120 - hue}, 100%, 50%)`;
+                    break;
 
                 case 'age':
+                    // Age color changes over time, don't cache
                     const age = frameCount - particle.age;
                     const ageHue = (age / frameCount) * 120;
                     return `hsl(${120 - ageHue}, 100%, 50%)`;
 
                 case 'green':
-                    return '#00ff41';
+                    color = '#00ff41';
+                    break;
 
                 case 'rainbow':
-                    const rainbowHue = (dist / maxRadius) * 360;
-                    return `hsl(${rainbowHue}, 100%, 50%)`;
+                    const rainbowDist = Math.sqrt(distSquared);
+                    const rainbowHue = (rainbowDist / maxRadius) * 360;
+                    color = `hsl(${rainbowHue}, 100%, 50%)`;
+                    break;
+            }
+
+            // Cache the color
+            particle.color = color;
+            return color;
+        }
+
+        function invalidateColorCache() {
+            for (const particle of particles) {
+                particle.color = null;
             }
         }
 
@@ -679,31 +711,40 @@
             // Update camera
             updateCamera();
 
-            // Draw particles
+            // Calculate viewport bounds in simulation space for culling
+            const viewportMargin = 10; // Small margin to avoid edge artifacts
+            const minX = camera.x - (canvas.width / 2 / camera.zoom) - viewportMargin;
+            const maxX = camera.x + (canvas.width / 2 / camera.zoom) + viewportMargin;
+            const minY = camera.y - (canvas.height / 2 / camera.zoom) - viewportMargin;
+            const maxY = camera.y + (canvas.height / 2 / camera.zoom) + viewportMargin;
+
+            // Calculate particle size based on zoom (min 1px, max 4px)
+            const particleSize = Math.max(1, Math.min(4, camera.zoom * 0.5));
+
+            // Draw particles with viewport culling
             for (const particle of particles) {
+                // Cull particles outside viewport
+                if (particle.x < minX || particle.x > maxX ||
+                    particle.y < minY || particle.y > maxY) {
+                    continue;
+                }
+
                 const screen = simToScreen(particle.x, particle.y);
-
-                // Calculate particle size based on zoom (min 1px, max 4px)
-                const particleSize = Math.max(1, Math.min(4, camera.zoom * 0.5));
-
                 ctx.fillStyle = getParticleColor(particle);
                 ctx.fillRect(screen.x - particleSize/2, screen.y - particleSize/2, particleSize, particleSize);
-
-                // Add glow effect
-                if (camera.zoom > 2) {
-                    ctx.shadowBlur = Math.min(3, camera.zoom * 0.3);
-                    ctx.shadowColor = ctx.fillStyle;
-                    ctx.fillRect(screen.x - particleSize/2, screen.y - particleSize/2, particleSize, particleSize);
-                    ctx.shadowBlur = 0;
-                }
             }
 
             // Draw walkers if enabled
             if (settings.showWalkers) {
                 ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                const walkerSize = Math.max(1, Math.min(3, camera.zoom * 0.4));
                 for (const walker of walkers) {
+                    // Cull walkers outside viewport
+                    if (walker.x < minX || walker.x > maxX ||
+                        walker.y < minY || walker.y > maxY) {
+                        continue;
+                    }
                     const screen = simToScreen(walker.x, walker.y);
-                    const walkerSize = Math.max(1, Math.min(3, camera.zoom * 0.4));
                     ctx.fillRect(screen.x - walkerSize/2, screen.y - walkerSize/2, walkerSize, walkerSize);
                 }
             }
@@ -817,6 +858,7 @@
 
         document.getElementById('colorScheme').addEventListener('change', (e) => {
             settings.colorScheme = e.target.value;
+            invalidateColorCache();
         });
 
         document.getElementById('showWalkers').addEventListener('change', (e) => {
