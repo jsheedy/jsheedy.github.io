@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-d Tree Nearest Neighbor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+            animation: flicker 0.15s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 260px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .right-sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 260px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff41;
+            box-shadow: -5px 0 30px rgba(0, 255, 65, 0.2);
+            padding: 15px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar-section.highlighted {
+            background: #001a00;
+            border-color: #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .sidebar h2,
+        .right-sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+        }
+
+        .sidebar p,
+        .right-sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
+        }
+
+        .legend {
+            font-size: 11px;
+            color: #00ff41aa;
+            display: grid;
+            gap: 8px;
+        }
+
+        .legend span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .toggle-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .toggle-row button.active {
+            background: #00ff41;
+            color: #000;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tree-panel {
+            display: block;
+        }
+
+        #tree {
+            width: 100%;
+            background: #000;
+            border: 2px solid #00ff41;
+            box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        @media (max-width: 1100px) {
+            .sidebar,
+            .right-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a class="back-link" href="index.html">experiments</a>
+        <div class="title-text">K-D TREE</div>
+        <div class="title-subtitle">Nearest Neighbor Search</div>
+    </div>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section highlighted">
+                    <h2>How it works</h2>
+                    <p>A k-d tree is a binary space-partitioning tree that alternates x/y splits to keep points balanced for fast neighbor searches. Here, each node is a point and each split is drawn as a red or blue line across its bounds.</p>
+                    <p>Click to add points. Hover to reveal the nearest neighbor search path.</p>
+                </div>
+                <div class="sidebar-section">
+                    <h2>Legend</h2>
+                    <div class="legend">
+                        <span><i class="dot" style="color:#ffdd57;background:#ffdd57;"></i>query point</span>
+                        <span><i class="dot" style="color:#00d4ff;background:#00d4ff;"></i>nearest neighbors</span>
+                        <span><i class="dot" style="color:#ff6b6b;background:#ff6b6b;"></i>x-axis split</span>
+                        <span><i class="dot" style="color:#4dabf7;background:#4dabf7;"></i>y-axis split</span>
+                        <span><i class="dot" style="color:#ffd166;background:#ffd166;"></i>visited nodes</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas" width="900" height="600"></canvas>
+        </div>
+
+        <aside class="right-sidebar">
+            <div class="sidebar-section">
+                <h2>Points</h2>
+                <div class="button-group" style="margin-top: 12px;">
+                    <button id="randomize">Randomize</button>
+                    <button id="clear">Clear</button>
+                </div>
+                <div class="button-group" style="margin-top: 10px;">
+                    <button id="add100">Add 100</button>
+                    <button id="add1000">Add 1000</button>
+                </div>
+                <div class="control-group" style="margin-top: 12px;">
+                    <label>K nearest <span class="value-display" id="kLabel">25</span></label>
+                    <input id="k" type="range" min="1" max="50" step="1" value="25">
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h2>View</h2>
+                <p>Splitting planes and the tree diagram are always visible.</p>
+            </div>
+
+            <div class="sidebar-section tree-panel" id="treePanel">
+                <h2>Tree Structure</h2>
+                <canvas id="tree" width="220" height="280"></canvas>
+            </div>
+        </aside>
+    </div>
+
+    <div class="control-panel">
+        <div class="control-group" style="grid-column: 1 / -1;">
+            <label>Stats</label>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="statPoints">0</div>
+                    <div class="stat-label">Points</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statDepth">0</div>
+                    <div class="stat-label">Depth</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statBalance">0</div>
+                    <div class="stat-label">Balance</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="statVisited">0</div>
+                    <div class="stat-label">KD Visits</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const field = document.getElementById('canvas');
+        const ctx = field.getContext('2d');
+        const treeCanvas = document.getElementById('tree');
+        const treeCtx = treeCanvas.getContext('2d');
+
+        const kInput = document.getElementById('k');
+        const kLabel = document.getElementById('kLabel');
+
+        const statPoints = document.getElementById('statPoints');
+        const statDepth = document.getElementById('statDepth');
+        const statBalance = document.getElementById('statBalance');
+        const statVisited = document.getElementById('statVisited');
+
+        const randomizeButton = document.getElementById('randomize');
+        const clearButton = document.getElementById('clear');
+        const add100Button = document.getElementById('add100');
+        const add1000Button = document.getElementById('add1000');
+
+        const colors = {
+            point: '#00ff41',
+            query: '#ffdd57',
+            neighbor: '#00d4ff',
+            visited: '#ffd166',
+            splitX: '#ff6b6b',
+            splitY: '#4dabf7'
+        };
+
+        const defaultCount = 120;
+
+        let points = [];
+        let root = null;
+        let queryPoint = null;
+        let neighborResult = [];
+        let visitedOrder = [];
+        const showSplits = true;
+        let nodeId = 0;
+
+        function randomPoint() {
+            const padding = 30;
+            return {
+                x: padding + Math.random() * (field.width - padding * 2),
+                y: padding + Math.random() * (field.height - padding * 2)
+            };
+        }
+
+        function rebuildTree() {
+            nodeId = 0;
+            root = buildKdTree(points, 0, {
+                minX: 0,
+                maxX: field.width,
+                minY: 0,
+                maxY: field.height
+            });
+            updateStats();
+            runQuery();
+        }
+
+        function buildKdTree(list, depth, bounds) {
+            if (!list.length) return null;
+            const axis = depth % 2;
+            const sorted = [...list].sort((a, b) => (axis === 0 ? a.x - b.x : a.y - b.y));
+            const median = Math.floor(sorted.length / 2);
+            const point = sorted[median];
+            const leftPoints = sorted.slice(0, median);
+            const rightPoints = sorted.slice(median + 1);
+            const nodeBounds = { ...bounds };
+
+            const leftBounds = { ...bounds };
+            const rightBounds = { ...bounds };
+            if (axis === 0) {
+                leftBounds.maxX = point.x;
+                rightBounds.minX = point.x;
+            } else {
+                leftBounds.maxY = point.y;
+                rightBounds.minY = point.y;
+            }
+
+            return {
+                id: nodeId++,
+                point,
+                axis,
+                depth,
+                bounds: nodeBounds,
+                left: buildKdTree(leftPoints, depth + 1, leftBounds),
+                right: buildKdTree(rightPoints, depth + 1, rightBounds)
+            };
+        }
+
+        function rectDistanceSq(target, bounds) {
+            let dx = 0;
+            if (target.x < bounds.minX) dx = bounds.minX - target.x;
+            else if (target.x > bounds.maxX) dx = target.x - bounds.maxX;
+            let dy = 0;
+            if (target.y < bounds.minY) dy = bounds.minY - target.y;
+            else if (target.y > bounds.maxY) dy = target.y - bounds.maxY;
+            return dx * dx + dy * dy;
+        }
+
+        function insertNeighbor(list, candidate, k) {
+            list.push(candidate);
+            list.sort((a, b) => a.dist - b.dist);
+            if (list.length > k) list.pop();
+        }
+
+        function kdSearch(node, target, k, result, visited) {
+            if (!node) return;
+            visited.push(node);
+            const dx = node.point.x - target.x;
+            const dy = node.point.y - target.y;
+            const dist = dx * dx + dy * dy;
+            insertNeighbor(result, { node, dist }, k);
+
+            const axis = node.axis;
+            const diff = axis === 0 ? target.x - node.point.x : target.y - node.point.y;
+            const near = diff < 0 ? node.left : node.right;
+            const far = diff < 0 ? node.right : node.left;
+
+            kdSearch(near, target, k, result, visited);
+            const worst = result.length < k ? Infinity : result[result.length - 1].dist;
+            if (far && rectDistanceSq(target, far.bounds) <= worst) {
+                kdSearch(far, target, k, result, visited);
+            }
+        }
+
+        function runQuery() {
+            if (!queryPoint || !root) {
+                neighborResult = [];
+                visitedOrder = [];
+                updateStats();
+                return;
+            }
+            const result = [];
+            const visited = [];
+            kdSearch(root, queryPoint, Number(kInput.value), result, visited);
+            neighborResult = result;
+            visitedOrder = visited;
+            statVisited.textContent = visitedOrder.length;
+        }
+
+        function updateStats() {
+            const { maxDepth, minDepth } = computeDepthStats(root);
+            statPoints.textContent = points.length;
+            statDepth.textContent = maxDepth;
+            const balance = minDepth === 0 ? 0 : (maxDepth / minDepth).toFixed(2);
+            statBalance.textContent = balance;
+            if (!queryPoint) {
+                statVisited.textContent = 0;
+            }
+        }
+
+        function computeDepthStats(node) {
+            if (!node) return { maxDepth: 0, minDepth: 0 };
+            if (!node.left && !node.right) return { maxDepth: node.depth, minDepth: node.depth };
+            const left = computeDepthStats(node.left);
+            const right = computeDepthStats(node.right);
+            const maxDepth = Math.max(left.maxDepth, right.maxDepth, node.depth);
+            const minDepth = Math.min(
+                left.minDepth || node.depth,
+                right.minDepth || node.depth,
+                node.depth
+            );
+            return { maxDepth, minDepth };
+        }
+
+        function drawSplits(node) {
+            if (!node) return;
+            const { point, bounds, axis } = node;
+            ctx.strokeStyle = axis === 0 ? colors.splitX : colors.splitY;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            if (axis === 0) {
+                ctx.moveTo(point.x, bounds.minY);
+                ctx.lineTo(point.x, bounds.maxY);
+            } else {
+                ctx.moveTo(bounds.minX, point.y);
+                ctx.lineTo(bounds.maxX, point.y);
+            }
+            ctx.stroke();
+            drawSplits(node.left);
+            drawSplits(node.right);
+        }
+
+        function drawPoints() {
+            ctx.fillStyle = colors.point;
+            points.forEach((point) => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawQuery() {
+            if (!queryPoint) return;
+            ctx.fillStyle = colors.query;
+            ctx.beginPath();
+            ctx.arc(queryPoint.x, queryPoint.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            const radius = neighborResult.length
+                ? Math.sqrt(neighborResult[neighborResult.length - 1].dist)
+                : 0;
+            if (radius) {
+                ctx.strokeStyle = 'rgba(255, 221, 87, 0.35)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(queryPoint.x, queryPoint.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawNeighbors() {
+            if (!queryPoint) return;
+            ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
+            ctx.lineWidth = 2;
+            neighborResult.forEach((entry) => {
+                const point = entry.node.point;
+                ctx.beginPath();
+                ctx.moveTo(queryPoint.x, queryPoint.y);
+                ctx.lineTo(point.x, point.y);
+                ctx.stroke();
+                ctx.fillStyle = colors.neighbor;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawVisited() {
+            if (!visitedOrder.length) return;
+            ctx.fillStyle = colors.visited;
+            for (const node of visitedOrder) {
+                ctx.beginPath();
+                ctx.arc(node.point.x, node.point.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawField() {
+            ctx.clearRect(0, 0, field.width, field.height);
+            if (showSplits) drawSplits(root);
+            drawPoints();
+            drawVisited();
+            drawNeighbors();
+            drawQuery();
+        }
+
+        function layoutTree(node, minX, maxX, levelHeight, positions) {
+            if (!node) return;
+            const x = (minX + maxX) / 2;
+            const y = 30 + node.depth * levelHeight;
+            positions.set(node.id, { x, y, node });
+            if (node.left) layoutTree(node.left, minX, x, levelHeight, positions);
+            if (node.right) layoutTree(node.right, x, maxX, levelHeight, positions);
+        }
+
+        function drawTree() {
+            treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+            if (!root) return;
+            const positions = new Map();
+            const { maxDepth } = computeDepthStats(root);
+            const levelHeight = Math.max(16, (treeCanvas.height - 40) / Math.max(1, maxDepth + 1));
+            layoutTree(root, 20, treeCanvas.width - 20, levelHeight, positions);
+            const visitedSet = new Set(visitedOrder.map((node) => node.id));
+
+            positions.forEach(({ node, x, y }) => {
+                if (node.left) {
+                    const child = positions.get(node.left.id);
+                    treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
+                    treeCtx.beginPath();
+                    treeCtx.moveTo(x, y);
+                    treeCtx.lineTo(child.x, child.y);
+                    treeCtx.stroke();
+                }
+                if (node.right) {
+                    const child = positions.get(node.right.id);
+                    treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
+                    treeCtx.beginPath();
+                    treeCtx.moveTo(x, y);
+                    treeCtx.lineTo(child.x, child.y);
+                    treeCtx.stroke();
+                }
+            });
+
+            positions.forEach(({ node, x, y }) => {
+                const isVisited = visitedSet.has(node.id);
+                if (isVisited) {
+                    treeCtx.fillStyle = colors.visited;
+                } else {
+                    treeCtx.fillStyle = node.axis === 0 ? colors.splitX : colors.splitY;
+                }
+                treeCtx.beginPath();
+                treeCtx.arc(x, y, 6, 0, Math.PI * 2);
+                treeCtx.fill();
+            });
+        }
+
+        function animate() {
+            drawField();
+            drawTree();
+            requestAnimationFrame(animate);
+        }
+
+        function getPointerPosition(event) {
+            const rect = field.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (field.width / rect.width),
+                y: (event.clientY - rect.top) * (field.height / rect.height)
+            };
+        }
+
+        field.addEventListener('pointerdown', (event) => {
+            const position = getPointerPosition(event);
+            points.push(position);
+            rebuildTree();
+        });
+
+        field.addEventListener('pointermove', (event) => {
+            if (event.pointerType === 'touch') return;
+            queryPoint = getPointerPosition(event);
+            runQuery();
+        });
+
+        randomizeButton.addEventListener('click', () => {
+            const targetCount = points.length || defaultCount;
+            points = Array.from({ length: targetCount }, randomPoint);
+            queryPoint = null;
+            rebuildTree();
+        });
+
+        clearButton.addEventListener('click', () => {
+            points = [];
+            queryPoint = null;
+            rebuildTree();
+        });
+
+        add100Button.addEventListener('click', () => {
+            points = points.concat(Array.from({ length: 100 }, randomPoint));
+            rebuildTree();
+        });
+
+        add1000Button.addEventListener('click', () => {
+            points = points.concat(Array.from({ length: 1000 }, randomPoint));
+            rebuildTree();
+        });
+
+        kInput.addEventListener('input', () => {
+            kLabel.textContent = kInput.value;
+            runQuery();
+        });
+
+        function init() {
+            kLabel.textContent = kInput.value;
+            points = Array.from({ length: defaultCount }, randomPoint);
+            rebuildTree();
+            animate();
+        }
+
+        init();
+    </script>
+</body>
+</html>
