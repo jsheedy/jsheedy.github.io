@@ -136,6 +136,21 @@
             background: #000;
         }
 
+        #zoom-indicator {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 65, 0.6);
+            color: #00ff41;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-shadow: 0 0 6px rgba(0, 255, 65, 0.6);
+            pointer-events: none;
+        }
+
         canvas {
             display: block;
             width: 100%;
@@ -334,6 +349,7 @@
 
         <div id="canvas-container">
             <canvas id="canvas"></canvas>
+            <div id="zoom-indicator">Zoom: 100%</div>
         </div>
 
         <div id="controls">
@@ -377,17 +393,25 @@
             <div class="control-group">
                 <label>
                     Spawn Radius Multiplier
-                    <span class="value-display" id="spawnRadiusValue">1.2</span>
+                    <span class="value-display" id="spawnRadiusValue">0.9</span>
                 </label>
-                <input type="range" id="spawnRadius" min="100" max="200" value="120">
+                <input type="range" id="spawnRadius" min="0" max="200" value="90">
             </div>
 
             <div class="control-group">
                 <label>
                     Kill Radius Multiplier
-                    <span class="value-display" id="killRadiusValue">3.0</span>
+                    <span class="value-display" id="killRadiusValue">1.2</span>
                 </label>
-                <input type="range" id="killRadius" min="150" max="500" value="300">
+                <input type="range" id="killRadius" min="0" max="500" value="120">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Max Radius
+                    <span class="value-display" id="maxRadiusLimitValue">500</span>
+                </label>
+                <input type="range" id="maxRadiusLimit" min="50" max="1500" value="500">
             </div>
 
             <div class="control-group">
@@ -413,7 +437,7 @@
 
             <div class="control-group">
                 <label>
-                    <input type="checkbox" id="showWalkers" style="width: auto; margin-right: 5px;">
+                    <input type="checkbox" id="showWalkers" style="width: auto; margin-right: 5px;" checked="checked">
                     Show Active Walkers
                 </label>
             </div>
@@ -466,6 +490,9 @@
         let lastTime = Date.now();
         let particlesAddedLastSec = 0;
         let lastSecTime = Date.now();
+        let isPanning = false;
+        let lastPanX = 0;
+        let lastPanY = 0;
 
         // Settings
         let settings = {
@@ -473,11 +500,12 @@
             particlesPerFrame: 1.0,  // Now used as steps multiplier
             stickProbability: 1.0,
             walkerCount: 200,
-            spawnRadiusMult: 1.2,
-            killRadiusMult: 3.0,
+            spawnRadiusMult: 0.9,
+            killRadiusMult: 1.2,
+            maxRadiusLimit: 500,
             seedPattern: 'center',
             colorScheme: 'distance',
-            showWalkers: false
+            showWalkers: true
         };
 
         // Grid cell size for spatial hashing (in simulation units)
@@ -490,8 +518,8 @@
             return `${gx},${gy}`;
         }
 
-        function addToGrid(x, y, particle) {
-            const key = hashKey(x, y);
+        function addToGrid(particle) {
+            const key = hashKey(particle.x, particle.y);
             if (!grid.has(key)) {
                 grid.set(key, []);
             }
@@ -578,7 +606,7 @@
                 color: null // Will be calculated lazily
             };
             particles.push(particle);
-            addToGrid(x, y, particle);
+            addToGrid(particle);
 
             const distSquared = x * x + y * y;
             const dist = Math.sqrt(distSquared);
@@ -614,6 +642,12 @@
                 // Check if stuck to structure
                 if (isNearStructure(this.x, this.y)) {
                     if (Math.random() < settings.stickProbability) {
+                        const distSquared = this.x * this.x + this.y * this.y;
+                        const limitSquared = settings.maxRadiusLimit * settings.maxRadiusLimit;
+                        if (distSquared > limitSquared) {
+                            this.respawn();
+                            return false;
+                        }
                         addParticle(this.x, this.y, frameCount);
                         particlesAddedLastSec++;
                         this.respawn();
@@ -684,6 +718,12 @@
             return { x: screenX, y: screenY };
         }
 
+        function screenToSim(screenX, screenY, zoom = camera.zoom) {
+            const simX = (screenX - canvas.width / 2) / zoom + camera.x;
+            const simY = (screenY - canvas.height / 2) / zoom + camera.y;
+            return { x: simX, y: simY };
+        }
+
         function updateCamera() {
             // Smoothly interpolate zoom
             camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
@@ -711,6 +751,22 @@
             // Update camera
             updateCamera();
 
+            // Draw spawn/kill radius rings
+            const center = simToScreen(0, 0);
+            const spawnRadius = (maxRadius + 0) * settings.spawnRadiusMult;
+            const killRadius = (maxRadius + 0) * settings.killRadiusMult;
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.35)';
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, spawnRadius * camera.zoom, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255, 80, 80, 0.35)';
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, killRadius * camera.zoom, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
             // Calculate viewport bounds in simulation space for culling
             const viewportMargin = 10; // Small margin to avoid edge artifacts
             const minX = camera.x - (canvas.width / 2 / camera.zoom) - viewportMargin;
@@ -719,7 +775,7 @@
             const maxY = camera.y + (canvas.height / 2 / camera.zoom) + viewportMargin;
 
             // Calculate particle size based on zoom (min 1px, max 4px)
-            const particleSize = Math.max(1, Math.min(4, camera.zoom * 0.5));
+            const particleSize = Math.max(3, Math.min(4, camera.zoom * 0.5));
 
             // Draw particles with viewport culling
             for (const particle of particles) {
@@ -736,7 +792,7 @@
 
             // Draw walkers if enabled
             if (settings.showWalkers) {
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
                 const walkerSize = Math.max(1, Math.min(3, camera.zoom * 0.4));
                 for (const walker of walkers) {
                     // Cull walkers outside viewport
@@ -792,6 +848,7 @@
             document.getElementById('currentSpawnRadius').textContent = Math.round((maxRadius + 10) * settings.spawnRadiusMult);
             document.getElementById('boundingRadius').textContent = Math.round(maxRadius);
             document.getElementById('zoomLevel').textContent = Math.round(camera.zoom * 10) + '%';
+            document.getElementById('zoom-indicator').textContent = 'Zoom: ' + Math.round(camera.zoom * 10) + '%';
 
             requestAnimationFrame(animate);
         }
@@ -852,6 +909,11 @@
             document.getElementById('killRadiusValue').textContent = settings.killRadiusMult.toFixed(1);
         });
 
+        document.getElementById('maxRadiusLimit').addEventListener('input', (e) => {
+            settings.maxRadiusLimit = parseInt(e.target.value);
+            document.getElementById('maxRadiusLimitValue').textContent = settings.maxRadiusLimit;
+        });
+
         document.getElementById('seedPattern').addEventListener('change', (e) => {
             settings.seedPattern = e.target.value;
         });
@@ -863,6 +925,52 @@
 
         document.getElementById('showWalkers').addEventListener('change', (e) => {
             settings.showWalkers = e.target.checked;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const before = screenToSim(screenX, screenY);
+
+            const zoomFactor = Math.exp(-e.deltaY * 0.0015);
+            const nextZoom = Math.min(camera.maxZoom, Math.max(camera.minZoom, camera.targetZoom * zoomFactor));
+
+            camera.targetZoom = nextZoom;
+            camera.x = before.x - (screenX - canvas.width / 2) / nextZoom;
+            camera.y = before.y - (screenY - canvas.height / 2) / nextZoom;
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) {
+                return;
+            }
+            isPanning = true;
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanning) {
+                return;
+            }
+            const dx = e.clientX - lastPanX;
+            const dy = e.clientY - lastPanY;
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            camera.x -= dx / camera.zoom;
+            camera.y -= dy / camera.zoom;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isPanning) {
+                return;
+            }
+            isPanning = false;
+            canvas.style.cursor = 'crosshair';
         });
 
         // Initialize
