@@ -215,6 +215,12 @@
             box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
         }
 
+        select option {
+            background: rgba(0, 20, 0, 0.95);
+            color: #00ff41;
+            padding: 8px;
+        }
+
         button {
             margin-bottom: 8px;
         }
@@ -338,6 +344,14 @@
 
             <div class="control-group">
                 <label>
+                    Simulation Speed
+                    <span class="value-display" id="speedValue">1.0x</span>
+                </label>
+                <input type="range" id="speed" min="1" max="50" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>
                     Particles/Frame
                     <span class="value-display" id="particlesPerFrameValue">50</span>
                 </label>
@@ -455,6 +469,7 @@
 
         // Settings
         let settings = {
+            speed: 1.0,
             particlesPerFrame: 50,
             stickProbability: 1.0,
             walkerCount: 100,
@@ -708,7 +723,10 @@
         }
 
         function animate() {
-            update();
+            // Run simulation multiple times per frame based on speed
+            for (let i = 0; i < settings.speed; i++) {
+                update();
+            }
             render();
 
             // Update FPS
@@ -753,6 +771,11 @@
             particlesAddedLastSec = 0;
             camera.zoom = 10;
             camera.targetZoom = 10;
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            settings.speed = parseInt(e.target.value) / 10;
+            document.getElementById('speedValue').textContent = settings.speed.toFixed(1) + 'x';
         });
 
         document.getElementById('particlesPerFrame').addEventListener('input', (e) => {
