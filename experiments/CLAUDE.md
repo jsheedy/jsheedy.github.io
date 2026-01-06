@@ -85,6 +85,10 @@ When showing file paths that should be opened in a browser, always present them 
 ## URL References
 When presenting URLS, always present them as clickable links and also call the open command on them which opens in a browser
 
+## GitHack Preview Links
+When providing GitHack preview links, always include the full commit SHA in the URL, not the branch name. This ensures the link remains valid even after the branch is merged or deleted.
+
+Example: `https://raw.githack.com/jsheedy/jsheedy.github.io/abc1234/experiments/file.html`
 
 ## Future Experiments
 
