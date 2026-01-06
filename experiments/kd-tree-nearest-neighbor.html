@@ -480,6 +480,8 @@
         const showSplits = true;
         let nodeId = 0;
         let resizeRaf = null;
+        let hoveredNode = null;
+        let treePositions = new Map();
 
         function randomPoint() {
             const padding = 30;
@@ -706,6 +708,18 @@
             }
         }
 
+        function drawHoveredPoint() {
+            if (!hoveredNode) return;
+            const point = hoveredNode.point;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00ff41';
+            ctx.fillStyle = '#00ff41';
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
         function drawField() {
             ctx.clearRect(0, 0, field.width, field.height);
             if (showSplits) drawSplits(root);
@@ -713,6 +727,7 @@
             drawVisited();
             drawNeighbors();
             drawQuery();
+            drawHoveredPoint();
         }
 
         function layoutTree(node, minX, maxX, levelHeight, positions) {
@@ -727,15 +742,15 @@
         function drawTree() {
             treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
             if (!root) return;
-            const positions = new Map();
+            treePositions.clear();
             const { maxDepth } = computeDepthStats(root);
             const levelHeight = Math.max(16, (treeCanvas.height - 40) / Math.max(1, maxDepth + 1));
-            layoutTree(root, 20, treeCanvas.width - 20, levelHeight, positions);
+            layoutTree(root, 20, treeCanvas.width - 20, levelHeight, treePositions);
             const visitedSet = new Set(visitedOrder.map((node) => node.id));
 
-            positions.forEach(({ node, x, y }) => {
+            treePositions.forEach(({ node, x, y }) => {
                 if (node.left) {
-                    const child = positions.get(node.left.id);
+                    const child = treePositions.get(node.left.id);
                     treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
                     treeCtx.beginPath();
                     treeCtx.moveTo(x, y);
@@ -743,7 +758,7 @@
                     treeCtx.stroke();
                 }
                 if (node.right) {
-                    const child = positions.get(node.right.id);
+                    const child = treePositions.get(node.right.id);
                     treeCtx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
                     treeCtx.beginPath();
                     treeCtx.moveTo(x, y);
@@ -752,16 +767,26 @@
                 }
             });
 
-            positions.forEach(({ node, x, y }) => {
+            treePositions.forEach(({ node, x, y }) => {
                 const isVisited = visitedSet.has(node.id);
-                if (isVisited) {
+                const isHovered = hoveredNode && hoveredNode.id === node.id;
+
+                if (isHovered) {
+                    // Draw glow effect
+                    treeCtx.shadowBlur = 20;
+                    treeCtx.shadowColor = '#00ff41';
+                    treeCtx.fillStyle = '#00ff41';
+                } else if (isVisited) {
+                    treeCtx.shadowBlur = 0;
                     treeCtx.fillStyle = colors.visited;
                 } else {
+                    treeCtx.shadowBlur = 0;
                     treeCtx.fillStyle = node.axis === 0 ? colors.splitX : colors.splitY;
                 }
                 treeCtx.beginPath();
-                treeCtx.arc(x, y, 6, 0, Math.PI * 2);
+                treeCtx.arc(x, y, isHovered ? 8 : 6, 0, Math.PI * 2);
                 treeCtx.fill();
+                treeCtx.shadowBlur = 0;
             });
         }
 
@@ -789,6 +814,43 @@
             if (event.pointerType === 'touch') return;
             queryPoint = getPointerPosition(event);
             runQuery();
+        });
+
+        field.addEventListener('pointerleave', () => {
+            queryPoint = null;
+            neighborResult = [];
+            visitedOrder = [];
+            updateStats();
+        });
+
+        function getTreePointerPosition(event) {
+            const rect = treeCanvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (treeCanvas.width / rect.width),
+                y: (event.clientY - rect.top) * (treeCanvas.height / rect.height)
+            };
+        }
+
+        function findHoveredNode(pointerX, pointerY) {
+            const hoverRadius = 10;
+            for (const [id, { node, x, y }] of treePositions) {
+                const dx = x - pointerX;
+                const dy = y - pointerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= hoverRadius) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        treeCanvas.addEventListener('pointermove', (event) => {
+            const pos = getTreePointerPosition(event);
+            hoveredNode = findHoveredNode(pos.x, pos.y);
+        });
+
+        treeCanvas.addEventListener('pointerleave', () => {
+            hoveredNode = null;
         });
 
         randomizeButton.addEventListener('click', () => {
