@@ -224,6 +224,135 @@
 			width: 80px;
 			accent-color: #48dbfb;
 		}
+
+		/* Sidebar */
+		.sidebar {
+			position: absolute;
+			top: 12px;
+			left: 12px;
+			width: 320px;
+			max-height: calc(100% - 70px);
+			background: rgba(0,0,0,0.85);
+			border: 1px solid rgba(255,255,255,0.15);
+			border-radius: 10px;
+			backdrop-filter: blur(10px);
+			overflow: hidden;
+			transition: transform 0.3s ease, opacity 0.3s ease;
+		}
+
+		.sidebar.collapsed {
+			transform: translateX(-340px);
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.sidebar-toggle {
+			position: absolute;
+			top: 12px;
+			left: 12px;
+			z-index: 10;
+			background: rgba(0,0,0,0.7);
+			border: 1px solid rgba(255,255,255,0.3);
+			color: #e8e8e8;
+			padding: 8px 12px;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 12px;
+			transition: all 0.2s;
+		}
+
+		.sidebar-toggle:hover {
+			background: rgba(255,255,255,0.15);
+		}
+
+		.sidebar-toggle.hidden { display: none; }
+
+		.sidebar-header {
+			background: linear-gradient(90deg, rgba(255,107,107,0.3), rgba(254,202,87,0.3), rgba(72,219,251,0.3));
+			padding: 14px 16px;
+			border-bottom: 1px solid rgba(255,255,255,0.1);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.sidebar-header h2 {
+			font-size: 14px;
+			font-weight: 600;
+			letter-spacing: 1px;
+			text-transform: uppercase;
+			margin: 0;
+		}
+
+		.sidebar-close {
+			background: none;
+			border: none;
+			color: rgba(255,255,255,0.6);
+			font-size: 18px;
+			cursor: pointer;
+			padding: 0;
+			line-height: 1;
+		}
+
+		.sidebar-close:hover { color: #fff; }
+
+		.sidebar-content {
+			padding: 16px;
+			overflow-y: auto;
+			max-height: calc(100vh - 200px);
+			font-size: 13px;
+			line-height: 1.7;
+		}
+
+		.sidebar-content h3 {
+			color: #48dbfb;
+			font-size: 12px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			margin: 16px 0 8px 0;
+			padding-bottom: 4px;
+			border-bottom: 1px solid rgba(72,219,251,0.3);
+		}
+
+		.sidebar-content h3:first-child { margin-top: 0; }
+
+		.sidebar-content p {
+			color: rgba(255,255,255,0.8);
+			margin: 0 0 12px 0;
+		}
+
+		.sidebar-content ul {
+			margin: 0 0 12px 0;
+			padding-left: 18px;
+			color: rgba(255,255,255,0.8);
+		}
+
+		.sidebar-content li { margin-bottom: 6px; }
+
+		.sidebar-content .highlight {
+			color: #feca57;
+			font-weight: 500;
+		}
+
+		.sidebar-content .formula {
+			background: rgba(255,255,255,0.08);
+			padding: 8px 12px;
+			border-radius: 6px;
+			font-family: 'Courier New', monospace;
+			font-size: 12px;
+			color: #ff9ff3;
+			margin: 8px 0;
+			overflow-x: auto;
+		}
+
+		.sidebar-content .dual-note {
+			background: linear-gradient(90deg, rgba(254,202,87,0.15), rgba(72,219,251,0.15));
+			border-left: 3px solid #feca57;
+			padding: 10px 12px;
+			border-radius: 0 6px 6px 0;
+			margin: 12px 0;
+		}
 	</style>
 </head>
 <body>
@@ -276,6 +405,64 @@
 
 	<div class="canvas-container">
 		<canvas id="canvas"></canvas>
+
+		<button class="sidebar-toggle hidden" id="sidebarToggle">? Info</button>
+
+		<div class="sidebar" id="sidebar">
+			<div class="sidebar-header">
+				<h2>About Delaunay</h2>
+				<button class="sidebar-close" id="sidebarClose">&times;</button>
+			</div>
+			<div class="sidebar-content">
+				<h3>What is it?</h3>
+				<p>
+					A <span class="highlight">Delaunay triangulation</span> connects a set of points
+					with triangles such that no point lies inside the circumcircle of any triangle.
+					Named after Boris Delaunay (1934).
+				</p>
+
+				<h3>Key Properties</h3>
+				<ul>
+					<li><strong>Empty Circle Property:</strong> The circumcircle of every triangle contains no other points</li>
+					<li><strong>Max-Min Angle:</strong> Maximizes the minimum angle across all triangles, avoiding "sliver" triangles</li>
+					<li><strong>Unique:</strong> For points in general position, the triangulation is unique</li>
+				</ul>
+
+				<h3>Bowyer-Watson Algorithm</h3>
+				<p>This visualization uses the incremental <span class="highlight">Bowyer-Watson</span> algorithm:</p>
+				<ul>
+					<li>Start with a "super-triangle" containing all points</li>
+					<li>For each point, find all triangles whose circumcircle contains it</li>
+					<li>Remove those triangles, leaving a polygonal hole</li>
+					<li>Connect the new point to the hole's boundary</li>
+					<li>Finally, remove triangles connected to the super-triangle</li>
+				</ul>
+				<div class="formula">Complexity: O(n²) average, O(n log n) with spatial indexing</div>
+
+				<h3>Voronoi Duality</h3>
+				<div class="dual-note">
+					<p style="margin:0">
+						The Delaunay triangulation is the <span class="highlight">dual graph</span> of the Voronoi diagram.
+						Toggle "Voronoi Dual" to see how circumcenters connect to form Voronoi edges!
+					</p>
+				</div>
+
+				<h3>Quality Metrics</h3>
+				<ul>
+					<li><strong>Min Angle:</strong> Higher is better. 60° = equilateral (ideal)</li>
+					<li><strong>Aspect Ratio:</strong> Lower is better. 1.0 = equilateral</li>
+				</ul>
+
+				<h3>Applications</h3>
+				<ul>
+					<li>Terrain mesh generation (3D landscapes)</li>
+					<li>Finite element analysis (engineering)</li>
+					<li>Game navigation meshes (pathfinding)</li>
+					<li>Natural neighbor interpolation</li>
+					<li>Image morphing & warping</li>
+				</ul>
+			</div>
+		</div>
 
 		<div class="stats">
 			<div><span class="label">Points:</span><span class="value" id="statPoints">0</span></div>
@@ -957,6 +1144,21 @@
 				document.getElementById('animControls').classList.remove('visible');
 			}
 		}
+
+		// Sidebar toggle
+		const sidebar = document.getElementById('sidebar');
+		const sidebarToggle = document.getElementById('sidebarToggle');
+		const sidebarClose = document.getElementById('sidebarClose');
+
+		sidebarClose.addEventListener('click', () => {
+			sidebar.classList.add('collapsed');
+			sidebarToggle.classList.remove('hidden');
+		});
+
+		sidebarToggle.addEventListener('click', () => {
+			sidebar.classList.remove('collapsed');
+			sidebarToggle.classList.add('hidden');
+		});
 
 		// Initialize
 		resizeCanvas();
