@@ -107,6 +107,6 @@ When I say "create a task to '<description here>' you will
 - create a new git worktree in $HOME/git/worktrees/
 - implement the task
 - iterate with me until we agree it's correct
-- when correct, push up a new PR upstream for my review
+- only once user determines it is correct, push up a new PR upstream for my review
 - show me the link to review
 - once I've merged, you can remove the worktree
