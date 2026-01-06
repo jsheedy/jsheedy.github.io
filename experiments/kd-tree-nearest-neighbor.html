@@ -812,7 +812,17 @@
 
         field.addEventListener('pointermove', (event) => {
             if (event.pointerType === 'touch') return;
-            queryPoint = getPointerPosition(event);
+            const position = getPointerPosition(event);
+            queryPoint = position;
+
+            // Check if hovering over a point to highlight corresponding tree node
+            const hoveredPoint = findHoveredCanvasPoint(position.x, position.y);
+            if (hoveredPoint) {
+                hoveredNode = findNodeByPoint(hoveredPoint, root);
+            } else {
+                hoveredNode = null;
+            }
+
             runQuery();
         });
 
@@ -820,6 +830,7 @@
             queryPoint = null;
             neighborResult = [];
             visitedOrder = [];
+            hoveredNode = null;
             updateStats();
         });
 
@@ -839,6 +850,27 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist <= hoverRadius) {
                     return node;
+                }
+            }
+            return null;
+        }
+
+        function findNodeByPoint(searchPoint, node) {
+            if (!node) return null;
+            if (node.point === searchPoint) return node;
+            const leftResult = findNodeByPoint(searchPoint, node.left);
+            if (leftResult) return leftResult;
+            return findNodeByPoint(searchPoint, node.right);
+        }
+
+        function findHoveredCanvasPoint(pointerX, pointerY) {
+            const hoverRadius = 8;
+            for (const point of points) {
+                const dx = point.x - pointerX;
+                const dy = point.y - pointerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= hoverRadius) {
+                    return point;
                 }
             }
             return null;
