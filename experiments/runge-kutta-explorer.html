@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runge-Kutta Methods Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e0a;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #0d120d 0%, #0a0e0a 100%);
+            border-bottom: 1px solid #00ff41;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .back-link {
+            color: #00ff41;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .title {
+            font-size: 1.4em;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebars */
+        .sidebar {
+            width: 280px;
+            background: #0d120d;
+            border-right: 1px solid rgba(0, 255, 65, 0.3);
+            padding: 15px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-right {
+            border-right: none;
+            border-left: 1px solid rgba(0, 255, 65, 0.3);
+        }
+
+        .sidebar h2 {
+            font-size: 1em;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.9em;
+            color: #00cc33;
+            margin-bottom: 8px;
+        }
+
+        .sidebar p, .sidebar li {
+            font-size: 0.8em;
+            line-height: 1.6;
+            color: #00aa2a;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .sidebar li::before {
+            content: '>';
+            margin-right: 8px;
+            color: #00ff41;
+        }
+
+        .equation {
+            background: rgba(0, 255, 65, 0.05);
+            padding: 8px 12px;
+            margin: 10px 0;
+            border-left: 2px solid #00ff41;
+            font-size: 0.85em;
+            white-space: pre;
+        }
+
+        .info-box {
+            background: rgba(0, 255, 65, 0.08);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .info-box h4 {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            color: #00ff41;
+        }
+
+        .info-box p {
+            font-size: 0.75em;
+            line-height: 1.5;
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #080a08;
+            position: relative;
+        }
+
+        #mainCanvas {
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+        }
+
+        /* Controls */
+        .controls {
+            background: #0d120d;
+            border-top: 1px solid rgba(0, 255, 65, 0.3);
+            padding: 15px 20px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .controls-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        select {
+            background: #0a0e0a;
+            color: #00ff41;
+            border: 1px solid #00ff41;
+            padding: 6px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            cursor: pointer;
+            min-width: 160px;
+        }
+
+        select:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: #0a0e0a;
+            height: 6px;
+            border: 1px solid #00ff41;
+            width: 120px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+            accent-color: #00ff41;
+        }
+
+        .method-label {
+            font-size: 0.85em;
+            padding: 2px 8px;
+            border: 1px solid;
+        }
+
+        .method-euler { color: #ff4444; border-color: #ff4444; }
+        .method-rk2 { color: #ffff44; border-color: #ffff44; }
+        .method-rk4 { color: #44ff44; border-color: #44ff44; }
+
+        .btn {
+            background: transparent;
+            color: #00ff41;
+            border: 1px solid #00ff41;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: rgba(0, 255, 65, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .btn.active {
+            background: #00ff41;
+            color: #0a0e0a;
+        }
+
+        .value-display {
+            font-size: 0.8em;
+            min-width: 60px;
+            text-align: right;
+            color: #00aa2a;
+        }
+
+        /* Parameter Controls */
+        .param-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .param-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .param-item label {
+            font-size: 0.8em;
+            color: #00aa2a;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0e0a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff41;
+            border: 1px solid #0a0e0a;
+        }
+
+        /* Canvas overlay for stats */
+        .canvas-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(10, 14, 10, 0.85);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            padding: 10px;
+            font-size: 0.75em;
+            pointer-events: none;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: #00aa2a;
+        }
+
+        .stat-value {
+            color: #00ff41;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a href="index.html" class="back-link">&#9664; experiments</a>
+            <span class="title">RUNGE-KUTTA METHODS EXPLORER</span>
+        </div>
+        <div class="header-stats">
+            <span>Time: <span id="simTime">0.00</span>s</span>
+            <span>Steps: <span id="stepCount">0</span></span>
+            <span>FPS: <span id="fps">0</span></span>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Left Sidebar - About -->
+        <div class="sidebar">
+            <h2>About Runge-Kutta</h2>
+
+            <div class="sidebar-section">
+                <h3>What are these methods?</h3>
+                <p>Runge-Kutta methods are numerical techniques for solving ordinary differential equations (ODEs) of the form:</p>
+                <div class="equation">dy/dt = f(t, y)</div>
+                <p>Given an initial value, these methods approximate the solution by taking discrete steps forward in time.</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Why different methods?</h3>
+                <ul>
+                    <li><strong>Euler</strong> - Simple but inaccurate. Uses only the slope at the current point.</li>
+                    <li><strong>RK2</strong> - Checks slope at midpoint for better accuracy.</li>
+                    <li><strong>RK4</strong> - Evaluates four slopes with weighted average. Industry standard.</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Key tradeoffs</h3>
+                <p><strong>Accuracy vs Speed:</strong> Higher-order methods need more computations but can use larger steps.</p>
+                <p style="margin-top: 8px;"><strong>Stability:</strong> Some methods become unstable with large step sizes.</p>
+                <p style="margin-top: 8px;"><strong>Energy:</strong> For physics, maintaining conserved quantities matters.</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>What to observe</h3>
+                <ul>
+                    <li>How trajectories diverge over time</li>
+                    <li>Effect of increasing step size</li>
+                    <li>Which method conserves energy</li>
+                    <li>Where Euler visibly fails</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-container">
+            <canvas id="mainCanvas"></canvas>
+            <div class="canvas-overlay">
+                <div class="stat-row">
+                    <span class="stat-label">Energy (RK4):</span>
+                    <span class="stat-value" id="energyStat">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Max Error:</span>
+                    <span class="stat-value" id="errorStat">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Selection Info -->
+        <div class="sidebar sidebar-right">
+            <h2>Current Selection</h2>
+
+            <div class="info-box" id="methodInfo">
+                <h4>Method: RK4</h4>
+                <p>Fourth-order Runge-Kutta. Evaluates derivative at four points per step:</p>
+                <div class="equation">k1 = f(t, y)
+k2 = f(t+h/2, y+h*k1/2)
+k3 = f(t+h/2, y+h*k2/2)
+k4 = f(t+h, y+h*k3)
+y_new = y + h/6*(k1+2k2+2k3+k4)</div>
+                <p>Error scales as O(h^4). Gold standard for general ODE solving.</p>
+            </div>
+
+            <div class="info-box" id="systemInfo">
+                <h4>System: Simple Pendulum</h4>
+                <p>A mass on a rigid rod swinging under gravity.</p>
+                <div class="equation">d&#952;/dt = &#969;
+d&#969;/dt = -(g/L)sin(&#952;)</div>
+                <p>Watch how Euler fails to conserve energy - the pendulum gains amplitude over time, while RK4 maintains stable oscillations.</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Tips</h3>
+                <p id="tipText">Try increasing the step size to see how quickly Euler diverges compared to RK4.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="controls-row">
+            <div class="control-group">
+                <label>System:</label>
+                <select id="systemSelect">
+                    <option value="pendulum">Simple Pendulum</option>
+                    <option value="orbital">Orbital Mechanics</option>
+                    <option value="lorenz">Lorenz Attractor</option>
+                    <option value="spring">Spring System</option>
+                    <option value="projectile">Projectile with Drag</option>
+                    <option value="rocket">Earth-Moon Rocket</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Methods:</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showEuler" checked>
+                        <span class="method-label method-euler">Euler</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showRK2" checked>
+                        <span class="method-label method-rk2">RK2</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="showRK4" checked>
+                        <span class="method-label method-rk4">RK4</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Step Size:</label>
+                <input type="range" id="stepSize" min="-3" max="-0.5" step="0.1" value="-2">
+                <span class="value-display" id="stepSizeValue">0.010s</span>
+            </div>
+
+            <div class="control-group">
+                <label>Speed:</label>
+                <input type="range" id="speed" min="0.25" max="4" step="0.25" value="1">
+                <span class="value-display" id="speedValue">1.0x</span>
+            </div>
+
+            <div class="control-group" style="margin-left: auto;">
+                <button class="btn" id="runBtn">&#9654; Run</button>
+                <button class="btn" id="stepBtn">Step</button>
+                <button class="btn" id="resetBtn">&#8634; Reset</button>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="param-controls" id="paramControls">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div class="control-group" style="margin-left: auto;">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="showTrails" checked>
+                    <span>Trails</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="showVectors">
+                    <span>Vectors</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="showGrid" checked>
+                    <span>Grid</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // INTEGRATORS
+        // ============================================================
+
+        class Integrator {
+            constructor(name, color) {
+                this.name = name;
+                this.color = color;
+            }
+
+            step(state, derivative, dt) {
+                throw new Error('Implement in subclass');
+            }
+        }
+
+        class EulerIntegrator extends Integrator {
+            constructor() {
+                super('Euler', '#ff4444');
+            }
+
+            step(state, derivative, dt) {
+                const k1 = derivative(state);
+                return state.map((s, i) => s + dt * k1[i]);
+            }
+        }
+
+        class RK2Integrator extends Integrator {
+            constructor() {
+                super('RK2', '#ffff44');
+            }
+
+            step(state, derivative, dt) {
+                const k1 = derivative(state);
+                const midState = state.map((s, i) => s + 0.5 * dt * k1[i]);
+                const k2 = derivative(midState);
+                return state.map((s, i) => s + dt * k2[i]);
+            }
+        }
+
+        class RK4Integrator extends Integrator {
+            constructor() {
+                super('RK4', '#44ff44');
+            }
+
+            step(state, derivative, dt) {
+                const k1 = derivative(state);
+                const k2 = derivative(state.map((s, i) => s + 0.5 * dt * k1[i]));
+                const k3 = derivative(state.map((s, i) => s + 0.5 * dt * k2[i]));
+                const k4 = derivative(state.map((s, i) => s + dt * k3[i]));
+                return state.map((s, i) =>
+                    s + (dt / 6) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                );
+            }
+        }
+
+        // ============================================================
+        // SIMULATIONS
+        // ============================================================
+
+        class Simulation {
+            constructor() {
+                this.initialState = [];
+                this.params = {};
+            }
+
+            derivative(state) { throw new Error('Implement'); }
+            reset() { return [...this.initialState]; }
+            getEnergy(state) { return null; }
+            getTimeScale() { return 1; }  // Simulation-specific speed multiplier
+
+            render(ctx, states, trails, options) { throw new Error('Implement'); }
+            getParams() { return []; }
+            getDescription() { return { title: '', equation: '', text: '', tip: '' }; }
+
+            toScreenCoords(x, y, ctx) {
+                return { x: x, y: y };
+            }
+        }
+
+        // Simple Pendulum
+        class PendulumSimulation extends Simulation {
+            constructor() {
+                super();
+                this.params = {
+                    length: 2.0,
+                    gravity: 9.81,
+                    damping: 0.0,
+                    initialAngle: 2.5
+                };
+                this.initialState = [this.params.initialAngle, 0];
+            }
+
+            derivative(state) {
+                const [theta, omega] = state;
+                const { length, gravity, damping } = this.params;
+                return [
+                    omega,
+                    -(gravity / length) * Math.sin(theta) - damping * omega
+                ];
+            }
+
+            reset() {
+                this.initialState = [this.params.initialAngle, 0];
+                return [...this.initialState];
+            }
+
+            getEnergy(state) {
+                const [theta, omega] = state;
+                const { length, gravity } = this.params;
+                const KE = 0.5 * length * length * omega * omega;
+                const PE = gravity * length * (1 - Math.cos(theta));
+                return KE + PE;
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const cx = width / 2;
+                const cy = height * 0.35;
+                const scale = Math.min(width, height) * 0.15;
+
+                // Draw pivot
+                ctx.fillStyle = '#00ff41';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw each pendulum
+                for (const [integrator, state] of states) {
+                    const [theta] = state;
+                    const x = cx + this.params.length * scale * Math.sin(theta);
+                    const y = cy + this.params.length * scale * Math.cos(theta);
+
+                    // Trail
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        if (trail.length > 1) {
+                            ctx.strokeStyle = integrator.color + '40';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            for (let i = 0; i < trail.length; i++) {
+                                const [t] = trail[i];
+                                const tx = cx + this.params.length * scale * Math.sin(t);
+                                const ty = cy + this.params.length * scale * Math.cos(t);
+                                if (i === 0) ctx.moveTo(tx, ty);
+                                else ctx.lineTo(tx, ty);
+                            }
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Rod
+                    ctx.strokeStyle = integrator.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+
+                    // Bob
+                    ctx.fillStyle = integrator.color;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Velocity vector
+                    if (options.showVectors) {
+                        const [, omega] = state;
+                        const vx = this.params.length * scale * Math.cos(theta) * omega * 0.3;
+                        const vy = -this.params.length * scale * Math.sin(theta) * omega * 0.3;
+                        ctx.strokeStyle = integrator.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + vx, y + vy);
+                        ctx.stroke();
+                        // Arrow head
+                        const angle = Math.atan2(vy, vx);
+                        ctx.beginPath();
+                        ctx.moveTo(x + vx, y + vy);
+                        ctx.lineTo(x + vx - 8*Math.cos(angle - 0.4), y + vy - 8*Math.sin(angle - 0.4));
+                        ctx.moveTo(x + vx, y + vy);
+                        ctx.lineTo(x + vx - 8*Math.cos(angle + 0.4), y + vy - 8*Math.sin(angle + 0.4));
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            getParams() {
+                return [
+                    { id: 'length', label: 'Length (m)', min: 0.5, max: 5, step: 0.1, value: this.params.length },
+                    { id: 'gravity', label: 'Gravity', min: 1, max: 20, step: 0.5, value: this.params.gravity },
+                    { id: 'damping', label: 'Damping', min: 0, max: 0.5, step: 0.01, value: this.params.damping },
+                    { id: 'initialAngle', label: 'Angle (rad)', min: 0.5, max: 3.1, step: 0.1, value: this.params.initialAngle }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Simple Pendulum',
+                    equation: 'd\u03B8/dt = \u03C9\nd\u03C9/dt = -(g/L)sin(\u03B8)',
+                    text: 'A mass on a rigid rod swinging under gravity. This is a conservative system - total energy should remain constant.',
+                    tip: 'Watch how Euler gains energy over time (pendulum swings higher), while RK4 maintains stable amplitude.'
+                };
+            }
+        }
+
+        // Orbital Mechanics
+        class OrbitalSimulation extends Simulation {
+            constructor() {
+                super();
+                this.params = {
+                    GM: 8000,
+                    eccentricity: 0.5
+                };
+                this.setupOrbit();
+            }
+
+            setupOrbit() {
+                const r0 = 100;
+                const e = this.params.eccentricity;
+                const v0 = Math.sqrt(this.params.GM / r0 * (1 + e));
+                this.initialState = [r0, 0, 0, v0];
+            }
+
+            derivative(state) {
+                const [x, y, vx, vy] = state;
+                const r = Math.sqrt(x*x + y*y);
+                const r3 = r * r * r;
+                return [
+                    vx,
+                    vy,
+                    -this.params.GM * x / r3,
+                    -this.params.GM * y / r3
+                ];
+            }
+
+            reset() {
+                this.setupOrbit();
+                return [...this.initialState];
+            }
+
+            getEnergy(state) {
+                const [x, y, vx, vy] = state;
+                const r = Math.sqrt(x*x + y*y);
+                const KE = 0.5 * (vx*vx + vy*vy);
+                const PE = -this.params.GM / r;
+                return KE + PE;
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const cx = width / 2;
+                const cy = height / 2;
+                const scale = 1.8;
+
+                // Central body
+                ctx.fillStyle = '#00ff41';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0e0a';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (const [integrator, state] of states) {
+                    const [x, y, vx, vy] = state;
+                    const sx = cx + x * scale;
+                    const sy = cy + y * scale;
+
+                    // Trail
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        if (trail.length > 1) {
+                            ctx.strokeStyle = integrator.color + '60';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            for (let i = 0; i < trail.length; i++) {
+                                const [tx, ty] = trail[i];
+                                const tsx = cx + tx * scale;
+                                const tsy = cy + ty * scale;
+                                if (i === 0) ctx.moveTo(tsx, tsy);
+                                else ctx.lineTo(tsx, tsy);
+                            }
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Satellite
+                    ctx.fillStyle = integrator.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Velocity vector
+                    if (options.showVectors) {
+                        const vscale = 5;
+                        ctx.strokeStyle = integrator.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, sy);
+                        ctx.lineTo(sx + vx * vscale, sy + vy * vscale);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            getTimeScale() { return 50; }  // Orbits are slow, speed up 50x
+
+            getParams() {
+                return [
+                    { id: 'GM', label: 'GM', min: 2000, max: 15000, step: 500, value: this.params.GM },
+                    { id: 'eccentricity', label: 'Eccentricity', min: 0, max: 0.9, step: 0.05, value: this.params.eccentricity }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Orbital Mechanics',
+                    equation: 'dx/dt = vx, dy/dt = vy\ndvx/dt = -GM*x/r\u00B3\ndvy/dt = -GM*y/r\u00B3',
+                    text: 'Two-body gravitational dynamics. Kepler orbits should be closed ellipses with constant energy.',
+                    tip: 'Euler causes orbits to spiral outward (gains energy). RK4 maintains closed elliptical orbits.'
+                };
+            }
+        }
+
+        // Lorenz Attractor
+        class LorenzSimulation extends Simulation {
+            constructor() {
+                super();
+                this.params = {
+                    sigma: 10,
+                    rho: 28,
+                    beta: 8/3
+                };
+                this.initialState = [1, 1, 1];
+            }
+
+            derivative(state) {
+                const [x, y, z] = state;
+                const { sigma, rho, beta } = this.params;
+                return [
+                    sigma * (y - x),
+                    x * (rho - z) - y,
+                    x * y - beta * z
+                ];
+            }
+
+            reset() {
+                this.initialState = [1, 1, 1];
+                return [...this.initialState];
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const cx = width / 2;
+                const cy = height / 2;
+                const scale = 8;
+
+                for (const [integrator, state] of states) {
+                    const [x, y, z] = state;
+                    // Project XZ plane
+                    const sx = cx + x * scale;
+                    const sy = cy - (z - 25) * scale;
+
+                    // Trail
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        if (trail.length > 1) {
+                            ctx.strokeStyle = integrator.color + '50';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            for (let i = 0; i < trail.length; i++) {
+                                const [tx, , tz] = trail[i];
+                                const tsx = cx + tx * scale;
+                                const tsy = cy - (tz - 25) * scale;
+                                if (i === 0) ctx.moveTo(tsx, tsy);
+                                else ctx.lineTo(tsx, tsy);
+                            }
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Current point
+                    ctx.fillStyle = integrator.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            getParams() {
+                return [
+                    { id: 'sigma', label: '\u03C3 (sigma)', min: 5, max: 20, step: 0.5, value: this.params.sigma },
+                    { id: 'rho', label: '\u03C1 (rho)', min: 20, max: 40, step: 0.5, value: this.params.rho },
+                    { id: 'beta', label: '\u03B2 (beta)', min: 1, max: 5, step: 0.1, value: this.params.beta }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Lorenz Attractor',
+                    equation: 'dx/dt = \u03C3(y-x)\ndy/dt = x(\u03C1-z) - y\ndz/dt = xy - \u03B2z',
+                    text: 'The famous chaotic system that launched chaos theory. Exhibits sensitive dependence on initial conditions.',
+                    tip: 'Even tiny numerical differences cause trajectories to diverge. All methods eventually disagree - this is chaos!'
+                };
+            }
+        }
+
+        // Spring System
+        class SpringSimulation extends Simulation {
+            constructor() {
+                super();
+                this.params = {
+                    k: 2.0,
+                    mass: 1.0,
+                    damping: 0.1,
+                    initialX: 150
+                };
+                this.initialState = [this.params.initialX, 0];
+            }
+
+            derivative(state) {
+                const [x, v] = state;
+                const { k, mass, damping } = this.params;
+                return [
+                    v,
+                    -(k / mass) * x - (damping / mass) * v
+                ];
+            }
+
+            reset() {
+                this.initialState = [this.params.initialX, 0];
+                return [...this.initialState];
+            }
+
+            getEnergy(state) {
+                const [x, v] = state;
+                const { k, mass } = this.params;
+                return 0.5 * k * x * x + 0.5 * mass * v * v;
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const cx = width / 2;
+                const cy = height / 2;
+                const wallX = cx - 200;
+
+                // Wall
+                ctx.strokeStyle = '#00ff41';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(wallX, cy - 80);
+                ctx.lineTo(wallX, cy + 80);
+                ctx.stroke();
+
+                // Draw hatching
+                for (let i = -80; i <= 80; i += 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(wallX, cy + i);
+                    ctx.lineTo(wallX - 10, cy + i + 10);
+                    ctx.stroke();
+                }
+
+                let yOffset = -30 * (states.size - 1) / 2;
+
+                for (const [integrator, state] of states) {
+                    const [x] = state;
+                    const massX = cx + x;
+                    const massY = cy + yOffset;
+
+                    // Spring (zigzag)
+                    ctx.strokeStyle = integrator.color + '80';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(wallX, massY);
+                    const springLen = massX - wallX - 25;
+                    const coils = 12;
+                    const coilWidth = 15;
+                    for (let i = 0; i <= coils; i++) {
+                        const px = wallX + (springLen / coils) * i;
+                        const py = massY + (i % 2 === 0 ? -coilWidth : coilWidth) * (i > 0 && i < coils ? 1 : 0);
+                        ctx.lineTo(px, py);
+                    }
+                    ctx.lineTo(massX - 25, massY);
+                    ctx.stroke();
+
+                    // Mass (rectangle)
+                    ctx.fillStyle = integrator.color;
+                    ctx.fillRect(massX - 25, massY - 20, 50, 40);
+
+                    // Trail (as time series at bottom)
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        const graphY = height - 100 + yOffset * 0.5;
+                        const graphScale = 0.3;
+
+                        ctx.strokeStyle = integrator.color + '60';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        for (let i = 0; i < trail.length; i++) {
+                            const gx = 50 + i * 2;
+                            const gy = graphY - trail[i][0] * graphScale;
+                            if (i === 0) ctx.moveTo(gx, gy);
+                            else ctx.lineTo(gx, gy);
+                        }
+                        ctx.stroke();
+                    }
+
+                    yOffset += 30;
+                }
+
+                // Equilibrium line
+                ctx.strokeStyle = '#00ff4140';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 100);
+                ctx.lineTo(cx, cy + 100);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            getParams() {
+                return [
+                    { id: 'k', label: 'Spring k', min: 0.5, max: 10, step: 0.1, value: this.params.k },
+                    { id: 'mass', label: 'Mass', min: 0.5, max: 5, step: 0.1, value: this.params.mass },
+                    { id: 'damping', label: 'Damping', min: 0, max: 1, step: 0.02, value: this.params.damping },
+                    { id: 'initialX', label: 'Initial X', min: 50, max: 200, step: 10, value: this.params.initialX }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Damped Spring System',
+                    equation: 'dx/dt = v\ndv/dt = -(k/m)x - (c/m)v',
+                    text: 'Mass on a spring with optional damping. Has an analytical solution for comparison.',
+                    tip: 'With zero damping, Euler slowly gains energy. Try different damping values to see underdamped vs overdamped behavior.'
+                };
+            }
+        }
+
+        // Projectile with Drag
+        class ProjectileSimulation extends Simulation {
+            constructor() {
+                super();
+                this.params = {
+                    angle: 45,
+                    velocity: 80,
+                    drag: 0.01,
+                    gravity: 9.81
+                };
+                this.setupProjectile();
+                this.groundHits = new Map();
+            }
+
+            setupProjectile() {
+                const rad = this.params.angle * Math.PI / 180;
+                const v = this.params.velocity;
+                this.initialState = [
+                    50,
+                    50,
+                    v * Math.cos(rad),
+                    v * Math.sin(rad)
+                ];
+            }
+
+            derivative(state) {
+                const [x, y, vx, vy] = state;
+                const { drag, gravity } = this.params;
+                const v = Math.sqrt(vx*vx + vy*vy);
+                return [
+                    vx,
+                    vy,
+                    -drag * v * vx,
+                    -gravity - drag * v * vy
+                ];
+            }
+
+            reset() {
+                this.setupProjectile();
+                this.groundHits.clear();
+                return [...this.initialState];
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const groundY = height - 80;
+                const scale = 4;
+                const offsetX = 50;
+                const offsetY = groundY;
+
+                // Ground
+                ctx.strokeStyle = '#00ff41';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                ctx.lineTo(width, groundY);
+                ctx.stroke();
+
+                // Ground hatching
+                for (let x = 0; x < width; x += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, groundY);
+                    ctx.lineTo(x + 10, groundY + 10);
+                    ctx.stroke();
+                }
+
+                for (const [integrator, state] of states) {
+                    const [x, y, vx, vy] = state;
+                    const sx = offsetX + x * scale;
+                    const sy = offsetY - y * scale;
+
+                    // Trail
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        if (trail.length > 1) {
+                            ctx.strokeStyle = integrator.color + '60';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            for (let i = 0; i < trail.length; i++) {
+                                const [tx, ty] = trail[i];
+                                const tsx = offsetX + tx * scale;
+                                const tsy = offsetY - ty * scale;
+                                if (i === 0) ctx.moveTo(tsx, tsy);
+                                else ctx.lineTo(tsx, tsy);
+                            }
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Projectile
+                    if (y >= 0) {
+                        ctx.fillStyle = integrator.color;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Velocity vector
+                        if (options.showVectors) {
+                            const vscale = 0.5;
+                            ctx.strokeStyle = integrator.color;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(sx, sy);
+                            ctx.lineTo(sx + vx * vscale, sy - vy * vscale);
+                            ctx.stroke();
+                        }
+                    } else {
+                        // Mark landing spot
+                        if (!this.groundHits.has(integrator.name)) {
+                            this.groundHits.set(integrator.name, x);
+                        }
+                        const landX = offsetX + this.groundHits.get(integrator.name) * scale;
+                        ctx.strokeStyle = integrator.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(landX, groundY - 10);
+                        ctx.lineTo(landX, groundY);
+                        ctx.stroke();
+
+                        ctx.font = '12px Courier New';
+                        ctx.fillStyle = integrator.color;
+                        ctx.fillText(`${this.groundHits.get(integrator.name).toFixed(1)}m`, landX - 15, groundY + 25);
+                    }
+                }
+
+                // Legend showing ranges if landed
+                if (this.groundHits.size > 0) {
+                    ctx.font = '14px Courier New';
+                    let ly = 30;
+                    for (const [name, range] of this.groundHits) {
+                        const color = name === 'Euler' ? '#ff4444' : name === 'RK2' ? '#ffff44' : '#44ff44';
+                        ctx.fillStyle = color;
+                        ctx.fillText(`${name}: ${range.toFixed(2)}m`, 20, ly);
+                        ly += 20;
+                    }
+                }
+            }
+
+            getParams() {
+                return [
+                    { id: 'angle', label: 'Angle (\u00B0)', min: 15, max: 75, step: 1, value: this.params.angle },
+                    { id: 'velocity', label: 'Velocity', min: 30, max: 150, step: 5, value: this.params.velocity },
+                    { id: 'drag', label: 'Drag', min: 0, max: 0.05, step: 0.002, value: this.params.drag },
+                    { id: 'gravity', label: 'Gravity', min: 5, max: 15, step: 0.5, value: this.params.gravity }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Projectile with Drag',
+                    equation: 'dx/dt = vx, dy/dt = vy\ndvx/dt = -k|v|vx\ndvy/dt = -g - k|v|vy',
+                    text: 'Ballistic motion with quadratic air resistance. No analytical solution exists, making numerical methods essential.',
+                    tip: 'Compare landing distances. With drag, the trajectory is no longer parabolic. Higher drag shows bigger method differences.'
+                };
+            }
+        }
+
+        // Earth-Moon Rocket
+        class RocketSimulation extends Simulation {
+            constructor() {
+                super();
+                // Scale: 1 unit = 1000 km
+                this.earthRadius = 6.371;
+                this.moonRadius = 1.737;
+                this.earthMoonDist = 384.4;
+                this.params = {
+                    earthGM: 398.6,  // km^3/s^2 scaled
+                    moonGM: 4.9,
+                    tliThrust: 0.015,     // Trans-lunar injection thrust
+                    tliBurnTime: 50,      // TLI burn duration
+                    loiThrust: 0.008,     // Lunar orbit insertion thrust
+                    loiDistance: 15,      // Distance to Moon to start LOI
+                    orbitAlt: 0.4         // 400 km = 0.4 units
+                };
+                this.plannedPath = [];
+                this.setupRocket();
+                this.time = 0;
+            }
+
+            setupRocket() {
+                // Start below Earth, heading right toward Moon
+                const r = this.earthRadius + this.params.orbitAlt;
+                // TLI velocity: ~1.41x circular for Hohmann-ish transfer
+                const vCirc = Math.sqrt(this.params.earthGM / r);
+                const v = vCirc * 1.41;
+                this.initialState = [0, -r, v, 0];
+                this.time = 0;
+
+                // Pre-compute planned trajectory using RK4
+                this.computePlannedPath();
+            }
+
+            computePlannedPath() {
+                this.plannedPath = [];
+                let state = [...this.initialState];
+                let t = 0;
+                const dt = 0.05;
+                const maxTime = 500;  // Max simulation time
+
+                // Use RK4 to compute ideal trajectory
+                while (t < maxTime) {
+                    this.plannedPath.push([...state]);
+
+                    // RK4 step
+                    const k1 = this.derivativeForPlanning(state, t);
+                    const s2 = state.map((s, i) => s + 0.5 * dt * k1[i]);
+                    const k2 = this.derivativeForPlanning(s2, t + dt/2);
+                    const s3 = state.map((s, i) => s + 0.5 * dt * k2[i]);
+                    const k3 = this.derivativeForPlanning(s3, t + dt/2);
+                    const s4 = state.map((s, i) => s + dt * k3[i]);
+                    const k4 = this.derivativeForPlanning(s4, t + dt);
+
+                    state = state.map((s, i) =>
+                        s + (dt / 6) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                    );
+                    t += dt;
+
+                    // Check if captured in lunar orbit
+                    const [x, y, vx, vy] = state;
+                    const dx = x - this.earthMoonDist;
+                    const dy = y;
+                    const rm = Math.sqrt(dx*dx + dy*dy);
+                    const speed = Math.sqrt(vx*vx + vy*vy);
+
+                    // Lunar orbital velocity at current distance
+                    const vOrbit = Math.sqrt(this.params.moonGM / rm);
+
+                    // Consider captured if close to Moon and speed is near orbital
+                    if (rm < 5 && speed < vOrbit * 1.5 && speed > vOrbit * 0.5) {
+                        // Add a few more points to show orbit
+                        for (let i = 0; i < 200; i++) {
+                            const k1 = this.derivativeForPlanning(state, t);
+                            const s2 = state.map((s, i) => s + 0.5 * dt * k1[i]);
+                            const k2 = this.derivativeForPlanning(s2, t + dt/2);
+                            const s3 = state.map((s, i) => s + 0.5 * dt * k2[i]);
+                            const k3 = this.derivativeForPlanning(s3, t + dt/2);
+                            const s4 = state.map((s, i) => s + dt * k3[i]);
+                            const k4 = this.derivativeForPlanning(s4, t + dt);
+                            state = state.map((s, i) =>
+                                s + (dt / 6) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                            );
+                            t += dt;
+                            this.plannedPath.push([...state]);
+                        }
+                        break;
+                    }
+
+                    // Abort if crashed into Earth or flew way past Moon
+                    const re = Math.sqrt(x*x + y*y);
+                    if (re < this.earthRadius || x > this.earthMoonDist * 1.5) {
+                        break;
+                    }
+                }
+            }
+
+            derivativeForPlanning(state, t) {
+                const [x, y, vx, vy] = state;
+                const { earthGM, moonGM, tliThrust, tliBurnTime, loiThrust, loiDistance } = this.params;
+
+                const re = Math.sqrt(x*x + y*y);
+                const re3 = re * re * re;
+
+                const moonX = this.earthMoonDist;
+                const dx = x - moonX;
+                const dy = y;
+                const rm = Math.sqrt(dx*dx + dy*dy);
+                const rm3 = rm * rm * rm;
+
+                let ax = -earthGM * x / re3 - moonGM * dx / rm3;
+                let ay = -earthGM * y / re3 - moonGM * dy / rm3;
+
+                const speed = Math.sqrt(vx*vx + vy*vy);
+
+                // TLI burn - prograde thrust early in mission
+                if (t < tliBurnTime && speed > 0.001) {
+                    ax += tliThrust * vx / speed;
+                    ay += tliThrust * vy / speed;
+                }
+
+                // LOI burn - retrograde thrust when approaching Moon
+                if (rm < loiDistance && speed > 0.001) {
+                    // Check if approaching Moon (velocity toward Moon)
+                    const approachVel = -(dx * vx + dy * vy) / rm;
+                    if (approachVel > 0 || rm < loiDistance * 0.5) {
+                        // Retrograde thrust to slow down
+                        ax -= loiThrust * vx / speed;
+                        ay -= loiThrust * vy / speed;
+                    }
+                }
+
+                return [vx, vy, ax, ay];
+            }
+
+            derivative(state) {
+                const [x, y, vx, vy] = state;
+                const { earthGM, moonGM, tliThrust, tliBurnTime, loiThrust, loiDistance } = this.params;
+
+                const re = Math.sqrt(x*x + y*y);
+                const re3 = re * re * re;
+
+                const moonX = this.earthMoonDist;
+                const dx = x - moonX;
+                const dy = y;
+                const rm = Math.sqrt(dx*dx + dy*dy);
+                const rm3 = rm * rm * rm;
+
+                let ax = -earthGM * x / re3 - moonGM * dx / rm3;
+                let ay = -earthGM * y / re3 - moonGM * dy / rm3;
+
+                const speed = Math.sqrt(vx*vx + vy*vy);
+
+                // TLI burn
+                if (this.time < tliBurnTime && speed > 0.001) {
+                    ax += tliThrust * vx / speed;
+                    ay += tliThrust * vy / speed;
+                }
+
+                // LOI burn
+                if (rm < loiDistance && speed > 0.001) {
+                    const approachVel = -(dx * vx + dy * vy) / rm;
+                    if (approachVel > 0 || rm < loiDistance * 0.5) {
+                        ax -= loiThrust * vx / speed;
+                        ay -= loiThrust * vy / speed;
+                    }
+                }
+
+                return [vx, vy, ax, ay];
+            }
+
+            reset() {
+                this.setupRocket();
+                return [...this.initialState];
+            }
+
+            render(ctx, states, trails, options) {
+                const { width, height } = ctx.canvas;
+                const cx = width * 0.15;
+                const cy = height / 2;
+                const scale = (width * 0.7) / this.earthMoonDist;
+
+                // Earth
+                ctx.fillStyle = '#00ff41';
+                ctx.beginPath();
+                ctx.arc(cx, cy, Math.max(this.earthRadius * scale, 8), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0e0a';
+                ctx.beginPath();
+                ctx.arc(cx, cy, Math.max(this.earthRadius * scale * 0.7, 5), 0, Math.PI * 2);
+                ctx.fill();
+
+                // Moon
+                const moonSx = cx + this.earthMoonDist * scale;
+                ctx.fillStyle = '#888888';
+                ctx.beginPath();
+                ctx.arc(moonSx, cy, Math.max(this.moonRadius * scale * 3, 10), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0e0a';
+                ctx.beginPath();
+                ctx.arc(moonSx, cy, Math.max(this.moonRadius * scale * 2, 6), 0, Math.PI * 2);
+                ctx.fill();
+
+                // LOI zone indicator
+                ctx.strokeStyle = 'rgba(136, 136, 136, 0.3)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(moonSx, cy, this.params.loiDistance * scale, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Planned trajectory (dashed cyan line)
+                if (this.plannedPath.length > 1) {
+                    ctx.strokeStyle = '#00ffff40';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 4]);
+                    ctx.beginPath();
+                    for (let i = 0; i < this.plannedPath.length; i++) {
+                        const [px, py] = this.plannedPath[i];
+                        const psx = cx + px * scale;
+                        const psy = cy - py * scale;
+                        if (i === 0) ctx.moveTo(psx, psy);
+                        else ctx.lineTo(psx, psy);
+                    }
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Labels
+                ctx.font = '12px Courier New';
+                ctx.fillStyle = '#00ff41';
+                ctx.fillText('Earth', cx - 20, cy + Math.max(this.earthRadius * scale, 8) + 15);
+                ctx.fillStyle = '#888888';
+                ctx.fillText('Moon', moonSx - 15, cy + Math.max(this.moonRadius * scale * 3, 10) + 15);
+
+                for (const [integrator, state] of states) {
+                    const [x, y, vx, vy] = state;
+                    const sx = cx + x * scale;
+                    const sy = cy - y * scale;
+
+                    // Trail
+                    if (options.showTrails && trails.has(integrator.name)) {
+                        const trail = trails.get(integrator.name);
+                        if (trail.length > 1) {
+                            ctx.strokeStyle = integrator.color + '60';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            for (let i = 0; i < trail.length; i++) {
+                                const [tx, ty] = trail[i];
+                                const tsx = cx + tx * scale;
+                                const tsy = cy - ty * scale;
+                                if (i === 0) ctx.moveTo(tsx, tsy);
+                                else ctx.lineTo(tsx, tsy);
+                            }
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Rocket
+                    ctx.fillStyle = integrator.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Determine burn state
+                    const rm = Math.sqrt((x - this.earthMoonDist)**2 + y**2);
+                    const isTLI = this.time < this.params.tliBurnTime;
+                    const isLOI = rm < this.params.loiDistance;
+
+                    // Thrust indicator
+                    const speed = Math.sqrt(vx*vx + vy*vy);
+                    if ((isTLI || isLOI) && speed > 0.001) {
+                        const thrustDir = isTLI ? 1 : -1;  // Prograde vs retrograde
+                        ctx.strokeStyle = isTLI ? '#ff8800' : '#8888ff';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, sy);
+                        ctx.lineTo(sx - thrustDir * vx/speed * 15, sy + thrustDir * vy/speed * 15);
+                        ctx.stroke();
+                    }
+                }
+
+                // Burn status indicator
+                ctx.font = '14px Courier New';
+                if (this.time < this.params.tliBurnTime) {
+                    ctx.fillStyle = '#ff8800';
+                    ctx.fillText(`TLI BURN: ${(this.params.tliBurnTime - this.time).toFixed(1)}s`, 20, 30);
+                } else {
+                    // Check if any rocket is in LOI zone
+                    for (const [integrator, state] of states) {
+                        const [x, y] = state;
+                        const rm = Math.sqrt((x - this.earthMoonDist)**2 + y**2);
+                        if (rm < this.params.loiDistance) {
+                            ctx.fillStyle = '#8888ff';
+                            ctx.fillText(`LOI BURN - Distance: ${rm.toFixed(1)}`, 20, 30);
+                            break;
+                        }
+                    }
+                }
+
+                // Legend
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('--- Planned Path', 20, height - 20);
+            }
+
+            getTimeScale() { return 100; }
+
+            getParams() {
+                return [
+                    { id: 'tliThrust', label: 'TLI Thrust', min: 0.005, max: 0.03, step: 0.001, value: this.params.tliThrust },
+                    { id: 'tliBurnTime', label: 'TLI Burn', min: 20, max: 100, step: 5, value: this.params.tliBurnTime },
+                    { id: 'loiThrust', label: 'LOI Thrust', min: 0.002, max: 0.02, step: 0.001, value: this.params.loiThrust },
+                    { id: 'loiDistance', label: 'LOI Dist', min: 5, max: 30, step: 1, value: this.params.loiDistance }
+                ];
+            }
+
+            getDescription() {
+                return {
+                    title: 'Earth-Moon Rocket Transfer',
+                    equation: 'TLI: prograde thrust\nLOI: retrograde thrust\nnear Moon',
+                    text: 'Two-burn lunar transfer: Trans-Lunar Injection (TLI) to escape Earth, Lunar Orbit Insertion (LOI) to capture at Moon. Cyan dashed line shows the planned RK4 trajectory.',
+                    tip: 'Watch how Euler diverges from the planned path. The LOI burn is critical - errors here determine capture success.'
+                };
+            }
+        }
+
+        // ============================================================
+        // MAIN APPLICATION
+        // ============================================================
+
+        class RKExplorer {
+            constructor() {
+                this.canvas = document.getElementById('mainCanvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                this.integrators = {
+                    'Euler': new EulerIntegrator(),
+                    'RK2': new RK2Integrator(),
+                    'RK4': new RK4Integrator()
+                };
+
+                this.simulations = {
+                    'pendulum': new PendulumSimulation(),
+                    'orbital': new OrbitalSimulation(),
+                    'lorenz': new LorenzSimulation(),
+                    'spring': new SpringSimulation(),
+                    'projectile': new ProjectileSimulation(),
+                    'rocket': new RocketSimulation()
+                };
+
+                this.currentSimName = 'pendulum';
+                this.activeIntegrators = new Set(['Euler', 'RK2', 'RK4']);
+                this.states = new Map();
+                this.trails = new Map();
+                this.maxTrailLength = 500;
+
+                this.dt = 0.01;
+                this.speed = 1;
+                this.running = false;
+                this.time = 0;
+                this.steps = 0;
+
+                this.options = {
+                    showTrails: true,
+                    showVectors: false,
+                    showGrid: true
+                };
+
+                this.lastFrameTime = 0;
+                this.frameCount = 0;
+                this.fps = 0;
+
+                this.init();
+            }
+
+            get currentSim() {
+                return this.simulations[this.currentSimName];
+            }
+
+            init() {
+                this.setupCanvas();
+                this.setupEventListeners();
+                this.updateParamControls();
+                this.updateDescriptions();
+                this.reset();
+                this.animate();
+            }
+
+            setupCanvas() {
+                const resize = () => {
+                    const container = this.canvas.parentElement;
+                    this.canvas.width = container.clientWidth;
+                    this.canvas.height = container.clientHeight;
+                };
+                resize();
+                window.addEventListener('resize', resize);
+            }
+
+            setupEventListeners() {
+                // System select
+                document.getElementById('systemSelect').addEventListener('change', (e) => {
+                    this.currentSimName = e.target.value;
+                    this.updateParamControls();
+                    this.updateDescriptions();
+                    this.reset();
+                });
+
+                // Method checkboxes
+                ['Euler', 'RK2', 'RK4'].forEach(name => {
+                    document.getElementById(`show${name}`).addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            this.activeIntegrators.add(name);
+                            // Initialize state for this integrator
+                            this.states.set(name, this.currentSim.reset());
+                            this.trails.set(name, []);
+                        } else {
+                            this.activeIntegrators.delete(name);
+                            this.states.delete(name);
+                            this.trails.delete(name);
+                        }
+                    });
+                });
+
+                // Step size
+                document.getElementById('stepSize').addEventListener('input', (e) => {
+                    this.dt = Math.pow(10, parseFloat(e.target.value));
+                    document.getElementById('stepSizeValue').textContent = this.dt.toFixed(3) + 's';
+                });
+
+                // Speed
+                document.getElementById('speed').addEventListener('input', (e) => {
+                    this.speed = parseFloat(e.target.value);
+                    document.getElementById('speedValue').textContent = this.speed.toFixed(2) + 'x';
+                });
+
+                // Buttons
+                document.getElementById('runBtn').addEventListener('click', () => {
+                    this.running = !this.running;
+                    document.getElementById('runBtn').classList.toggle('active', this.running);
+                    document.getElementById('runBtn').innerHTML = this.running ? '&#9724; Pause' : '&#9654; Run';
+                });
+
+                document.getElementById('stepBtn').addEventListener('click', () => {
+                    this.step();
+                });
+
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.reset();
+                });
+
+                // Options
+                document.getElementById('showTrails').addEventListener('change', (e) => {
+                    this.options.showTrails = e.target.checked;
+                });
+
+                document.getElementById('showVectors').addEventListener('change', (e) => {
+                    this.options.showVectors = e.target.checked;
+                });
+
+                document.getElementById('showGrid').addEventListener('change', (e) => {
+                    this.options.showGrid = e.target.checked;
+                });
+            }
+
+            updateParamControls() {
+                const container = document.getElementById('paramControls');
+                container.innerHTML = '';
+
+                const params = this.currentSim.getParams();
+                params.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'param-item';
+                    item.innerHTML = `
+                        <label>${p.label}:</label>
+                        <input type="range" id="param_${p.id}"
+                               min="${p.min}" max="${p.max}" step="${p.step}" value="${p.value}">
+                        <span class="value-display" id="paramVal_${p.id}">${p.value}</span>
+                    `;
+                    container.appendChild(item);
+
+                    document.getElementById(`param_${p.id}`).addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value);
+                        this.currentSim.params[p.id] = val;
+                        document.getElementById(`paramVal_${p.id}`).textContent =
+                            val < 0.1 ? val.toFixed(3) : val < 10 ? val.toFixed(2) : val.toFixed(1);
+                    });
+                });
+            }
+
+            updateDescriptions() {
+                const desc = this.currentSim.getDescription();
+
+                document.getElementById('systemInfo').innerHTML = `
+                    <h4>System: ${desc.title}</h4>
+                    <div class="equation">${desc.equation}</div>
+                    <p>${desc.text}</p>
+                `;
+
+                document.getElementById('tipText').textContent = desc.tip;
+            }
+
+            reset() {
+                this.time = 0;
+                this.steps = 0;
+                this.states.clear();
+                this.trails.clear();
+
+                if (this.currentSim.time !== undefined) {
+                    this.currentSim.time = 0;
+                }
+
+                for (const name of this.activeIntegrators) {
+                    this.states.set(name, this.currentSim.reset());
+                    this.trails.set(name, []);
+                }
+
+                // Reset projectile ground hits
+                if (this.currentSim.groundHits) {
+                    this.currentSim.groundHits.clear();
+                }
+
+                this.updateStats();
+            }
+
+            step() {
+                const derivative = (state) => this.currentSim.derivative(state);
+
+                for (const name of this.activeIntegrators) {
+                    const integrator = this.integrators[name];
+                    const state = this.states.get(name);
+                    const newState = integrator.step(state, derivative, this.dt);
+                    this.states.set(name, newState);
+
+                    // Update trail
+                    const trail = this.trails.get(name);
+                    trail.push([...newState]);
+                    if (trail.length > this.maxTrailLength) {
+                        trail.shift();
+                    }
+                }
+
+                this.time += this.dt;
+                this.steps++;
+
+                // Update rocket time
+                if (this.currentSim.time !== undefined) {
+                    this.currentSim.time = this.time;
+                }
+
+                this.updateStats();
+            }
+
+            updateStats() {
+                document.getElementById('simTime').textContent = this.time.toFixed(2);
+                document.getElementById('stepCount').textContent = this.steps;
+
+                // Energy
+                if (this.states.has('RK4')) {
+                    const energy = this.currentSim.getEnergy(this.states.get('RK4'));
+                    document.getElementById('energyStat').textContent =
+                        energy !== null ? energy.toFixed(3) : '-';
+                }
+
+                // Error (compare Euler to RK4)
+                if (this.states.has('Euler') && this.states.has('RK4')) {
+                    const euler = this.states.get('Euler');
+                    const rk4 = this.states.get('RK4');
+                    let maxErr = 0;
+                    for (let i = 0; i < euler.length; i++) {
+                        maxErr = Math.max(maxErr, Math.abs(euler[i] - rk4[i]));
+                    }
+                    document.getElementById('errorStat').textContent = maxErr.toFixed(4);
+                } else {
+                    document.getElementById('errorStat').textContent = '-';
+                }
+            }
+
+            render() {
+                const { width, height } = this.canvas;
+
+                // Clear
+                this.ctx.fillStyle = '#080a08';
+                this.ctx.fillRect(0, 0, width, height);
+
+                // Grid
+                if (this.options.showGrid) {
+                    this.ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+                    this.ctx.lineWidth = 1;
+                    const gridSize = 50;
+
+                    for (let x = 0; x < width; x += gridSize) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, 0);
+                        this.ctx.lineTo(x, height);
+                        this.ctx.stroke();
+                    }
+                    for (let y = 0; y < height; y += gridSize) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, y);
+                        this.ctx.lineTo(width, y);
+                        this.ctx.stroke();
+                    }
+                }
+
+                // Build states map for rendering
+                const renderStates = new Map();
+                for (const name of this.activeIntegrators) {
+                    renderStates.set(this.integrators[name], this.states.get(name));
+                }
+
+                // Render simulation
+                this.currentSim.render(this.ctx, renderStates, this.trails, this.options);
+
+                // Method legend
+                this.ctx.font = '12px Courier New';
+                let ly = 20;
+                for (const name of this.activeIntegrators) {
+                    const integrator = this.integrators[name];
+                    this.ctx.fillStyle = integrator.color;
+                    this.ctx.fillRect(10, ly - 10, 12, 12);
+                    this.ctx.fillText(name, 28, ly);
+                    ly += 18;
+                }
+            }
+
+            animate(timestamp = 0) {
+                // FPS calculation
+                this.frameCount++;
+                if (timestamp - this.lastFrameTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastFrameTime = timestamp;
+                    document.getElementById('fps').textContent = this.fps;
+                }
+
+                // Run simulation steps based on speed and simulation time scale
+                if (this.running) {
+                    const timeScale = this.currentSim.getTimeScale();
+                    const stepsPerFrame = Math.max(1, Math.round(this.speed * 2 * timeScale));
+                    for (let i = 0; i < stepsPerFrame; i++) {
+                        this.step();
+                    }
+                }
+
+                this.render();
+                requestAnimationFrame((t) => this.animate(t));
+            }
+        }
+
+        // Initialize
+        const explorer = new RKExplorer();
+    </script>
+</body>
+</html>
