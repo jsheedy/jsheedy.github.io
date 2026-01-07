@@ -584,6 +584,7 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
             derivative(state) { throw new Error('Implement'); }
             reset() { return [...this.initialState]; }
             getEnergy(state) { return null; }
+            getTimeScale() { return 1; }  // Simulation-specific speed multiplier
 
             render(ctx, states, trails, options) { throw new Error('Implement'); }
             getParams() { return []; }
@@ -821,6 +822,8 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                     }
                 }
             }
+
+            getTimeScale() { return 50; }  // Orbits are slow, speed up 50x
 
             getParams() {
                 return [
@@ -1689,9 +1692,10 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                     document.getElementById('fps').textContent = this.fps;
                 }
 
-                // Run simulation steps based on speed
+                // Run simulation steps based on speed and simulation time scale
                 if (this.running) {
-                    const stepsPerFrame = Math.max(1, Math.round(this.speed * 2));
+                    const timeScale = this.currentSim.getTimeScale();
+                    const stepsPerFrame = Math.max(1, Math.round(this.speed * 2 * timeScale));
                     for (let i = 0; i < stepsPerFrame; i++) {
                         this.step();
                     }
