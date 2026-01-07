@@ -726,14 +726,14 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
             constructor() {
                 super();
                 this.params = {
-                    GM: 1000,
+                    GM: 8000,
                     eccentricity: 0.5
                 };
                 this.setupOrbit();
             }
 
             setupOrbit() {
-                const r0 = 150;
+                const r0 = 100;
                 const e = this.params.eccentricity;
                 const v0 = Math.sqrt(this.params.GM / r0 * (1 + e));
                 this.initialState = [r0, 0, 0, v0];
@@ -768,7 +768,7 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                 const { width, height } = ctx.canvas;
                 const cx = width / 2;
                 const cy = height / 2;
-                const scale = 1.2;
+                const scale = 1.8;
 
                 // Central body
                 ctx.fillStyle = '#00ff41';
@@ -824,7 +824,7 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
 
             getParams() {
                 return [
-                    { id: 'GM', label: 'GM', min: 500, max: 2000, step: 50, value: this.params.GM },
+                    { id: 'GM', label: 'GM', min: 2000, max: 15000, step: 500, value: this.params.GM },
                     { id: 'eccentricity', label: 'Eccentricity', min: 0, max: 0.9, step: 0.05, value: this.params.eccentricity }
                 ];
             }
