@@ -1,0 +1,3293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Algorithms - Interactive Visualizations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+            animation: flicker 0.15s infinite;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 280px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .right-sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 280px;
+            overflow-y: auto;
+            border-left: 2px solid #00ff41;
+            box-shadow: -5px 0 30px rgba(0, 255, 65, 0.2);
+            padding: 15px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .sidebar h2,
+        .right-sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+        }
+
+        .sidebar h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar p,
+        .right-sidebar p,
+        .sidebar ul {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
+        }
+
+        .sidebar ul {
+            padding-left: 20px;
+        }
+
+        .sidebar li {
+            margin-bottom: 4px;
+        }
+
+        .complexity {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #00ff41;
+            background: #001a00;
+            padding: 4px 8px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .control-group select,
+        .control-group input[type="text"],
+        .control-group input[type="number"] {
+            width: 100%;
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+            outline: none;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 12px;
+            text-shadow: 0 0 8px #00ff41;
+            margin-top: 4px;
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .button-group button {
+            margin-bottom: 0;
+        }
+
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #001a00;
+            border: 2px solid #00ff41;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .stats h2 {
+            margin-bottom: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 8px;
+            background: #0a0e0a;
+            border-radius: 3px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .algo-controls {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background: #001a00;
+            border: 2px solid #00ff4144;
+            border-radius: 4px;
+        }
+
+        .algo-controls.active {
+            display: block;
+        }
+
+        .algo-controls h3 {
+            font-size: 11px;
+            margin-bottom: 12px;
+            color: #00ff41;
+        }
+
+        .message-overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 26, 0, 0.95);
+            border: 2px solid #00ff41;
+            padding: 15px 30px;
+            border-radius: 4px;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+            font-size: 14px;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .message-overlay.show {
+            opacity: 1;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        @media (max-width: 1100px) {
+            .sidebar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 800px) {
+            .right-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a class="back-link" href="index.html">Back</a>
+        <h1 class="title-text">Tree Algorithms</h1>
+        <div class="title-subtitle">Interactive Visualizations</div>
+    </div>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <h2 id="algoName">Binary Search Tree</h2>
+                    <p id="algoDescription">A binary tree where each node's left subtree contains only values less than the node, and the right subtree contains only values greater.</p>
+
+                    <h3>Properties</h3>
+                    <ul id="algoProperties">
+                        <li>Left < Parent < Right ordering</li>
+                        <li>No balance guarantees</li>
+                        <li>Can degrade to linked list</li>
+                    </ul>
+
+                    <h3>Complexity</h3>
+                    <div id="algoComplexity">
+                        <span class="complexity">Search: O(h)</span>
+                        <span class="complexity">Insert: O(h)</span>
+                        <span class="complexity">Delete: O(h)</span>
+                        <span class="complexity">h = height</span>
+                    </div>
+
+                    <h3>Use Cases</h3>
+                    <ul id="algoUseCases">
+                        <li>Sorted data storage</li>
+                        <li>Range queries</li>
+                        <li>Ordered traversal</li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+            <div id="messageOverlay" class="message-overlay"></div>
+        </div>
+
+        <aside class="right-sidebar">
+            <div class="control-group">
+                <label for="algorithmSelect">Algorithm</label>
+                <select id="algorithmSelect">
+                    <option value="all" selected>All (Grid View)</option>
+                    <option value="bst">Binary Search Tree</option>
+                    <option value="rbt">Red-Black Tree</option>
+                    <option value="avl">AVL Tree</option>
+                    <option value="btree">B-Tree</option>
+                    <option value="skiplist">Skip List</option>
+                    <option value="segtree">Segment Tree</option>
+                    <option value="trie">Trie</option>
+                    <option value="unionfind">Union-Find</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="valueInput">Value</label>
+                <input type="text" id="valueInput" placeholder="Enter value...">
+            </div>
+
+            <div class="button-group">
+                <button id="insertBtn">Insert</button>
+                <button id="deleteBtn">Delete</button>
+            </div>
+
+            <div class="button-group">
+                <button id="searchBtn">Search</button>
+                <button id="clearBtn">Clear</button>
+            </div>
+
+            <button id="randomBtn">Random 10</button>
+
+            <div class="algo-controls" id="btreeControls">
+                <h3>B-Tree Settings</h3>
+                <label>Order (m): <span id="btreeOrderValue">4</span></label>
+                <input type="range" id="btreeOrder" min="3" max="10" value="4">
+            </div>
+
+            <div class="algo-controls" id="skiplistControls">
+                <h3>Skip List Settings</h3>
+                <label for="skiplistProb">Probability</label>
+                <select id="skiplistProb">
+                    <option value="0.25">0.25</option>
+                    <option value="0.5" selected>0.5</option>
+                    <option value="0.75">0.75</option>
+                </select>
+            </div>
+
+            <div class="algo-controls" id="segtreeControls">
+                <h3>Segment Tree Settings</h3>
+                <label for="segtreeOp">Query Type</label>
+                <select id="segtreeOp">
+                    <option value="sum" selected>Sum</option>
+                    <option value="min">Minimum</option>
+                    <option value="max">Maximum</option>
+                    <option value="gcd">GCD</option>
+                </select>
+                <div class="button-group" style="margin-top: 10px;">
+                    <input type="number" id="queryStart" placeholder="Start" style="width: 100%;">
+                    <input type="number" id="queryEnd" placeholder="End" style="width: 100%;">
+                </div>
+                <button id="queryBtn" style="margin-top: 8px;">Query Range</button>
+            </div>
+
+            <div class="algo-controls" id="trieControls">
+                <h3>Trie Settings</h3>
+                <button id="loadDictBtn">Load Dictionary</button>
+                <div id="autocompleteResults" style="margin-top: 10px; font-size: 10px; color: #00ff41aa;"></div>
+            </div>
+
+            <div class="algo-controls" id="unionfindControls">
+                <h3>Union-Find Settings</h3>
+                <label for="ufMode">Mode</label>
+                <select id="ufMode">
+                    <option value="union">Union</option>
+                    <option value="find">Find</option>
+                </select>
+                <div class="control-group" style="margin-top: 10px;">
+                    <label for="ufValue2">Second Value (for Union)</label>
+                    <input type="text" id="ufValue2" placeholder="Second value...">
+                </div>
+            </div>
+
+            <div class="control-group" style="margin-top: 20px;">
+                <label>Animation Speed: <span id="speedValue">5</span></label>
+                <input type="range" id="animSpeed" min="1" max="10" value="5">
+            </div>
+
+            <div class="button-group">
+                <button id="playPauseBtn">⏸ Pause</button>
+                <button id="stepBtn">⏭ Step</button>
+            </div>
+
+            <div class="stats">
+                <h2>Statistics</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be populated dynamically -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // ==========================================================
+        // SECTION 1: CONSTANTS & CONFIGURATION
+        // ==========================================================
+
+        const COLOR_RED = 'RED';
+        const COLOR_BLACK = 'BLACK';
+
+        const colors = {
+            background: '#000',
+            node: '#00ff41',
+            nodeRed: '#ff4444',
+            nodeBlack: '#333333',
+            edge: '#00ff4188',
+            text: '#000',
+            textOnLight: '#000',
+            textOnDark: '#00ff41',
+            highlight: '#ffdd57',
+            searchPath: '#00aaff',
+            rangeInside: '#00ff00',
+            rangePartial: '#ffaa00',
+            rangeOutside: '#666666'
+        };
+
+        const layout = {
+            nodeRadius: 20,
+            levelHeight: 80,
+            minHorizontalSpacing: 120,
+            padding: 50
+        };
+
+        const MAX_NODES = {
+            bst: 100,
+            rbt: 100,
+            avl: 100,
+            btree: 50,
+            skiplist: 80,
+            segtree: 63, // 2^6 - 1 for nice tree
+            trie: 200,
+            unionfind: 100
+        };
+
+        let nextNodeId = 0;
+        const generateId = () => nextNodeId++;
+
+        // ==========================================================
+        // SECTION 2: BASE CLASSES & ANIMATION SYSTEM
+        // ==========================================================
+
+        const AnimationType = {
+            HIGHLIGHT_NODE: 'highlightNode',
+            HIGHLIGHT_EDGE: 'highlightEdge',
+            COLOR_CHANGE: 'colorChange',
+            ROTATE: 'rotate',
+            MESSAGE: 'message'
+        };
+
+        class AnimationFrame {
+            constructor(type, data, duration = 500) {
+                this.type = type;
+                this.data = data;
+                this.duration = duration;
+            }
+        }
+
+        const animationState = {
+            playing: true,
+            queue: [],
+            currentFrameIndex: 0,
+            frameStartTime: null,
+            speed: 1.0,
+            highlights: new Map(),
+
+            play() {
+                this.playing = true;
+                if (this.queue.length > 0 && this.currentFrameIndex < this.queue.length) {
+                    this.frameStartTime = performance.now();
+                }
+            },
+
+            pause() {
+                this.playing = false;
+            },
+
+            step() {
+                if (this.currentFrameIndex < this.queue.length - 1) {
+                    this.currentFrameIndex++;
+                    this.frameStartTime = performance.now();
+                    this.applyCurrentFrame();
+                }
+            },
+
+            reset() {
+                this.currentFrameIndex = 0;
+                this.frameStartTime = null;
+                this.highlights.clear();
+            },
+
+            clear() {
+                this.queue = [];
+                this.currentFrameIndex = 0;
+                this.frameStartTime = null;
+                this.highlights.clear();
+            },
+
+            applyCurrentFrame() {
+                const frame = this.queue[this.currentFrameIndex];
+                if (!frame) return;
+
+                switch (frame.type) {
+                    case AnimationType.HIGHLIGHT_NODE:
+                        this.highlights.set(frame.data.nodeId, { color: frame.data.color });
+                        break;
+                    case AnimationType.MESSAGE:
+                        showMessage(frame.data.text);
+                        break;
+                }
+            },
+
+            update() {
+                if (!this.playing || this.queue.length === 0) return;
+
+                const now = performance.now();
+                if (this.frameStartTime === null) {
+                    this.frameStartTime = now;
+                }
+
+                const frame = this.queue[this.currentFrameIndex];
+                if (!frame) return;
+
+                const elapsed = now - this.frameStartTime;
+                const frameSpeed = this.speed * 2;
+
+                if (elapsed >= frame.duration / frameSpeed) {
+                    this.currentFrameIndex++;
+                    this.frameStartTime = now;
+
+                    if (this.currentFrameIndex >= this.queue.length) {
+                        this.playing = false;
+                        this.clear();
+                    } else {
+                        this.applyCurrentFrame();
+                    }
+                }
+            }
+        };
+
+        class TreeAlgorithm {
+            constructor(id, name, description) {
+                this.id = id;
+                this.name = name;
+                this.description = description;
+            }
+
+            insert(value) {
+                throw new Error('insert() must be implemented');
+            }
+
+            delete(value) {
+                throw new Error('delete() must be implemented');
+            }
+
+            search(value) {
+                throw new Error('search() must be implemented');
+            }
+
+            clear() {
+                throw new Error('clear() must be implemented');
+            }
+
+            getStats() {
+                throw new Error('getStats() must be implemented');
+            }
+
+            draw(ctx, width, height) {
+                throw new Error('draw() must be implemented');
+            }
+        }
+
+        // ==========================================================
+        // SECTION 3: BINARY SEARCH TREE
+        // ==========================================================
+
+        class BSTNode {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                this.parent = null;
+                this.id = generateId();
+            }
+        }
+
+        class BinarySearchTree extends TreeAlgorithm {
+            constructor(id, name, description) {
+                super(id, name, description);
+                this.root = null;
+                this.nodeCount = 0;
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.nodeCount >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} nodes reached`);
+                    return;
+                }
+
+                if (this.search(numValue, true)) {
+                    showMessage('Value already exists');
+                    return;
+                }
+
+                animationState.clear();
+                const newNode = new BSTNode(numValue);
+
+                if (!this.root) {
+                    this.root = newNode;
+                    this.nodeCount++;
+                    animationState.queue.push(new AnimationFrame(
+                        AnimationType.MESSAGE,
+                        { text: `Inserted ${numValue} as root` }
+                    ));
+                    return;
+                }
+
+                let current = this.root;
+                let parent = null;
+
+                while (current) {
+                    animationState.queue.push(new AnimationFrame(
+                        AnimationType.HIGHLIGHT_NODE,
+                        { nodeId: current.id, color: colors.highlight },
+                        300
+                    ));
+
+                    parent = current;
+                    if (numValue < current.value) {
+                        current = current.left;
+                    } else {
+                        current = current.right;
+                    }
+                }
+
+                newNode.parent = parent;
+                if (numValue < parent.value) {
+                    parent.left = newNode;
+                } else {
+                    parent.right = newNode;
+                }
+
+                this.nodeCount++;
+
+                animationState.queue.push(new AnimationFrame(
+                    AnimationType.MESSAGE,
+                    { text: `Inserted ${numValue}` },
+                    500
+                ));
+                animationState.play();
+            }
+
+            search(value, silent = false) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) return null;
+
+                if (!silent) {
+                    animationState.clear();
+                }
+
+                let current = this.root;
+                while (current) {
+                    if (!silent) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.HIGHLIGHT_NODE,
+                            { nodeId: current.id, color: colors.searchPath },
+                            300
+                        ));
+                    }
+
+                    if (numValue === current.value) {
+                        if (!silent) {
+                            animationState.queue.push(new AnimationFrame(
+                                AnimationType.MESSAGE,
+                                { text: `Found ${numValue}!` },
+                                800
+                            ));
+                            animationState.play();
+                        }
+                        return current;
+                    }
+
+                    if (numValue < current.value) {
+                        current = current.left;
+                    } else {
+                        current = current.right;
+                    }
+                }
+
+                if (!silent) {
+                    animationState.queue.push(new AnimationFrame(
+                        AnimationType.MESSAGE,
+                        { text: `${numValue} not found` },
+                        800
+                    ));
+                    animationState.play();
+                }
+                return null;
+            }
+
+            delete(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                animationState.clear();
+                const node = this.search(numValue, true);
+
+                if (!node) {
+                    showMessage(`${numValue} not found`);
+                    return;
+                }
+
+                this.deleteNode(node);
+                this.nodeCount--;
+
+                animationState.queue.push(new AnimationFrame(
+                    AnimationType.MESSAGE,
+                    { text: `Deleted ${numValue}` },
+                    500
+                ));
+                animationState.play();
+            }
+
+            deleteNode(node) {
+                // Case 1: Leaf node
+                if (!node.left && !node.right) {
+                    if (node === this.root) {
+                        this.root = null;
+                    } else if (node.parent.left === node) {
+                        node.parent.left = null;
+                    } else {
+                        node.parent.right = null;
+                    }
+                }
+                // Case 2: One child
+                else if (!node.left || !node.right) {
+                    const child = node.left || node.right;
+                    if (node === this.root) {
+                        this.root = child;
+                        child.parent = null;
+                    } else {
+                        child.parent = node.parent;
+                        if (node.parent.left === node) {
+                            node.parent.left = child;
+                        } else {
+                            node.parent.right = child;
+                        }
+                    }
+                }
+                // Case 3: Two children
+                else {
+                    const successor = this.findMin(node.right);
+                    node.value = successor.value;
+                    this.deleteNode(successor);
+                }
+            }
+
+            findMin(node) {
+                while (node.left) {
+                    node = node.left;
+                }
+                return node;
+            }
+
+            clear() {
+                this.root = null;
+                this.nodeCount = 0;
+                animationState.clear();
+            }
+
+            getHeight(node = this.root) {
+                if (!node) return 0;
+                return 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+            }
+
+            getStats() {
+                return {
+                    nodeCount: this.nodeCount,
+                    height: this.getHeight(),
+                    balance: 'N/A'
+                };
+            }
+
+            draw(ctx, width, height) {
+                if (!this.root) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Tree is empty. Insert values to begin.', width / 2, height / 2);
+                    return;
+                }
+
+                const positions = this.layoutTree(this.root, width, height);
+
+                // Draw edges
+                this.drawEdges(ctx, this.root, positions);
+
+                // Draw nodes
+                this.drawNodes(ctx, this.root, positions);
+            }
+
+            layoutTree(root, width, height) {
+                const positions = new Map();
+                const treeHeight = this.getHeight(root);
+                // More generous spacing calculation
+                const initialSpacing = Math.max(
+                    layout.minHorizontalSpacing,
+                    width / (Math.pow(2, Math.min(treeHeight - 1, 3)))
+                );
+
+                const positionNode = (node, x, y, spacing, depth) => {
+                    if (!node) return;
+
+                    positions.set(node.id, { x, y, node });
+
+                    const nextSpacing = spacing / 2;
+                    const nextY = y + 80;
+
+                    if (node.left) {
+                        positionNode(node.left, x - nextSpacing, nextY, nextSpacing, depth + 1);
+                    }
+                    if (node.right) {
+                        positionNode(node.right, x + nextSpacing, nextY, nextSpacing, depth + 1);
+                    }
+                };
+
+                positionNode(root, width / 2, 60, initialSpacing, 0);
+                return positions;
+            }
+
+            drawEdges(ctx, node, positions) {
+                if (!node) return;
+
+                const pos = positions.get(node.id);
+
+                if (node.left) {
+                    const leftPos = positions.get(node.left.id);
+                    ctx.strokeStyle = colors.edge;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y);
+                    ctx.lineTo(leftPos.x, leftPos.y);
+                    ctx.stroke();
+                    this.drawEdges(ctx, node.left, positions);
+                }
+
+                if (node.right) {
+                    const rightPos = positions.get(node.right.id);
+                    ctx.strokeStyle = colors.edge;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y);
+                    ctx.lineTo(rightPos.x, rightPos.y);
+                    ctx.stroke();
+                    this.drawEdges(ctx, node.right, positions);
+                }
+            }
+
+            drawNodes(ctx, node, positions) {
+                if (!node) return;
+
+                const pos = positions.get(node.id);
+                const highlight = animationState.highlights.get(node.id);
+
+                // Draw node circle
+                ctx.fillStyle = highlight ? highlight.color : this.getNodeColor(node);
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, layout.nodeRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw node outline
+                ctx.strokeStyle = colors.node;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw value
+                const nodeColor = highlight ? highlight.color : this.getNodeColor(node);
+                // Use white/light text on dark nodes, dark text on light nodes
+                const isDarkNode = nodeColor === colors.nodeBlack;
+                ctx.fillStyle = isDarkNode ? colors.textOnDark : colors.textOnLight;
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.value.toString(), pos.x, pos.y);
+
+                this.drawNodes(ctx, node.left, positions);
+                this.drawNodes(ctx, node.right, positions);
+            }
+
+            getNodeColor(node) {
+                return colors.node;
+            }
+        }
+
+        // ==========================================================
+        // SECTION 4: RED-BLACK TREE
+        // ==========================================================
+
+        class RBNode extends BSTNode {
+            constructor(value) {
+                super(value);
+                this.color = COLOR_RED;
+            }
+        }
+
+        class RedBlackTree extends BinarySearchTree {
+            constructor() {
+                super('rbt', 'Red-Black Tree', 'Self-balancing binary search tree with color properties');
+                this.rotations = 0;
+                this.recolors = 0;
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.nodeCount >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} nodes reached`);
+                    return;
+                }
+
+                if (this.search(numValue, true)) {
+                    showMessage('Value already exists');
+                    return;
+                }
+
+                animationState.clear();
+                const newNode = new RBNode(numValue);
+
+                if (!this.root) {
+                    this.root = newNode;
+                    this.root.color = COLOR_BLACK;
+                    this.nodeCount++;
+                    return;
+                }
+
+                // Standard BST insert
+                let current = this.root;
+                let parent = null;
+
+                while (current) {
+                    parent = current;
+                    if (numValue < current.value) {
+                        current = current.left;
+                    } else {
+                        current = current.right;
+                    }
+                }
+
+                newNode.parent = parent;
+                if (numValue < parent.value) {
+                    parent.left = newNode;
+                } else {
+                    parent.right = newNode;
+                }
+
+                this.nodeCount++;
+                this.fixInsert(newNode);
+                animationState.play();
+            }
+
+            fixInsert(node) {
+                while (node.parent && node.parent.color === COLOR_RED) {
+                    if (node.parent === node.parent.parent.left) {
+                        const uncle = node.parent.parent.right;
+
+                        if (uncle && uncle.color === COLOR_RED) {
+                            // Case 1: Uncle is red
+                            node.parent.color = COLOR_BLACK;
+                            uncle.color = COLOR_BLACK;
+                            node.parent.parent.color = COLOR_RED;
+                            this.recolors += 3;
+                            node = node.parent.parent;
+                        } else {
+                            if (node === node.parent.right) {
+                                // Case 2: Node is right child
+                                node = node.parent;
+                                this.rotateLeft(node);
+                            }
+                            // Case 3: Node is left child
+                            node.parent.color = COLOR_BLACK;
+                            node.parent.parent.color = COLOR_RED;
+                            this.recolors += 2;
+                            this.rotateRight(node.parent.parent);
+                        }
+                    } else {
+                        const uncle = node.parent.parent.left;
+
+                        if (uncle && uncle.color === COLOR_RED) {
+                            node.parent.color = COLOR_BLACK;
+                            uncle.color = COLOR_BLACK;
+                            node.parent.parent.color = COLOR_RED;
+                            this.recolors += 3;
+                            node = node.parent.parent;
+                        } else {
+                            if (node === node.parent.left) {
+                                node = node.parent;
+                                this.rotateRight(node);
+                            }
+                            node.parent.color = COLOR_BLACK;
+                            node.parent.parent.color = COLOR_RED;
+                            this.recolors += 2;
+                            this.rotateLeft(node.parent.parent);
+                        }
+                    }
+                }
+                this.root.color = COLOR_BLACK;
+            }
+
+            rotateLeft(node) {
+                const right = node.right;
+                node.right = right.left;
+
+                if (right.left) {
+                    right.left.parent = node;
+                }
+
+                right.parent = node.parent;
+
+                if (!node.parent) {
+                    this.root = right;
+                } else if (node === node.parent.left) {
+                    node.parent.left = right;
+                } else {
+                    node.parent.right = right;
+                }
+
+                right.left = node;
+                node.parent = right;
+                this.rotations++;
+            }
+
+            rotateRight(node) {
+                const left = node.left;
+                node.left = left.right;
+
+                if (left.right) {
+                    left.right.parent = node;
+                }
+
+                left.parent = node.parent;
+
+                if (!node.parent) {
+                    this.root = left;
+                } else if (node === node.parent.right) {
+                    node.parent.right = left;
+                } else {
+                    node.parent.left = left;
+                }
+
+                left.right = node;
+                node.parent = left;
+                this.rotations++;
+            }
+
+            clear() {
+                super.clear();
+                this.rotations = 0;
+                this.recolors = 0;
+            }
+
+            getBlackHeight(node = this.root) {
+                if (!node) return 0;
+                const leftHeight = this.getBlackHeight(node.left);
+                const add = node.color === COLOR_BLACK ? 1 : 0;
+                return leftHeight + add;
+            }
+
+            getStats() {
+                return {
+                    nodeCount: this.nodeCount,
+                    height: this.getHeight(),
+                    blackHeight: this.getBlackHeight(),
+                    rotations: this.rotations,
+                    recolors: this.recolors,
+                    violations: 0
+                };
+            }
+
+            getNodeColor(node) {
+                return node.color === COLOR_RED ? colors.nodeRed : colors.nodeBlack;
+            }
+        }
+
+        // ==========================================================
+        // SECTION 5: AVL TREE
+        // ==========================================================
+
+        class AVLNode extends BSTNode {
+            constructor(value) {
+                super(value);
+                this.height = 1;
+            }
+
+            getBalance() {
+                const lh = this.left ? this.left.height : 0;
+                const rh = this.right ? this.right.height : 0;
+                return lh - rh;
+            }
+
+            updateHeight() {
+                const lh = this.left ? this.left.height : 0;
+                const rh = this.right ? this.right.height : 0;
+                this.height = 1 + Math.max(lh, rh);
+            }
+        }
+
+        class AVLTree extends BinarySearchTree {
+            constructor() {
+                super('avl', 'AVL Tree', 'Height-balanced binary search tree');
+                this.rotations = 0;
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.nodeCount >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} nodes reached`);
+                    return;
+                }
+
+                if (this.search(numValue, true)) {
+                    showMessage('Value already exists');
+                    return;
+                }
+
+                animationState.clear();
+                this.root = this.insertNode(this.root, numValue, null);
+                this.nodeCount++;
+
+                animationState.queue.push(new AnimationFrame(
+                    AnimationType.MESSAGE,
+                    { text: `Inserted ${numValue}` },
+                    500
+                ));
+                animationState.play();
+            }
+
+            insertNode(node, value, parent) {
+                if (!node) {
+                    const newNode = new AVLNode(value);
+                    newNode.parent = parent;
+                    return newNode;
+                }
+
+                animationState.queue.push(new AnimationFrame(
+                    AnimationType.HIGHLIGHT_NODE,
+                    { nodeId: node.id, color: colors.highlight },
+                    300
+                ));
+
+                if (value < node.value) {
+                    node.left = this.insertNode(node.left, value, node);
+                } else {
+                    node.right = this.insertNode(node.right, value, node);
+                }
+
+                node.updateHeight();
+                const balance = node.getBalance();
+
+                // Left Left Case
+                if (balance > 1 && value < node.left.value) {
+                    return this.rotateRight(node);
+                }
+
+                // Right Right Case
+                if (balance < -1 && value > node.right.value) {
+                    return this.rotateLeft(node);
+                }
+
+                // Left Right Case
+                if (balance > 1 && value > node.left.value) {
+                    node.left = this.rotateLeft(node.left);
+                    return this.rotateRight(node);
+                }
+
+                // Right Left Case
+                if (balance < -1 && value < node.right.value) {
+                    node.right = this.rotateRight(node.right);
+                    return this.rotateLeft(node);
+                }
+
+                return node;
+            }
+
+            rotateLeft(z) {
+                const y = z.right;
+                const T2 = y.left;
+
+                y.left = z;
+                z.right = T2;
+
+                y.parent = z.parent;
+                z.parent = y;
+                if (T2) T2.parent = z;
+
+                z.updateHeight();
+                y.updateHeight();
+
+                this.rotations++;
+                return y;
+            }
+
+            rotateRight(z) {
+                const y = z.left;
+                const T3 = y.right;
+
+                y.right = z;
+                z.left = T3;
+
+                y.parent = z.parent;
+                z.parent = y;
+                if (T3) T3.parent = z;
+
+                z.updateHeight();
+                y.updateHeight();
+
+                this.rotations++;
+                return y;
+            }
+
+            delete(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (!this.search(numValue, true)) {
+                    showMessage(`${numValue} not found`);
+                    return;
+                }
+
+                animationState.clear();
+                this.root = this.deleteNode(this.root, numValue);
+                this.nodeCount--;
+
+                animationState.queue.push(new AnimationFrame(
+                    AnimationType.MESSAGE,
+                    { text: `Deleted ${numValue}` },
+                    500
+                ));
+                animationState.play();
+            }
+
+            deleteNode(node, value) {
+                if (!node) return node;
+
+                if (value < node.value) {
+                    node.left = this.deleteNode(node.left, value);
+                } else if (value > node.value) {
+                    node.right = this.deleteNode(node.right, value);
+                } else {
+                    // Node with one or no child
+                    if (!node.left || !node.right) {
+                        const temp = node.left || node.right;
+                        if (!temp) {
+                            return null;
+                        } else {
+                            temp.parent = node.parent;
+                            return temp;
+                        }
+                    } else {
+                        // Node with two children
+                        const temp = this.findMin(node.right);
+                        node.value = temp.value;
+                        node.right = this.deleteNode(node.right, temp.value);
+                    }
+                }
+
+                node.updateHeight();
+                const balance = node.getBalance();
+
+                // Left Left Case
+                if (balance > 1 && node.left.getBalance() >= 0) {
+                    return this.rotateRight(node);
+                }
+
+                // Left Right Case
+                if (balance > 1 && node.left.getBalance() < 0) {
+                    node.left = this.rotateLeft(node.left);
+                    return this.rotateRight(node);
+                }
+
+                // Right Right Case
+                if (balance < -1 && node.right.getBalance() <= 0) {
+                    return this.rotateLeft(node);
+                }
+
+                // Right Left Case
+                if (balance < -1 && node.right.getBalance() > 0) {
+                    node.right = this.rotateRight(node.right);
+                    return this.rotateLeft(node);
+                }
+
+                return node;
+            }
+
+            clear() {
+                super.clear();
+                this.rotations = 0;
+            }
+
+            getStats() {
+                return {
+                    nodeCount: this.nodeCount,
+                    height: this.getHeight(),
+                    balance: this.root ? this.root.getBalance() : 0,
+                    rotations: this.rotations
+                };
+            }
+
+            drawNodes(ctx, node, positions) {
+                if (!node) return;
+
+                const pos = positions.get(node.id);
+                const highlight = animationState.highlights.get(node.id);
+
+                // Draw node circle
+                ctx.fillStyle = highlight ? highlight.color : colors.node;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, layout.nodeRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw node outline
+                ctx.strokeStyle = colors.node;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw value
+                ctx.fillStyle = colors.textOnLight;
+                ctx.font = 'bold 12px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.value.toString(), pos.x, pos.y);
+
+                // Draw height
+                ctx.fillStyle = colors.node;
+                ctx.font = '10px Courier New';
+                ctx.fillText(`h:${node.height}`, pos.x, pos.y + layout.nodeRadius + 12);
+
+                this.drawNodes(ctx, node.left, positions);
+                this.drawNodes(ctx, node.right, positions);
+            }
+        }
+
+        class BTree extends TreeAlgorithm {
+            constructor() {
+                super('btree', 'B-Tree', 'Multi-way search tree optimized for disk access');
+                this.order = 4;
+                this.root = null;
+                this.keyCount = 0;
+            }
+
+            insert(value) {
+                showMessage('B-Tree: Insert operation (placeholder)');
+            }
+
+            delete(value) {
+                showMessage('B-Tree: Delete operation (placeholder)');
+            }
+
+            search(value) {
+                showMessage('B-Tree: Search operation (placeholder)');
+            }
+
+            clear() {
+                this.root = null;
+                this.keyCount = 0;
+            }
+
+            getStats() {
+                return {
+                    keyCount: this.keyCount,
+                    nodeCount: 0,
+                    height: 0,
+                    avgUtilization: 0,
+                    diskReads: 0
+                };
+            }
+
+            draw(ctx, width, height) {
+                ctx.fillStyle = colors.node;
+                ctx.font = '14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('B-Tree visualization (in development)', width / 2, height / 2);
+            }
+        }
+
+        // ==========================================================
+        // SECTION 7: SKIP LIST
+        // ==========================================================
+
+        class SkipNode {
+            constructor(value, level) {
+                this.value = value;
+                this.forward = new Array(level + 1).fill(null);
+                this.id = generateId();
+            }
+        }
+
+        class SkipList extends TreeAlgorithm {
+            constructor() {
+                super('skiplist', 'Skip List', 'Probabilistic data structure with layered linked lists');
+                this.head = new SkipNode(-Infinity, 16);
+                this.maxLevel = 0;
+                this.probability = 0.5;
+                this.elementCount = 0;
+                this.searchComparisons = 0;
+            }
+
+            randomLevel() {
+                let level = 0;
+                while (Math.random() < this.probability && level < 16) {
+                    level++;
+                }
+                return level;
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.elementCount >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} nodes reached`);
+                    return;
+                }
+
+                const update = new Array(17).fill(null);
+                let current = this.head;
+
+                // Find position for insertion
+                for (let i = this.maxLevel; i >= 0; i--) {
+                    while (current.forward[i] && current.forward[i].value < numValue) {
+                        current = current.forward[i];
+                    }
+                    update[i] = current;
+                }
+
+                current = current.forward[0];
+
+                // Check if value already exists
+                if (current && current.value === numValue) {
+                    showMessage('Value already exists');
+                    return;
+                }
+
+                // Insert new node
+                const level = this.randomLevel();
+                if (level > this.maxLevel) {
+                    for (let i = this.maxLevel + 1; i <= level; i++) {
+                        update[i] = this.head;
+                    }
+                    this.maxLevel = level;
+                }
+
+                const newNode = new SkipNode(numValue, level);
+
+                for (let i = 0; i <= level; i++) {
+                    newNode.forward[i] = update[i].forward[i];
+                    update[i].forward[i] = newNode;
+                }
+
+                this.elementCount++;
+                showMessage(`Inserted ${numValue} at level ${level}`);
+            }
+
+            search(value, silent = false) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) return null;
+
+                if (!silent) {
+                    animationState.clear();
+                }
+
+                this.searchComparisons = 0;
+                let current = this.head;
+
+                for (let i = this.maxLevel; i >= 0; i--) {
+                    while (current.forward[i] && current.forward[i].value < numValue) {
+                        current = current.forward[i];
+                        this.searchComparisons++;
+
+                        if (!silent && current.value !== -Infinity) {
+                            animationState.queue.push(new AnimationFrame(
+                                AnimationType.HIGHLIGHT_NODE,
+                                { nodeId: current.id, color: colors.searchPath },
+                                200
+                            ));
+                        }
+                    }
+                }
+
+                current = current.forward[0];
+
+                if (current && current.value === numValue) {
+                    if (!silent) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.HIGHLIGHT_NODE,
+                            { nodeId: current.id, color: colors.highlight },
+                            400
+                        ));
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.MESSAGE,
+                            { text: `Found ${numValue}! (${this.searchComparisons} comparisons)` },
+                            800
+                        ));
+                        animationState.play();
+                    }
+                    return current;
+                }
+
+                if (!silent) {
+                    animationState.queue.push(new AnimationFrame(
+                        AnimationType.MESSAGE,
+                        { text: `${numValue} not found (${this.searchComparisons} comparisons)` },
+                        800
+                    ));
+                    animationState.play();
+                }
+                return null;
+            }
+
+            delete(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                const update = new Array(17).fill(null);
+                let current = this.head;
+
+                for (let i = this.maxLevel; i >= 0; i--) {
+                    while (current.forward[i] && current.forward[i].value < numValue) {
+                        current = current.forward[i];
+                    }
+                    update[i] = current;
+                }
+
+                current = current.forward[0];
+
+                if (current && current.value === numValue) {
+                    for (let i = 0; i <= this.maxLevel; i++) {
+                        if (update[i].forward[i] !== current) break;
+                        update[i].forward[i] = current.forward[i];
+                    }
+
+                    while (this.maxLevel > 0 && !this.head.forward[this.maxLevel]) {
+                        this.maxLevel--;
+                    }
+
+                    this.elementCount--;
+                    showMessage(`Deleted ${numValue}`);
+                } else {
+                    showMessage(`${numValue} not found`);
+                }
+            }
+
+            clear() {
+                this.head = new SkipNode(-Infinity, 16);
+                this.maxLevel = 0;
+                this.elementCount = 0;
+                this.searchComparisons = 0;
+            }
+
+            getStats() {
+                let totalLevels = 0;
+                let current = this.head.forward[0];
+
+                while (current) {
+                    totalLevels += current.forward.filter(f => f !== null).length;
+                    current = current.forward[0];
+                }
+
+                return {
+                    elementCount: this.elementCount,
+                    maxLevel: this.maxLevel,
+                    avgLevel: this.elementCount > 0 ? (totalLevels / this.elementCount).toFixed(1) : 0,
+                    searchComparisons: this.searchComparisons
+                };
+            }
+
+            draw(ctx, width, height) {
+                if (this.elementCount === 0) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Skip List is empty. Insert values to begin.', width / 2, height / 2);
+                    return;
+                }
+
+                const levelHeight = 50;
+                const nodeWidth = 60;
+                const startX = 50;
+                const startY = height - (this.maxLevel + 2) * levelHeight;
+
+                // Draw level labels
+                ctx.fillStyle = colors.node;
+                ctx.font = '12px Courier New';
+                ctx.textAlign = 'right';
+                for (let level = this.maxLevel; level >= 0; level--) {
+                    const y = startY + (this.maxLevel - level) * levelHeight;
+                    ctx.fillText(`L${level}`, startX - 10, y + 5);
+                }
+
+                // Collect nodes
+                const nodes = [];
+                let current = this.head.forward[0];
+                while (current) {
+                    nodes.push(current);
+                    current = current.forward[0];
+                }
+
+                // Draw nodes and connections
+                nodes.forEach((node, index) => {
+                    const x = startX + index * nodeWidth + nodeWidth;
+
+                    // Draw node at all its levels
+                    const nodeLevel = node.forward.filter(f => f !== null).length - 1;
+
+                    for (let level = 0; level <= nodeLevel; level++) {
+                        const y = startY + (this.maxLevel - level) * levelHeight;
+
+                        // Check for highlight
+                        const highlight = animationState.highlights.get(node.id);
+                        const nodeColor = highlight ? highlight.color : colors.node;
+
+                        // Draw node
+                        ctx.fillStyle = nodeColor;
+                        ctx.fillRect(x - 15, y - 15, 30, 30);
+                        ctx.strokeStyle = nodeColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x - 15, y - 15, 30, 30);
+
+                        // Draw value
+                        ctx.fillStyle = colors.textOnLight;
+                        ctx.font = 'bold 11px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(node.value.toString(), x, y);
+
+                        // Draw forward pointer
+                        if (node.forward[level] && node.forward[level] !== null) {
+                            const nextIndex = nodes.indexOf(node.forward[level]);
+                            if (nextIndex !== -1) {
+                                const nextX = startX + nextIndex * nodeWidth + nodeWidth;
+                                ctx.strokeStyle = colors.edge;
+                                ctx.beginPath();
+                                ctx.moveTo(x + 15, y);
+                                ctx.lineTo(nextX - 15, y);
+                                ctx.stroke();
+
+                                // Arrow
+                                ctx.beginPath();
+                                ctx.moveTo(nextX - 15, y);
+                                ctx.lineTo(nextX - 20, y - 3);
+                                ctx.lineTo(nextX - 20, y + 3);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==========================================================
+        // SECTION 8: SEGMENT TREE
+        // ==========================================================
+
+        class SegmentTree extends TreeAlgorithm {
+            constructor() {
+                super('segtree', 'Segment Tree', 'Range query data structure');
+                this.arr = [];
+                this.tree = [];
+                this.operation = 'sum';
+                this.lastQueryResult = null;
+                this.nodesVisited = 0;
+            }
+
+            buildTree(arr, tree, start, end, index) {
+                if (start === end) {
+                    tree[index] = arr[start];
+                    return;
+                }
+
+                const mid = Math.floor((start + end) / 2);
+                const leftChild = 2 * index + 1;
+                const rightChild = 2 * index + 2;
+
+                this.buildTree(arr, tree, start, mid, leftChild);
+                this.buildTree(arr, tree, mid + 1, end, rightChild);
+
+                tree[index] = this.combine(tree[leftChild], tree[rightChild]);
+            }
+
+            combine(a, b) {
+                if (a === undefined) return b;
+                if (b === undefined) return a;
+
+                switch (this.operation) {
+                    case 'sum': return a + b;
+                    case 'min': return Math.min(a, b);
+                    case 'max': return Math.max(a, b);
+                    case 'gcd': return this.gcd(a, b);
+                    default: return a + b;
+                }
+            }
+
+            gcd(a, b) {
+                return b === 0 ? a : this.gcd(b, a % b);
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.arr.length >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} elements reached`);
+                    return;
+                }
+
+                this.arr.push(numValue);
+                this.tree = new Array(4 * this.arr.length);
+                this.buildTree(this.arr, this.tree, 0, this.arr.length - 1, 0);
+                showMessage(`Added ${numValue} to array (index ${this.arr.length - 1})`);
+            }
+
+            delete(value) {
+                showMessage('Segment Tree: Use Clear to reset');
+            }
+
+            search(value, silent = false) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) return;
+
+                if (!silent) {
+                    animationState.clear();
+                }
+
+                // Search through array and highlight each position checked
+                for (let i = 0; i < this.arr.length; i++) {
+                    if (!silent) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.HIGHLIGHT_NODE,
+                            { nodeId: `arr_${i}`, color: colors.searchPath },
+                            150
+                        ));
+                    }
+
+                    if (this.arr[i] === numValue) {
+                        if (!silent) {
+                            animationState.queue.push(new AnimationFrame(
+                                AnimationType.HIGHLIGHT_NODE,
+                                { nodeId: `arr_${i}`, color: colors.highlight },
+                                400
+                            ));
+                            animationState.queue.push(new AnimationFrame(
+                                AnimationType.MESSAGE,
+                                { text: `Found ${numValue} at index ${i}` },
+                                800
+                            ));
+                            animationState.play();
+                        }
+                        return;
+                    }
+                }
+
+                if (!silent) {
+                    animationState.queue.push(new AnimationFrame(
+                        AnimationType.MESSAGE,
+                        { text: `${numValue} not in array` },
+                        800
+                    ));
+                    animationState.play();
+                }
+            }
+
+            query(queryStart, queryEnd) {
+                if (this.arr.length === 0) {
+                    showMessage('Array is empty');
+                    return;
+                }
+
+                if (queryStart < 0 || queryEnd >= this.arr.length || queryStart > queryEnd) {
+                    showMessage('Invalid range');
+                    return;
+                }
+
+                this.nodesVisited = 0;
+                const result = this.rangeQuery(0, 0, this.arr.length - 1, queryStart, queryEnd);
+                this.lastQueryResult = result;
+
+                const opName = this.operation.toUpperCase();
+                showMessage(`${opName}[${queryStart}..${queryEnd}] = ${result} (visited ${this.nodesVisited} nodes)`);
+            }
+
+            rangeQuery(index, start, end, queryStart, queryEnd) {
+                this.nodesVisited++;
+
+                // Complete overlap
+                if (queryStart <= start && queryEnd >= end) {
+                    return this.tree[index];
+                }
+
+                // No overlap
+                if (queryEnd < start || queryStart > end) {
+                    return undefined;
+                }
+
+                // Partial overlap
+                const mid = Math.floor((start + end) / 2);
+                const leftResult = this.rangeQuery(2 * index + 1, start, mid, queryStart, queryEnd);
+                const rightResult = this.rangeQuery(2 * index + 2, mid + 1, end, queryStart, queryEnd);
+
+                return this.combine(leftResult, rightResult);
+            }
+
+            clear() {
+                this.arr = [];
+                this.tree = [];
+                this.lastQueryResult = null;
+                this.nodesVisited = 0;
+            }
+
+            getStats() {
+                return {
+                    arraySize: this.arr.length,
+                    treeNodes: this.tree.filter(x => x !== undefined).length,
+                    lastQueryResult: this.lastQueryResult !== null ? this.lastQueryResult : '-',
+                    nodesVisited: this.nodesVisited
+                };
+            }
+
+            draw(ctx, width, height) {
+                if (this.arr.length === 0) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Segment Tree is empty. Insert values to build the tree.', width / 2, height / 2);
+                    return;
+                }
+
+                // Draw array at bottom
+                const arrayHeight = 60;
+                const arrayY = height - arrayHeight;
+                const cellWidth = Math.min(50, (width - 100) / this.arr.length);
+
+                ctx.fillStyle = colors.node;
+                ctx.font = '11px Courier New';
+                ctx.fillText('Backing Array:', 50, arrayY - 10);
+
+                this.arr.forEach((val, i) => {
+                    const x = 50 + i * cellWidth;
+
+                    // Check for highlight
+                    const highlight = animationState.highlights.get(`arr_${i}`);
+                    const cellColor = highlight ? highlight.color : colors.background;
+
+                    // Cell background
+                    if (highlight) {
+                        ctx.fillStyle = cellColor;
+                        ctx.fillRect(x, arrayY, cellWidth, 40);
+                    }
+
+                    // Cell border
+                    ctx.strokeStyle = colors.edge;
+                    ctx.strokeRect(x, arrayY, cellWidth, 40);
+
+                    // Index
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '9px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i.toString(), x + cellWidth / 2, arrayY + 12);
+
+                    // Value
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.fillText(val.toString(), x + cellWidth / 2, arrayY + 28);
+                });
+
+                // Draw tree (simplified view - just show as text nodes)
+                const treeHeight = arrayY - 100;
+                if (treeHeight > 100) {
+                    ctx.font = '12px Courier New';
+                    ctx.fillText('Segment Tree:', 50, 50);
+
+                    // Calculate tree depth
+                    const n = this.arr.length;
+                    const depth = Math.ceil(Math.log2(n)) + 1;
+                    const nodeSpacing = Math.max(30, (width - 100) / Math.pow(2, depth - 1));
+
+                    this.drawTreeNode(ctx, 0, 0, this.arr.length - 1, width / 2, 80, nodeSpacing, 0);
+                }
+            }
+
+            drawTreeNode(ctx, index, start, end, x, y, spacing, level) {
+                if (this.tree[index] === undefined || level > 4 || y > 400) return;
+
+                // Draw node
+                ctx.fillStyle = colors.node;
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = colors.node;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw value
+                ctx.fillStyle = colors.textOnLight;
+                ctx.font = 'bold 11px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.tree[index].toString(), x, y);
+
+                // Draw range label
+                ctx.fillStyle = colors.node;
+                ctx.font = '9px Courier New';
+                ctx.fillText(`[${start}..${end}]`, x, y + 25);
+
+                if (start !== end) {
+                    const mid = Math.floor((start + end) / 2);
+                    const leftChild = 2 * index + 1;
+                    const rightChild = 2 * index + 2;
+                    const nextY = y + 60;
+                    const nextSpacing = spacing / 2;
+
+                    // Draw left child
+                    if (this.tree[leftChild] !== undefined) {
+                        const leftX = x - nextSpacing;
+                        ctx.strokeStyle = colors.edge;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y + 18);
+                        ctx.lineTo(leftX, nextY - 18);
+                        ctx.stroke();
+                        this.drawTreeNode(ctx, leftChild, start, mid, leftX, nextY, nextSpacing, level + 1);
+                    }
+
+                    // Draw right child
+                    if (this.tree[rightChild] !== undefined) {
+                        const rightX = x + nextSpacing;
+                        ctx.strokeStyle = colors.edge;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y + 18);
+                        ctx.lineTo(rightX, nextY - 18);
+                        ctx.stroke();
+                        this.drawTreeNode(ctx, rightChild, mid + 1, end, rightX, nextY, nextSpacing, level + 1);
+                    }
+                }
+            }
+        }
+
+        class Trie extends TreeAlgorithm {
+            constructor() {
+                super('trie', 'Trie', 'Prefix tree for string operations');
+                this.root = { children: new Map(), isEndOfWord: false, id: generateId() };
+                this.wordCount = 0;
+            }
+
+            insert(value) {
+                if (!value || typeof value !== 'string') {
+                    showMessage('Please enter a valid string');
+                    return;
+                }
+
+                let node = this.root;
+                for (const char of value.toLowerCase()) {
+                    if (!node.children.has(char)) {
+                        node.children.set(char, { children: new Map(), isEndOfWord: false, id: generateId() });
+                    }
+                    node = node.children.get(char);
+                }
+                if (!node.isEndOfWord) {
+                    node.isEndOfWord = true;
+                    this.wordCount++;
+                    showMessage(`Inserted "${value}"`);
+                }
+            }
+
+            delete(value) {
+                showMessage('Trie: Delete operation (placeholder)');
+            }
+
+            search(value) {
+                if (!value) return;
+
+                let node = this.root;
+                for (const char of value.toLowerCase()) {
+                    if (!node.children.has(char)) {
+                        showMessage(`"${value}" not found`);
+                        return;
+                    }
+                    node = node.children.get(char);
+                }
+
+                if (node.isEndOfWord) {
+                    showMessage(`Found "${value}"!`);
+                } else {
+                    showMessage(`"${value}" is a prefix but not a complete word`);
+                }
+            }
+
+            clear() {
+                this.root = { children: new Map(), isEndOfWord: false, id: generateId() };
+                this.wordCount = 0;
+            }
+
+            getStats() {
+                let nodeCount = 0;
+                const countNodes = (node) => {
+                    nodeCount++;
+                    for (const child of node.children.values()) {
+                        countNodes(child);
+                    }
+                };
+                countNodes(this.root);
+
+                return {
+                    wordCount: this.wordCount,
+                    nodeCount: nodeCount,
+                    avgWordLength: 0
+                };
+            }
+
+            draw(ctx, width, height) {
+                if (this.wordCount === 0) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Trie is empty. Insert words to begin.', width / 2, height / 2);
+                    return;
+                }
+
+                // Calculate node positions
+                const positions = new Map();
+                const levelNodes = [];
+
+                const traverse = (node, level, xStart, xEnd) => {
+                    if (!levelNodes[level]) {
+                        levelNodes[level] = [];
+                    }
+
+                    const x = (xStart + xEnd) / 2;
+                    const y = 80 + level * 70;
+
+                    positions.set(node.id, { x, y, node });
+                    levelNodes[level].push({ node, x, y });
+
+                    const children = Array.from(node.children.entries());
+                    const childWidth = (xEnd - xStart) / Math.max(children.length, 1);
+
+                    children.forEach(([char, child], index) => {
+                        const childXStart = xStart + index * childWidth;
+                        const childXEnd = childXStart + childWidth;
+                        traverse(child, level + 1, childXStart, childXEnd);
+                    });
+                };
+
+                traverse(this.root, 0, 0, width);
+
+                // Draw edges with character labels
+                positions.forEach((pos, nodeId) => {
+                    const node = pos.node;
+                    node.children.forEach((child, char) => {
+                        const childPos = positions.get(child.id);
+                        if (childPos) {
+                            // Draw edge
+                            ctx.strokeStyle = colors.edge;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(pos.x, pos.y + 15);
+                            ctx.lineTo(childPos.x, childPos.y - 15);
+                            ctx.stroke();
+
+                            // Draw character label on edge
+                            const midX = (pos.x + childPos.x) / 2;
+                            const midY = (pos.y + childPos.y) / 2;
+                            ctx.fillStyle = colors.node;
+                            ctx.font = 'bold 13px Courier New';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+
+                            // Background for label
+                            ctx.fillStyle = colors.background;
+                            ctx.fillRect(midX - 10, midY - 10, 20, 20);
+
+                            ctx.fillStyle = colors.node;
+                            ctx.fillText(char, midX, midY);
+                        }
+                    });
+                });
+
+                // Draw nodes
+                positions.forEach((pos, nodeId) => {
+                    const node = pos.node;
+
+                    // Draw node circle
+                    if (node.isEndOfWord) {
+                        // Double circle for end-of-word
+                        ctx.fillStyle = colors.node;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = colors.background;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = colors.node;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Regular circle
+                        ctx.strokeStyle = colors.node;
+                        ctx.fillStyle = colors.background;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 12, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                });
+
+                // Draw root label
+                const rootPos = positions.get(this.root.id);
+                if (rootPos) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '11px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('root', rootPos.x, rootPos.y - 25);
+                }
+            }
+        }
+
+        // ==========================================================
+        // SECTION 10: UNION-FIND
+        // ==========================================================
+
+        class UnionFind extends TreeAlgorithm {
+            constructor() {
+                super('unionfind', 'Union-Find', 'Disjoint set data structure');
+                this.parent = new Map();
+                this.rank = new Map();
+                this.elementCount = 0;
+                this.compressions = 0;
+                this.elements = [];
+            }
+
+            insert(value) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) {
+                    showMessage('Please enter a valid number');
+                    return;
+                }
+
+                if (this.parent.has(numValue)) {
+                    showMessage('Element already exists');
+                    return;
+                }
+
+                if (this.elementCount >= MAX_NODES[this.id]) {
+                    showMessage(`Maximum ${MAX_NODES[this.id]} elements reached`);
+                    return;
+                }
+
+                this.parent.set(numValue, numValue);
+                this.rank.set(numValue, 0);
+                this.elements.push(numValue);
+                this.elementCount++;
+                showMessage(`Created set for ${numValue}`);
+            }
+
+            find(x, animate = false) {
+                if (!this.parent.has(x)) {
+                    return null;
+                }
+
+                if (animate) {
+                    // Trace path for animation without compression
+                    const path = [];
+                    let current = x;
+                    while (this.parent.get(current) !== current) {
+                        path.push(current);
+                        current = this.parent.get(current);
+                    }
+                    path.push(current); // Add root
+
+                    // Add animation frames for each step
+                    for (const node of path) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.HIGHLIGHT_NODE,
+                            { nodeId: `uf_${node}`, color: colors.searchPath },
+                            200
+                        ));
+                    }
+
+                    return current;
+                }
+
+                // Path compression
+                if (this.parent.get(x) !== x) {
+                    this.compressions++;
+                    this.parent.set(x, this.find(this.parent.get(x)));
+                }
+                return this.parent.get(x);
+            }
+
+            union(x, y) {
+                const rootX = this.find(x);
+                const rootY = this.find(y);
+
+                if (rootX === null || rootY === null) {
+                    showMessage('One or both elements not found');
+                    return;
+                }
+
+                if (rootX === rootY) {
+                    showMessage(`${x} and ${y} are already in the same set`);
+                    return;
+                }
+
+                // Union by rank
+                if (this.rank.get(rootX) < this.rank.get(rootY)) {
+                    this.parent.set(rootX, rootY);
+                } else if (this.rank.get(rootX) > this.rank.get(rootY)) {
+                    this.parent.set(rootY, rootX);
+                } else {
+                    this.parent.set(rootY, rootX);
+                    this.rank.set(rootX, this.rank.get(rootX) + 1);
+                }
+
+                showMessage(`United sets containing ${x} and ${y}`);
+            }
+
+            delete(value) {
+                showMessage('Union-Find: Delete not supported');
+            }
+
+            search(value, silent = false) {
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) return;
+
+                if (!silent) {
+                    animationState.clear();
+                }
+
+                const root = this.find(numValue, !silent);
+
+                if (root !== null) {
+                    if (!silent) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.HIGHLIGHT_NODE,
+                            { nodeId: `uf_${root}`, color: colors.highlight },
+                            400
+                        ));
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.MESSAGE,
+                            { text: `${numValue} is in set with root ${root}` },
+                            800
+                        ));
+                        animationState.play();
+                    }
+                } else {
+                    if (!silent) {
+                        animationState.queue.push(new AnimationFrame(
+                            AnimationType.MESSAGE,
+                            { text: `${numValue} not found` },
+                            800
+                        ));
+                        animationState.play();
+                    }
+                }
+            }
+
+            clear() {
+                this.parent = new Map();
+                this.rank = new Map();
+                this.elements = [];
+                this.elementCount = 0;
+                this.compressions = 0;
+            }
+
+            countSets() {
+                const roots = new Set();
+                for (const elem of this.elements) {
+                    roots.add(this.find(elem));
+                }
+                return roots.size;
+            }
+
+            getMaxHeight() {
+                let maxHeight = 0;
+                const getHeight = (x) => {
+                    let height = 0;
+                    let current = x;
+                    while (this.parent.get(current) !== current) {
+                        height++;
+                        current = this.parent.get(current);
+                    }
+                    return height;
+                };
+
+                for (const elem of this.elements) {
+                    maxHeight = Math.max(maxHeight, getHeight(elem));
+                }
+                return maxHeight;
+            }
+
+            getStats() {
+                return {
+                    elementCount: this.elementCount,
+                    setCount: this.countSets(),
+                    maxHeight: this.getMaxHeight(),
+                    compressions: this.compressions
+                };
+            }
+
+            draw(ctx, width, height) {
+                if (this.elementCount === 0) {
+                    ctx.fillStyle = colors.node;
+                    ctx.font = '14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Union-Find is empty. Insert elements to create sets.', width / 2, height / 2);
+                    return;
+                }
+
+                // Group elements by their root (set)
+                const sets = new Map();
+                for (const elem of this.elements) {
+                    const root = this.find(elem);
+                    if (!sets.has(root)) {
+                        sets.set(root, []);
+                    }
+                    sets.get(root).push(elem);
+                }
+
+                // Draw each set as a tree
+                const setArray = Array.from(sets.entries());
+                const setWidth = Math.min(200, (width - 100) / setArray.length);
+
+                setArray.forEach(([root, elements], setIndex) => {
+                    const startX = 50 + setIndex * setWidth + setWidth / 2;
+                    const startY = 100;
+
+                    // Build tree structure for this set
+                    const children = new Map();
+                    for (const elem of elements) {
+                        const parent = this.parent.get(elem);
+                        if (parent !== elem) {
+                            if (!children.has(parent)) {
+                                children.set(parent, []);
+                            }
+                            children.get(parent).push(elem);
+                        }
+                    }
+
+                    // Draw tree using BFS-like layout
+                    const drawn = new Set();
+                    const positions = new Map();
+
+                    const drawNode = (node, x, y, spread) => {
+                        if (drawn.has(node)) return;
+                        drawn.add(node);
+                        positions.set(node, { x, y });
+
+                        const nodeChildren = children.get(node) || [];
+                        const childSpacing = spread / Math.max(nodeChildren.length, 1);
+
+                        nodeChildren.forEach((child, index) => {
+                            const childX = x - spread / 2 + (index + 0.5) * childSpacing;
+                            const childY = y + 60;
+
+                            // Draw edge
+                            ctx.strokeStyle = colors.edge;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(x, y + 15);
+                            ctx.lineTo(childX, childY - 15);
+                            ctx.stroke();
+
+                            drawNode(child, childX, childY, spread / 2);
+                        });
+                    };
+
+                    // Start from root
+                    drawNode(root, startX, startY, setWidth * 0.8);
+
+                    // Draw nodes
+                    positions.forEach((pos, node) => {
+                        const isRoot = node === root;
+
+                        // Check for highlight
+                        const highlight = animationState.highlights.get(`uf_${node}`);
+                        let nodeColor;
+                        if (highlight) {
+                            nodeColor = highlight.color;
+                        } else {
+                            nodeColor = isRoot ? colors.node : colors.background;
+                        }
+
+                        // Draw node
+                        ctx.fillStyle = nodeColor;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 15, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = colors.node;
+                        ctx.lineWidth = isRoot ? 3 : 2;
+                        ctx.stroke();
+
+                        // Draw value
+                        ctx.fillStyle = isRoot ? colors.text : colors.node;
+                        ctx.font = 'bold 12px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(node.toString(), pos.x, pos.y);
+
+                        // Draw rank for root
+                        if (isRoot) {
+                            ctx.fillStyle = colors.node;
+                            ctx.font = '10px Courier New';
+                            ctx.fillText(`rank:${this.rank.get(node)}`, pos.x, pos.y + 25);
+                        }
+                    });
+                });
+
+                // Draw legend
+                ctx.fillStyle = colors.node;
+                ctx.font = '11px Courier New';
+                ctx.textAlign = 'left';
+                ctx.fillText('Each tree represents a disjoint set. Filled nodes are roots.', 20, height - 20);
+            }
+        }
+
+        // ==========================================================
+        // SECTION 13: UI & RENDERING
+        // ==========================================================
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let algorithms = {};
+        let currentAlgorithm = null;
+
+        const algorithmInfo = {
+            bst: {
+                name: 'Binary Search Tree',
+                description: 'A binary tree where each node\'s left subtree contains only values less than the node, and the right subtree contains only values greater.',
+                properties: [
+                    'Left < Parent < Right ordering',
+                    'No balance guarantees',
+                    'Can degrade to linked list'
+                ],
+                complexity: [
+                    { label: 'Search', value: 'O(h)' },
+                    { label: 'Insert', value: 'O(h)' },
+                    { label: 'Delete', value: 'O(h)' },
+                    { label: 'Note', value: 'h = height (worst case: n)' }
+                ],
+                useCases: [
+                    'Sorted data storage',
+                    'Range queries',
+                    'Ordered traversal'
+                ]
+            },
+            rbt: {
+                name: 'Red-Black Tree',
+                description: 'A self-balancing binary search tree where each node has a color (red or black) used to maintain balance during insertions and deletions.',
+                properties: [
+                    'Every node is red or black',
+                    'Root is always black',
+                    'No two red nodes in a row',
+                    'Same black height on all paths',
+                    'Height ≤ 2 log(n+1)'
+                ],
+                complexity: [
+                    { label: 'Search', value: 'O(log n)' },
+                    { label: 'Insert', value: 'O(log n)' },
+                    { label: 'Delete', value: 'O(log n)' }
+                ],
+                useCases: [
+                    'C++ std::map/set',
+                    'Java TreeMap/TreeSet',
+                    'Linux kernel scheduler',
+                    'Database indexing'
+                ]
+            },
+            avl: {
+                name: 'AVL Tree',
+                description: 'A height-balanced binary search tree where the heights of left and right subtrees differ by at most 1.',
+                properties: [
+                    'Balance factor: -1, 0, or 1',
+                    'Stricter balance than Red-Black',
+                    'More rotations on insert/delete',
+                    'Faster lookups'
+                ],
+                complexity: [
+                    { label: 'Search', value: 'O(log n)' },
+                    { label: 'Insert', value: 'O(log n)' },
+                    { label: 'Delete', value: 'O(log n)' }
+                ],
+                useCases: [
+                    'Read-heavy workloads',
+                    'Lookup-intensive applications',
+                    'In-memory databases'
+                ]
+            },
+            btree: {
+                name: 'B-Tree',
+                description: 'A self-balancing tree with multiple keys per node, optimized for systems that read/write large blocks of data.',
+                properties: [
+                    'Multiple keys per node',
+                    'All leaves at same level',
+                    'Minimum degree t (order m = 2t)',
+                    'Node has m-1 keys max',
+                    'Minimizes disk I/O'
+                ],
+                complexity: [
+                    { label: 'Search', value: 'O(log n)' },
+                    { label: 'Insert', value: 'O(log n)' },
+                    { label: 'Delete', value: 'O(log n)' }
+                ],
+                useCases: [
+                    'Database indexes',
+                    'Filesystems (NTFS, ext4)',
+                    'Disk-based storage'
+                ]
+            },
+            skiplist: {
+                name: 'Skip List',
+                description: 'A probabilistic data structure using randomization for balance instead of strict rotations.',
+                properties: [
+                    'Multiple levels of linked lists',
+                    'Express lanes skip elements',
+                    'Random level assignment',
+                    'Expected O(log n) operations',
+                    'Simpler than balanced trees'
+                ],
+                complexity: [
+                    { label: 'Search', value: 'O(log n) expected' },
+                    { label: 'Insert', value: 'O(log n) expected' },
+                    { label: 'Delete', value: 'O(log n) expected' }
+                ],
+                useCases: [
+                    'Redis sorted sets',
+                    'LevelDB/RocksDB',
+                    'Concurrent data structures'
+                ]
+            },
+            segtree: {
+                name: 'Segment Tree',
+                description: 'A tree structure for storing intervals or segments, enabling efficient range queries.',
+                properties: [
+                    'Array-based binary tree',
+                    'Leaves store array elements',
+                    'Internal nodes store aggregates',
+                    'Supports range queries',
+                    'Efficient point updates'
+                ],
+                complexity: [
+                    { label: 'Build', value: 'O(n)' },
+                    { label: 'Query', value: 'O(log n)' },
+                    { label: 'Update', value: 'O(log n)' }
+                ],
+                useCases: [
+                    'Range sum/min/max queries',
+                    'Competitive programming',
+                    'Computational geometry'
+                ]
+            },
+            trie: {
+                name: 'Trie (Prefix Tree)',
+                description: 'A tree structure where edges are labeled with characters, enabling efficient string prefix operations.',
+                properties: [
+                    'Edges labeled with characters',
+                    'Common prefixes shared',
+                    'Fast prefix matching',
+                    'Space for time tradeoff',
+                    'End-of-word markers'
+                ],
+                complexity: [
+                    { label: 'Insert', value: 'O(m)' },
+                    { label: 'Search', value: 'O(m)' },
+                    { label: 'Prefix', value: 'O(m)' },
+                    { label: 'Note', value: 'm = word length' }
+                ],
+                useCases: [
+                    'Autocomplete',
+                    'Spell checking',
+                    'IP routing tables',
+                    'Dictionary lookups'
+                ]
+            },
+            unionfind: {
+                name: 'Union-Find',
+                description: 'A data structure tracking elements partitioned into disjoint sets with efficient union and find operations.',
+                properties: [
+                    'Disjoint set forest',
+                    'Path compression',
+                    'Union by rank',
+                    'Nearly O(1) operations',
+                    'Inverse Ackermann complexity'
+                ],
+                complexity: [
+                    { label: 'Find', value: 'O(α(n))' },
+                    { label: 'Union', value: 'O(α(n))' },
+                    { label: 'Note', value: 'α = inverse Ackermann' }
+                ],
+                useCases: [
+                    'Kruskal\'s MST algorithm',
+                    'Network connectivity',
+                    'Image segmentation',
+                    'Least common ancestor'
+                ]
+            }
+        };
+
+        const statsDefinitions = {
+            bst: [
+                { key: 'nodeCount', label: 'Nodes' },
+                { key: 'height', label: 'Height' },
+                { key: 'balance', label: 'Balance' }
+            ],
+            rbt: [
+                { key: 'nodeCount', label: 'Nodes' },
+                { key: 'height', label: 'Height' },
+                { key: 'blackHeight', label: 'Black Height' },
+                { key: 'rotations', label: 'Rotations' },
+                { key: 'recolors', label: 'Recolors' },
+                { key: 'violations', label: 'Violations' }
+            ],
+            avl: [
+                { key: 'nodeCount', label: 'Nodes' },
+                { key: 'height', label: 'Height' },
+                { key: 'balance', label: 'Balance' },
+                { key: 'rotations', label: 'Rotations' }
+            ],
+            btree: [
+                { key: 'keyCount', label: 'Keys' },
+                { key: 'nodeCount', label: 'Nodes' },
+                { key: 'height', label: 'Height' },
+                { key: 'avgUtilization', label: 'Utilization %' },
+                { key: 'diskReads', label: 'Disk I/O' }
+            ],
+            skiplist: [
+                { key: 'elementCount', label: 'Elements' },
+                { key: 'maxLevel', label: 'Max Level' },
+                { key: 'avgLevel', label: 'Avg Level' },
+                { key: 'searchComparisons', label: 'Comparisons' }
+            ],
+            segtree: [
+                { key: 'arraySize', label: 'Array Size' },
+                { key: 'treeNodes', label: 'Tree Nodes' },
+                { key: 'lastQueryResult', label: 'Last Result' },
+                { key: 'nodesVisited', label: 'Visited' }
+            ],
+            trie: [
+                { key: 'wordCount', label: 'Words' },
+                { key: 'nodeCount', label: 'Nodes' },
+                { key: 'avgWordLength', label: 'Avg Length' }
+            ],
+            unionfind: [
+                { key: 'elementCount', label: 'Elements' },
+                { key: 'setCount', label: 'Sets' },
+                { key: 'maxHeight', label: 'Max Height' },
+                { key: 'compressions', label: 'Compressions' }
+            ]
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        function render() {
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (currentAlgorithm === 'all') {
+                drawAllAlgorithms();
+            } else if (currentAlgorithm) {
+                currentAlgorithm.draw(ctx, canvas.width, canvas.height);
+            }
+
+            animationState.update();
+            requestAnimationFrame(render);
+        }
+
+        function drawAllAlgorithms() {
+            // Draw all algorithms in a 3x2 grid (excluding btree and trie)
+            const algorithmList = [
+                { id: 'bst', name: 'BST' },
+                { id: 'rbt', name: 'Red-Black' },
+                { id: 'avl', name: 'AVL' },
+                { id: 'skiplist', name: 'Skip List' },
+                { id: 'segtree', name: 'Segment Tree' },
+                { id: 'unionfind', name: 'Union-Find' }
+            ];
+
+            const cols = 3;
+            const rows = Math.ceil(algorithmList.length / cols);
+            const cellWidth = canvas.width / cols;
+            const cellHeight = canvas.height / rows;
+            const padding = 10;
+
+            algorithmList.forEach((algoInfo, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                const x = col * cellWidth;
+                const y = row * cellHeight;
+
+                // Save context
+                ctx.save();
+
+                // Clip to cell area
+                ctx.beginPath();
+                ctx.rect(x + padding, y + padding, cellWidth - padding * 2, cellHeight - padding * 2);
+                ctx.clip();
+
+                // Translate to cell position
+                ctx.translate(x + padding, y + padding);
+
+                // Draw the algorithm
+                const algo = algorithms[algoInfo.id];
+                if (algo) {
+                    algo.draw(ctx, cellWidth - padding * 2, cellHeight - padding * 2);
+                }
+
+                // Restore context
+                ctx.restore();
+
+                // Draw cell border and label
+                ctx.strokeStyle = colors.edge;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + padding, y + padding, cellWidth - padding * 2, cellHeight - padding * 2);
+
+                // Draw label
+                ctx.fillStyle = colors.node;
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(algoInfo.name, x + cellWidth / 2, y + padding + 20);
+            });
+        }
+
+        function updateSidebar() {
+            const info = algorithmInfo[currentAlgorithm.id];
+
+            document.getElementById('algoName').textContent = info.name;
+            document.getElementById('algoDescription').textContent = info.description;
+
+            const propsList = document.getElementById('algoProperties');
+            propsList.innerHTML = info.properties.map(p => `<li>${p}</li>`).join('');
+
+            const complexityDiv = document.getElementById('algoComplexity');
+            complexityDiv.innerHTML = info.complexity.map(c =>
+                `<span class="complexity">${c.label}: ${c.value}</span>`
+            ).join('');
+
+            const useCasesList = document.getElementById('algoUseCases');
+            useCasesList.innerHTML = info.useCases.map(u => `<li>${u}</li>`).join('');
+        }
+
+        function updateStats() {
+            const stats = currentAlgorithm.getStats();
+            const defs = statsDefinitions[currentAlgorithm.id];
+
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = defs.map(({ key, label }) => `
+                <div class="stat">
+                    <div class="stat-value">${stats[key]}</div>
+                    <div class="stat-label">${label}</div>
+                </div>
+            `).join('');
+        }
+
+        function showAlgorithmControls(algorithmId) {
+            document.querySelectorAll('.algo-controls').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            const controls = document.getElementById(`${algorithmId}Controls`);
+            if (controls) {
+                controls.classList.add('active');
+            }
+        }
+
+        function switchToAlgorithm(algorithmId) {
+            animationState.pause();
+            animationState.clear();
+
+            if (algorithmId === 'all') {
+                currentAlgorithm = 'all';
+                updateSidebarForAll();
+                showAlgorithmControls(null); // Hide all algorithm-specific controls
+                updateStatsForAll();
+            } else {
+                currentAlgorithm = algorithms[algorithmId];
+                updateSidebar();
+                showAlgorithmControls(algorithmId);
+                updateStats();
+            }
+        }
+
+        function updateSidebarForAll() {
+            document.getElementById('algoName').textContent = 'All Algorithms (Grid View)';
+            document.getElementById('algoDescription').textContent = 'Comparing all tree data structures side-by-side with the same data.';
+
+            const propsList = document.getElementById('algoProperties');
+            propsList.innerHTML = '<li>All algorithms share the same input data</li><li>Compare performance and structure</li><li>Click individual algorithm to see details</li>';
+
+            const complexityDiv = document.getElementById('algoComplexity');
+            complexityDiv.innerHTML = '<span class="complexity">Grid View Active</span>';
+
+            const useCasesList = document.getElementById('algoUseCases');
+            useCasesList.innerHTML = '<li>Educational comparison</li><li>Visual algorithm analysis</li><li>Performance comparison</li>';
+        }
+
+        function updateStatsForAll() {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '<div class="stat"><div class="stat-value">7</div><div class="stat-label">Algorithms</div></div>';
+        }
+
+        function showMessage(text) {
+            const overlay = document.getElementById('messageOverlay');
+            overlay.textContent = text;
+            overlay.classList.add('show');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, 2000);
+        }
+
+        // ==========================================================
+        // SECTION 14: EVENT HANDLERS
+        // ==========================================================
+
+        function setupEventListeners() {
+            document.getElementById('algorithmSelect').addEventListener('change', (e) => {
+                switchToAlgorithm(e.target.value);
+            });
+
+            document.getElementById('insertBtn').addEventListener('click', () => {
+                const value = document.getElementById('valueInput').value;
+                if (value) {
+                    if (currentAlgorithm === 'all') {
+                        // Insert into all algorithms (excluding btree and trie)
+                        Object.values(algorithms).forEach(algo => {
+                            if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                                algo.insert(value);
+                            }
+                        });
+                        updateStatsForAll();
+                    } else {
+                        currentAlgorithm.insert(value);
+                        updateStats();
+                    }
+                    document.getElementById('valueInput').value = '';
+                }
+            });
+
+            document.getElementById('deleteBtn').addEventListener('click', () => {
+                const value = document.getElementById('valueInput').value;
+                if (value) {
+                    if (currentAlgorithm === 'all') {
+                        // Delete from all algorithms (excluding btree and trie)
+                        Object.values(algorithms).forEach(algo => {
+                            if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                                algo.delete(value);
+                            }
+                        });
+                        updateStatsForAll();
+                        document.getElementById('valueInput').value = '';
+                    } else {
+                        // Special handling for Union-Find's Union operation
+                        if (currentAlgorithm.id === 'unionfind') {
+                            const value2 = document.getElementById('ufValue2').value;
+                            if (value2) {
+                                const numValue1 = parseFloat(value);
+                                const numValue2 = parseFloat(value2);
+                                if (!isNaN(numValue1) && !isNaN(numValue2)) {
+                                    currentAlgorithm.union(numValue1, numValue2);
+                                    document.getElementById('valueInput').value = '';
+                                    document.getElementById('ufValue2').value = '';
+                                    updateStats();
+                                }
+                            } else {
+                                showMessage('Enter both values for Union operation');
+                            }
+                        } else {
+                            currentAlgorithm.delete(value);
+                            document.getElementById('valueInput').value = '';
+                            updateStats();
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('searchBtn').addEventListener('click', () => {
+                const value = document.getElementById('valueInput').value;
+                if (value) {
+                    if (currentAlgorithm === 'all') {
+                        // Search in all algorithms (excluding btree and trie)
+                        Object.values(algorithms).forEach(algo => {
+                            if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                                algo.search(value);
+                            }
+                        });
+                    } else {
+                        currentAlgorithm.search(value);
+                    }
+                }
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (currentAlgorithm === 'all') {
+                    // Clear all algorithms (excluding btree and trie)
+                    Object.values(algorithms).forEach(algo => {
+                        if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                            algo.clear();
+                        }
+                    });
+                    updateStatsForAll();
+                } else {
+                    currentAlgorithm.clear();
+                    updateStats();
+                }
+            });
+
+            document.getElementById('randomBtn').addEventListener('click', () => {
+                // Use a larger range and track added values to avoid too many duplicates
+                const added = new Set();
+
+                // Generate 10 unique random values
+                for (let i = 0; i < 10; i++) {
+                    let value;
+                    let attempts = 0;
+                    // Try to find a unique value (give up after 50 attempts)
+                    do {
+                        value = Math.floor(Math.random() * 1000);
+                        attempts++;
+                    } while (added.has(value) && attempts < 50);
+
+                    added.add(value);
+                }
+
+                // Insert the same values into all algorithms or current algorithm
+                if (currentAlgorithm === 'all') {
+                    added.forEach(value => {
+                        Object.values(algorithms).forEach(algo => {
+                            if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                                algo.insert(value);
+                            }
+                        });
+                    });
+                    updateStatsForAll();
+                } else {
+                    added.forEach(value => {
+                        currentAlgorithm.insert(value);
+                    });
+                    updateStats();
+                }
+            });
+
+            document.getElementById('valueInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('insertBtn').click();
+                }
+            });
+
+            const speedSlider = document.getElementById('animSpeed');
+            const speedValue = document.getElementById('speedValue');
+            speedSlider.addEventListener('input', (e) => {
+                const value = e.target.value;
+                speedValue.textContent = value;
+                animationState.speed = value / 5;
+            });
+
+            document.getElementById('playPauseBtn').addEventListener('click', () => {
+                if (animationState.playing) {
+                    animationState.pause();
+                    document.getElementById('playPauseBtn').textContent = '▶ Play';
+                } else {
+                    animationState.play();
+                    document.getElementById('playPauseBtn').textContent = '⏸ Pause';
+                }
+            });
+
+            document.getElementById('stepBtn').addEventListener('click', () => {
+                animationState.step();
+            });
+
+            // B-Tree controls
+            const btreeOrderSlider = document.getElementById('btreeOrder');
+            const btreeOrderValue = document.getElementById('btreeOrderValue');
+            btreeOrderSlider.addEventListener('input', (e) => {
+                const value = e.target.value;
+                btreeOrderValue.textContent = value;
+                if (algorithms.btree) {
+                    algorithms.btree.order = parseInt(value);
+                }
+            });
+
+            // Skip List controls
+            document.getElementById('skiplistProb').addEventListener('change', (e) => {
+                if (algorithms.skiplist) {
+                    algorithms.skiplist.probability = parseFloat(e.target.value);
+                }
+            });
+
+            // Segment Tree controls
+            document.getElementById('segtreeOp').addEventListener('change', (e) => {
+                if (algorithms.segtree) {
+                    algorithms.segtree.operation = e.target.value;
+                    // Rebuild tree with new operation
+                    if (algorithms.segtree.arr.length > 0) {
+                        const arr = [...algorithms.segtree.arr];
+                        algorithms.segtree.clear();
+                        arr.forEach(val => algorithms.segtree.insert(val));
+                        updateStats();
+                    }
+                }
+            });
+
+            document.getElementById('queryBtn').addEventListener('click', () => {
+                const start = parseInt(document.getElementById('queryStart').value);
+                const end = parseInt(document.getElementById('queryEnd').value);
+
+                if (!isNaN(start) && !isNaN(end) && algorithms.segtree) {
+                    algorithms.segtree.query(start, end);
+                    updateStats();
+                }
+            });
+
+            // Trie controls
+            document.getElementById('loadDictBtn').addEventListener('click', () => {
+                const words = ['the', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'else', 'when',
+                               'where', 'why', 'how', 'what', 'who', 'which', 'this', 'that', 'these', 'those'];
+                words.forEach(word => algorithms.trie.insert(word));
+                updateStats();
+                showMessage(`Loaded ${words.length} words`);
+            });
+
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        // ==========================================================
+        // SECTION 15: INITIALIZATION
+        // ==========================================================
+
+        function init() {
+            algorithms = {
+                bst: new BinarySearchTree('bst', 'Binary Search Tree', '...'),
+                rbt: new RedBlackTree(),
+                avl: new AVLTree(),
+                btree: new BTree(),
+                skiplist: new SkipList(),
+                segtree: new SegmentTree(),
+                trie: new Trie(),
+                unionfind: new UnionFind()
+            };
+
+            resizeCanvas();
+            setupEventListeners();
+            switchToAlgorithm('all');
+
+            // Insert 50 random values into all algorithms on startup
+            const added = new Set();
+            for (let i = 0; i < 50; i++) {
+                let value;
+                let attempts = 0;
+                do {
+                    value = Math.floor(Math.random() * 1000);
+                    attempts++;
+                } while (added.has(value) && attempts < 100);
+                added.add(value);
+            }
+
+            // Insert the same values into all algorithms
+            added.forEach(value => {
+                Object.values(algorithms).forEach(algo => {
+                    if (algo && algo.id !== 'btree' && algo.id !== 'trie') {
+                        algo.insert(value);
+                    }
+                });
+            });
+
+            // Seed the search value with a random value from the set
+            const valuesArray = Array.from(added);
+            const randomValue = valuesArray[Math.floor(Math.random() * valuesArray.length)];
+            document.getElementById('valueInput').value = randomValue;
+
+            updateStatsForAll();
+            render();
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
