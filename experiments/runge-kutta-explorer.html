@@ -1225,10 +1225,13 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                 this.params = {
                     earthGM: 398.6,  // km^3/s^2 scaled
                     moonGM: 4.9,
-                    thrust: 0.01,
-                    burnTime: 30,
-                    orbitAlt: 0.4  // 400 km = 0.4 units
+                    tliThrust: 0.015,     // Trans-lunar injection thrust
+                    tliBurnTime: 50,      // TLI burn duration
+                    loiThrust: 0.008,     // Lunar orbit insertion thrust
+                    loiDistance: 15,      // Distance to Moon to start LOI
+                    orbitAlt: 0.4         // 400 km = 0.4 units
                 };
+                this.plannedPath = [];
                 this.setupRocket();
                 this.time = 0;
             }
@@ -1236,37 +1239,147 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
             setupRocket() {
                 // Start below Earth, heading right toward Moon
                 const r = this.earthRadius + this.params.orbitAlt;
-                const v = Math.sqrt(this.params.earthGM / r) * 1.3; // Trans-lunar injection velocity
-                this.initialState = [0, -r, v, 0];  // Position below Earth, velocity toward Moon
+                // TLI velocity: ~1.41x circular for Hohmann-ish transfer
+                const vCirc = Math.sqrt(this.params.earthGM / r);
+                const v = vCirc * 1.41;
+                this.initialState = [0, -r, v, 0];
                 this.time = 0;
+
+                // Pre-compute planned trajectory using RK4
+                this.computePlannedPath();
+            }
+
+            computePlannedPath() {
+                this.plannedPath = [];
+                let state = [...this.initialState];
+                let t = 0;
+                const dt = 0.05;
+                const maxTime = 500;  // Max simulation time
+
+                // Use RK4 to compute ideal trajectory
+                while (t < maxTime) {
+                    this.plannedPath.push([...state]);
+
+                    // RK4 step
+                    const k1 = this.derivativeForPlanning(state, t);
+                    const s2 = state.map((s, i) => s + 0.5 * dt * k1[i]);
+                    const k2 = this.derivativeForPlanning(s2, t + dt/2);
+                    const s3 = state.map((s, i) => s + 0.5 * dt * k2[i]);
+                    const k3 = this.derivativeForPlanning(s3, t + dt/2);
+                    const s4 = state.map((s, i) => s + dt * k3[i]);
+                    const k4 = this.derivativeForPlanning(s4, t + dt);
+
+                    state = state.map((s, i) =>
+                        s + (dt / 6) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                    );
+                    t += dt;
+
+                    // Check if captured in lunar orbit
+                    const [x, y, vx, vy] = state;
+                    const dx = x - this.earthMoonDist;
+                    const dy = y;
+                    const rm = Math.sqrt(dx*dx + dy*dy);
+                    const speed = Math.sqrt(vx*vx + vy*vy);
+
+                    // Lunar orbital velocity at current distance
+                    const vOrbit = Math.sqrt(this.params.moonGM / rm);
+
+                    // Consider captured if close to Moon and speed is near orbital
+                    if (rm < 5 && speed < vOrbit * 1.5 && speed > vOrbit * 0.5) {
+                        // Add a few more points to show orbit
+                        for (let i = 0; i < 200; i++) {
+                            const k1 = this.derivativeForPlanning(state, t);
+                            const s2 = state.map((s, i) => s + 0.5 * dt * k1[i]);
+                            const k2 = this.derivativeForPlanning(s2, t + dt/2);
+                            const s3 = state.map((s, i) => s + 0.5 * dt * k2[i]);
+                            const k3 = this.derivativeForPlanning(s3, t + dt/2);
+                            const s4 = state.map((s, i) => s + dt * k3[i]);
+                            const k4 = this.derivativeForPlanning(s4, t + dt);
+                            state = state.map((s, i) =>
+                                s + (dt / 6) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                            );
+                            t += dt;
+                            this.plannedPath.push([...state]);
+                        }
+                        break;
+                    }
+
+                    // Abort if crashed into Earth or flew way past Moon
+                    const re = Math.sqrt(x*x + y*y);
+                    if (re < this.earthRadius || x > this.earthMoonDist * 1.5) {
+                        break;
+                    }
+                }
+            }
+
+            derivativeForPlanning(state, t) {
+                const [x, y, vx, vy] = state;
+                const { earthGM, moonGM, tliThrust, tliBurnTime, loiThrust, loiDistance } = this.params;
+
+                const re = Math.sqrt(x*x + y*y);
+                const re3 = re * re * re;
+
+                const moonX = this.earthMoonDist;
+                const dx = x - moonX;
+                const dy = y;
+                const rm = Math.sqrt(dx*dx + dy*dy);
+                const rm3 = rm * rm * rm;
+
+                let ax = -earthGM * x / re3 - moonGM * dx / rm3;
+                let ay = -earthGM * y / re3 - moonGM * dy / rm3;
+
+                const speed = Math.sqrt(vx*vx + vy*vy);
+
+                // TLI burn - prograde thrust early in mission
+                if (t < tliBurnTime && speed > 0.001) {
+                    ax += tliThrust * vx / speed;
+                    ay += tliThrust * vy / speed;
+                }
+
+                // LOI burn - retrograde thrust when approaching Moon
+                if (rm < loiDistance && speed > 0.001) {
+                    // Check if approaching Moon (velocity toward Moon)
+                    const approachVel = -(dx * vx + dy * vy) / rm;
+                    if (approachVel > 0 || rm < loiDistance * 0.5) {
+                        // Retrograde thrust to slow down
+                        ax -= loiThrust * vx / speed;
+                        ay -= loiThrust * vy / speed;
+                    }
+                }
+
+                return [vx, vy, ax, ay];
             }
 
             derivative(state) {
                 const [x, y, vx, vy] = state;
-                const { earthGM, moonGM, thrust, burnTime } = this.params;
+                const { earthGM, moonGM, tliThrust, tliBurnTime, loiThrust, loiDistance } = this.params;
 
-                // Distance to Earth (at origin)
                 const re = Math.sqrt(x*x + y*y);
                 const re3 = re * re * re;
 
-                // Distance to Moon
                 const moonX = this.earthMoonDist;
-                const moonY = 0;
                 const dx = x - moonX;
-                const dy = y - moonY;
+                const dy = y;
                 const rm = Math.sqrt(dx*dx + dy*dy);
                 const rm3 = rm * rm * rm;
 
-                // Gravitational accelerations
                 let ax = -earthGM * x / re3 - moonGM * dx / rm3;
                 let ay = -earthGM * y / re3 - moonGM * dy / rm3;
 
-                // Thrust (in direction of velocity during burn)
-                if (this.time < burnTime) {
-                    const v = Math.sqrt(vx*vx + vy*vy);
-                    if (v > 0.001) {
-                        ax += thrust * vx / v;
-                        ay += thrust * vy / v;
+                const speed = Math.sqrt(vx*vx + vy*vy);
+
+                // TLI burn
+                if (this.time < tliBurnTime && speed > 0.001) {
+                    ax += tliThrust * vx / speed;
+                    ay += tliThrust * vy / speed;
+                }
+
+                // LOI burn
+                if (rm < loiDistance && speed > 0.001) {
+                    const approachVel = -(dx * vx + dy * vy) / rm;
+                    if (approachVel > 0 || rm < loiDistance * 0.5) {
+                        ax -= loiThrust * vx / speed;
+                        ay -= loiThrust * vy / speed;
                     }
                 }
 
@@ -1280,7 +1393,6 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
 
             render(ctx, states, trails, options) {
                 const { width, height } = ctx.canvas;
-                // Center view between Earth and Moon
                 const cx = width * 0.15;
                 const cy = height / 2;
                 const scale = (width * 0.7) / this.earthMoonDist;
@@ -1288,33 +1400,58 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                 // Earth
                 ctx.fillStyle = '#00ff41';
                 ctx.beginPath();
-                ctx.arc(cx, cy, this.earthRadius * scale, 0, Math.PI * 2);
+                ctx.arc(cx, cy, Math.max(this.earthRadius * scale, 8), 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#0a0e0a';
                 ctx.beginPath();
-                ctx.arc(cx, cy, this.earthRadius * scale * 0.7, 0, Math.PI * 2);
+                ctx.arc(cx, cy, Math.max(this.earthRadius * scale * 0.7, 5), 0, Math.PI * 2);
                 ctx.fill();
 
                 // Moon
                 const moonSx = cx + this.earthMoonDist * scale;
                 ctx.fillStyle = '#888888';
                 ctx.beginPath();
-                ctx.arc(moonSx, cy, this.moonRadius * scale * 3, 0, Math.PI * 2);  // Exaggerated for visibility
+                ctx.arc(moonSx, cy, Math.max(this.moonRadius * scale * 3, 10), 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillStyle = '#0a0e0a';
                 ctx.beginPath();
-                ctx.arc(moonSx, cy, this.moonRadius * scale * 2, 0, Math.PI * 2);
+                ctx.arc(moonSx, cy, Math.max(this.moonRadius * scale * 2, 6), 0, Math.PI * 2);
                 ctx.fill();
+
+                // LOI zone indicator
+                ctx.strokeStyle = 'rgba(136, 136, 136, 0.3)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(moonSx, cy, this.params.loiDistance * scale, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Planned trajectory (dashed cyan line)
+                if (this.plannedPath.length > 1) {
+                    ctx.strokeStyle = '#00ffff40';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 4]);
+                    ctx.beginPath();
+                    for (let i = 0; i < this.plannedPath.length; i++) {
+                        const [px, py] = this.plannedPath[i];
+                        const psx = cx + px * scale;
+                        const psy = cy - py * scale;
+                        if (i === 0) ctx.moveTo(psx, psy);
+                        else ctx.lineTo(psx, psy);
+                    }
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
 
                 // Labels
                 ctx.font = '12px Courier New';
                 ctx.fillStyle = '#00ff41';
-                ctx.fillText('Earth', cx - 20, cy + this.earthRadius * scale + 20);
+                ctx.fillText('Earth', cx - 20, cy + Math.max(this.earthRadius * scale, 8) + 15);
                 ctx.fillStyle = '#888888';
-                ctx.fillText('Moon', moonSx - 15, cy + this.moonRadius * scale * 3 + 20);
+                ctx.fillText('Moon', moonSx - 15, cy + Math.max(this.moonRadius * scale * 3, 10) + 15);
 
                 for (const [integrator, state] of states) {
-                    const [x, y] = state;
+                    const [x, y, vx, vy] = state;
                     const sx = cx + x * scale;
                     const sy = cy - y * scale;
 
@@ -1322,8 +1459,8 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                     if (options.showTrails && trails.has(integrator.name)) {
                         const trail = trails.get(integrator.name);
                         if (trail.length > 1) {
-                            ctx.strokeStyle = integrator.color + '50';
-                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = integrator.color + '60';
+                            ctx.lineWidth = 1.5;
                             ctx.beginPath();
                             for (let i = 0; i < trail.length; i++) {
                                 const [tx, ty] = trail[i];
@@ -1342,45 +1479,64 @@ d&#969;/dt = -(g/L)sin(&#952;)</div>
                     ctx.arc(sx, sy, 5, 0, Math.PI * 2);
                     ctx.fill();
 
+                    // Determine burn state
+                    const rm = Math.sqrt((x - this.earthMoonDist)**2 + y**2);
+                    const isTLI = this.time < this.params.tliBurnTime;
+                    const isLOI = rm < this.params.loiDistance;
+
                     // Thrust indicator
-                    if (this.time < this.params.burnTime) {
-                        const [,, vx, vy] = state;
-                        const v = Math.sqrt(vx*vx + vy*vy);
-                        if (v > 0.001) {
-                            ctx.strokeStyle = '#ff8800';
-                            ctx.lineWidth = 3;
-                            ctx.beginPath();
-                            ctx.moveTo(sx, sy);
-                            ctx.lineTo(sx - vx/v * 15, sy + vy/v * 15);
-                            ctx.stroke();
+                    const speed = Math.sqrt(vx*vx + vy*vy);
+                    if ((isTLI || isLOI) && speed > 0.001) {
+                        const thrustDir = isTLI ? 1 : -1;  // Prograde vs retrograde
+                        ctx.strokeStyle = isTLI ? '#ff8800' : '#8888ff';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, sy);
+                        ctx.lineTo(sx - thrustDir * vx/speed * 15, sy + thrustDir * vy/speed * 15);
+                        ctx.stroke();
+                    }
+                }
+
+                // Burn status indicator
+                ctx.font = '14px Courier New';
+                if (this.time < this.params.tliBurnTime) {
+                    ctx.fillStyle = '#ff8800';
+                    ctx.fillText(`TLI BURN: ${(this.params.tliBurnTime - this.time).toFixed(1)}s`, 20, 30);
+                } else {
+                    // Check if any rocket is in LOI zone
+                    for (const [integrator, state] of states) {
+                        const [x, y] = state;
+                        const rm = Math.sqrt((x - this.earthMoonDist)**2 + y**2);
+                        if (rm < this.params.loiDistance) {
+                            ctx.fillStyle = '#8888ff';
+                            ctx.fillText(`LOI BURN - Distance: ${rm.toFixed(1)}`, 20, 30);
+                            break;
                         }
                     }
                 }
 
-                // Burn indicator
-                if (this.time < this.params.burnTime) {
-                    ctx.fillStyle = '#ff8800';
-                    ctx.font = '14px Courier New';
-                    ctx.fillText(`BURN: ${(this.params.burnTime - this.time).toFixed(1)}s`, 20, 30);
-                }
+                // Legend
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('--- Planned Path', 20, height - 20);
             }
 
-            getTimeScale() { return 100; }  // Long journey, speed up 100x
+            getTimeScale() { return 100; }
 
             getParams() {
                 return [
-                    { id: 'thrust', label: 'Thrust', min: 0.005, max: 0.05, step: 0.002, value: this.params.thrust },
-                    { id: 'burnTime', label: 'Burn Time', min: 10, max: 100, step: 5, value: this.params.burnTime },
-                    { id: 'orbitAlt', label: 'Orbit Alt', min: 0.2, max: 1.0, step: 0.1, value: this.params.orbitAlt }
+                    { id: 'tliThrust', label: 'TLI Thrust', min: 0.005, max: 0.03, step: 0.001, value: this.params.tliThrust },
+                    { id: 'tliBurnTime', label: 'TLI Burn', min: 20, max: 100, step: 5, value: this.params.tliBurnTime },
+                    { id: 'loiThrust', label: 'LOI Thrust', min: 0.002, max: 0.02, step: 0.001, value: this.params.loiThrust },
+                    { id: 'loiDistance', label: 'LOI Dist', min: 5, max: 30, step: 1, value: this.params.loiDistance }
                 ];
             }
 
             getDescription() {
                 return {
                     title: 'Earth-Moon Rocket Transfer',
-                    equation: 'dvx/dt = -GM_e*x/r_e\u00B3\n        - GM_m*(x-x_m)/r_m\u00B3\n        + T*vx/|v|',
-                    text: 'Rocket traveling from Earth orbit toward the Moon in a three-body gravitational field with thrust control.',
-                    tip: 'Small numerical errors compound in this sensitive system. Watch how trajectories diverge over the long journey.'
+                    equation: 'TLI: prograde thrust\nLOI: retrograde thrust\nnear Moon',
+                    text: 'Two-burn lunar transfer: Trans-Lunar Injection (TLI) to escape Earth, Lunar Orbit Insertion (LOI) to capture at Moon. Cyan dashed line shows the planned RK4 trajectory.',
+                    tip: 'Watch how Euler diverges from the planned path. The LOI burn is critical - errors here determine capture success.'
                 };
             }
         }
