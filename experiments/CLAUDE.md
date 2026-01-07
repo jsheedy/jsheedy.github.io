@@ -103,10 +103,22 @@ Each proposal includes algorithm details, use cases, interactive features, and t
 
 ## Tasks
 
+<<<<<<< Updated upstream
 When I say "create a task to '<description here>' you will
 - create a new git worktree in $HOME/git/worktrees/
 - implement the task
 - iterate with me until we agree it's correct
-- when correct, push up a new PR upstream for my review
+- only once user determines it is correct, push up a new PR upstream for my review
 - show me the link to review
 - once I've merged, you can remove the worktree
+=======
+When I "create a task to" <description here> you will
+- create a new git worktree in $HOME/git/worktrees/ and switch to it
+- implement the task described by description
+- check your work and fix bugs
+- if we're running locally in /home/velotron, use the open command to open the file to show it to me. if running remotely on a PR, use githack preview link
+- iterate the previous 2 steps until we agree it's correct
+- when correct, push up a new PR upstream for my review
+- show me the PR link to review
+- once I've merged, switch back to master and remove the worktree
+>>>>>>> Stashed changes

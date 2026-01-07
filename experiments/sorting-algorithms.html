@@ -1,0 +1,3058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Sorting Algorithm Visualizer</title>
+	<style>
+		* { box-sizing: border-box; margin: 0; padding: 0; }
+		html, body { height: 100%; overflow: hidden; }
+		body {
+			font-family: 'Courier New', monospace;
+			background: #0a0e0a;
+			color: #00ff41;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.title-bar {
+			background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+			border-bottom: 3px solid #00ff41;
+			padding: 15px 20px;
+			text-align: center;
+			box-shadow: 0 5px 30px rgba(0,255,65,0.4), inset 0 1px 0 rgba(0,255,65,0.3);
+			position: relative;
+		}
+
+		.back-link {
+			position: absolute;
+			left: 20px;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #00ff41;
+			text-decoration: none;
+			font-family: 'Courier New', monospace;
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			padding: 8px 15px;
+			border: 2px solid #00ff41;
+			background: #001a00;
+			transition: all 0.2s;
+			box-shadow: 0 0 10px rgba(0,255,65,0.3);
+		}
+
+		.back-link:hover {
+			background: #00ff41;
+			color: #000;
+			box-shadow: 0 0 20px #00ff41;
+		}
+
+		.back-link::before {
+			content: "← ";
+		}
+
+		.title-text {
+			font-size: 32px;
+			font-weight: bold;
+			letter-spacing: 8px;
+			text-transform: uppercase;
+			color: #00ff41;
+			text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 30px #00ff41, 0 2px 0 #003311;
+			margin-bottom: 5px;
+		}
+
+		.title-subtitle {
+			font-size: 11px;
+			letter-spacing: 4px;
+			color: #00ff4199;
+			text-transform: uppercase;
+		}
+
+		.main-container {
+			display: flex;
+			flex: 1;
+			overflow: hidden;
+		}
+
+		.sidebar {
+			background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+			width: 280px;
+			overflow-y: auto;
+			border-right: 2px solid #00ff41;
+			box-shadow: 5px 0 30px rgba(0,255,65,0.2);
+		}
+
+		.sidebar.hidden {
+			display: none;
+		}
+
+		.sidebar-content {
+			padding: 20px;
+		}
+
+		.sidebar-section {
+			padding: 15px;
+			margin-bottom: 20px;
+			background: #001a00;
+			border-radius: 4px;
+			border: 2px solid #00ff4140;
+		}
+
+		.sidebar h2 {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			color: #00ff41;
+			text-shadow: 0 0 10px #00ff41;
+			margin-bottom: 15px;
+			border-bottom: 1px solid #00ff4140;
+			padding-bottom: 8px;
+		}
+
+		.sidebar h3 {
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			color: #00ff41;
+			margin-bottom: 8px;
+		}
+
+		.sidebar p {
+			font-size: 11px;
+			line-height: 1.6;
+			color: #00ff41aa;
+			margin-bottom: 12px;
+		}
+
+		.complexity-info {
+			font-size: 10px;
+			line-height: 1.5;
+			color: #00ff41aa;
+		}
+
+		.complexity-row {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 5px;
+		}
+
+		.complexity-label {
+			color: #00ff4199;
+		}
+
+		.complexity-value {
+			color: #00ff41;
+			font-weight: bold;
+		}
+
+		.canvas-wrapper {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			position: relative;
+		}
+
+		.canvas-container {
+			flex: 1;
+			position: relative;
+			overflow: hidden;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #000;
+		}
+
+		canvas {
+			display: block;
+			max-width: 100%;
+			max-height: 100%;
+		}
+
+		.grid-container {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 15px;
+			padding: 20px;
+			overflow-y: auto;
+			background: #000;
+		}
+
+		.grid-item {
+			background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+			border: 2px solid #00ff4140;
+			border-radius: 4px;
+			padding: 12px;
+			display: flex;
+			flex-direction: column;
+			box-shadow: 0 0 20px rgba(0,255,65,0.2);
+			transition: all 0.3s;
+		}
+
+		.grid-item:hover {
+			border-color: #00ff41;
+			box-shadow: 0 0 30px rgba(0,255,65,0.4);
+		}
+
+		.grid-item-header {
+			text-align: center;
+			margin-bottom: 8px;
+			padding-bottom: 8px;
+			border-bottom: 1px solid #00ff4140;
+		}
+
+		.grid-item-title {
+			font-size: 11px;
+			font-weight: bold;
+			color: #00ff41;
+			text-shadow: 0 0 8px #00ff41;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			margin-bottom: 4px;
+		}
+
+		.grid-item-stats {
+			font-size: 9px;
+			color: #00ff4199;
+			display: flex;
+			justify-content: space-around;
+			gap: 8px;
+		}
+
+		.grid-item-canvas {
+			background: #000;
+			border: 1px solid #00ff4140;
+			width: 100%;
+			height: 180px;
+		}
+
+		.canvas-container.hidden {
+			display: none;
+		}
+
+		.stats.hidden {
+			display: none;
+		}
+
+		@media (min-width: 1400px) {
+			.grid-container {
+				grid-template-columns: repeat(6, 1fr);
+			}
+		}
+
+		@media (min-width: 1100px) and (max-width: 1399px) {
+			.grid-container {
+				grid-template-columns: repeat(5, 1fr);
+			}
+		}
+
+		@media (min-width: 900px) and (max-width: 1099px) {
+			.grid-container {
+				grid-template-columns: repeat(4, 1fr);
+			}
+		}
+
+		@media (min-width: 600px) and (max-width: 899px) {
+			.grid-container {
+				grid-template-columns: repeat(3, 1fr);
+			}
+		}
+
+		@media (max-width: 599px) {
+			.grid-container {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
+		.control-panel {
+			background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+			border-top: 2px solid #00ff41;
+			padding: 15px 20px;
+			box-shadow: 0 -5px 30px rgba(0,255,65,0.3);
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 15px;
+		}
+
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.control-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		label {
+			color: #00ff41;
+			font-size: 11px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			min-width: 90px;
+			text-shadow: 0 0 5px #00ff41;
+			font-weight: bold;
+		}
+
+		select {
+			flex: 1;
+			background: #001a00;
+			color: #00ff41;
+			border: 2px solid #00ff4133;
+			padding: 6px 8px;
+			font-family: inherit;
+			font-size: 11px;
+			border-radius: 3px;
+			cursor: pointer;
+		}
+
+		select:focus {
+			outline: none;
+			border-color: #00ff41;
+		}
+
+		input[type="range"] {
+			flex: 1;
+			height: 4px;
+			background: #001a00;
+			border: 1px solid #00ff41;
+			outline: none;
+			-webkit-appearance: none;
+			box-shadow: 0 0 10px rgba(0,255,65,0.2);
+		}
+
+		input[type="range"]::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			width: 14px;
+			height: 14px;
+			background: #00ff41;
+			cursor: pointer;
+			border-radius: 50%;
+			box-shadow: 0 0 8px #00ff41;
+		}
+
+		input[type="range"]::-moz-range-thumb {
+			width: 14px;
+			height: 14px;
+			background: #00ff41;
+			cursor: pointer;
+			border-radius: 50%;
+			border: none;
+			box-shadow: 0 0 8px #00ff41;
+		}
+
+		.value-display {
+			color: #0f0;
+			font-weight: bold;
+			min-width: 50px;
+			text-align: right;
+			font-size: 11px;
+			text-shadow: 0 0 8px #00ff41;
+		}
+
+		button {
+			background: #001a00;
+			color: #00ff41;
+			border: 2px solid #00ff41;
+			padding: 8px 16px;
+			font-family: inherit;
+			font-size: 11px;
+			cursor: pointer;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			transition: all 0.15s;
+			border-radius: 3px;
+			box-shadow: 0 0 10px rgba(0,255,65,0.3);
+		}
+
+		button:hover {
+			background: #00ff41;
+			color: #000;
+			box-shadow: 0 0 20px #00ff41;
+		}
+
+		button:active {
+			transform: scale(0.97);
+		}
+
+		button:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		button:disabled:hover {
+			background: #001a00;
+			color: #00ff41;
+		}
+
+		.stats {
+			position: absolute;
+			top: 12px;
+			right: 12px;
+			background: rgba(0,26,0,0.95);
+			border: 2px solid #00ff41;
+			padding: 12px 16px;
+			font-size: 11px;
+			line-height: 1.8;
+			border-radius: 3px;
+			box-shadow: 0 0 20px rgba(0,255,65,0.4);
+			min-width: 180px;
+		}
+
+		.stats-row {
+			display: flex;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 4px;
+		}
+
+		.stats-label {
+			color: #00ff4199;
+		}
+
+		.stats-value {
+			color: #00ff41;
+			font-weight: bold;
+			text-shadow: 0 0 5px #00ff41;
+		}
+
+		body::before {
+			content: "";
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: repeating-linear-gradient(
+				0deg,
+				rgba(0, 0, 0, 0.15),
+				rgba(0, 0, 0, 0.15) 1px,
+				transparent 1px,
+				transparent 2px
+			);
+			pointer-events: none;
+			z-index: 1000;
+		}
+
+		@keyframes flicker {
+			0% { opacity: 1; }
+			50% { opacity: 0.97; }
+			100% { opacity: 1; }
+		}
+	</style>
+</head>
+<body>
+	<div class="title-bar">
+		<a href="index.html" class="back-link">Back</a>
+		<div class="title-text">Sorting Algorithms</div>
+		<div class="title-subtitle">31 Algorithm Visualizer</div>
+	</div>
+
+	<div class="main-container">
+		<div class="sidebar">
+			<div class="sidebar-content">
+				<div class="sidebar-section">
+					<h2>Algorithm Info</h2>
+					<h3 id="algo-name">Select Algorithm</h3>
+					<p id="algo-description">Choose a sorting algorithm to see its details and complexity.</p>
+					<div class="complexity-info">
+						<div class="complexity-row">
+							<span class="complexity-label">Time (Best):</span>
+							<span class="complexity-value" id="time-best">-</span>
+						</div>
+						<div class="complexity-row">
+							<span class="complexity-label">Time (Avg):</span>
+							<span class="complexity-value" id="time-avg">-</span>
+						</div>
+						<div class="complexity-row">
+							<span class="complexity-label">Time (Worst):</span>
+							<span class="complexity-value" id="time-worst">-</span>
+						</div>
+						<div class="complexity-row">
+							<span class="complexity-label">Space:</span>
+							<span class="complexity-value" id="space">-</span>
+						</div>
+						<div class="complexity-row">
+							<span class="complexity-label">Stable:</span>
+							<span class="complexity-value" id="stable">-</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="sidebar-section">
+					<h2>About</h2>
+					<p>This visualizer demonstrates 31 different sorting algorithms. Watch how each algorithm organizes data through comparisons and swaps.</p>
+					<p>The green bars represent array elements. Highlighted bars show current operations (comparisons, swaps, or special positions).</p>
+					<p>Try different array sizes and speeds to understand each algorithm's behavior and performance characteristics.</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="canvas-wrapper">
+			<div class="canvas-container" id="singleView">
+				<canvas id="canvas"></canvas>
+				<div class="stats" id="stats">
+					<div class="stats-row">
+						<span class="stats-label">Array Size:</span>
+						<span class="stats-value" id="stat-size">50</span>
+					</div>
+					<div class="stats-row">
+						<span class="stats-label">Comparisons:</span>
+						<span class="stats-value" id="stat-comparisons">0</span>
+					</div>
+					<div class="stats-row">
+						<span class="stats-label">Swaps:</span>
+						<span class="stats-value" id="stat-swaps">0</span>
+					</div>
+					<div class="stats-row">
+						<span class="stats-label">Array Accesses:</span>
+						<span class="stats-value" id="stat-accesses">0</span>
+					</div>
+					<div class="stats-row">
+						<span class="stats-label">Time (ms):</span>
+						<span class="stats-value" id="stat-time">0</span>
+					</div>
+					<div class="stats-row">
+						<span class="stats-label">Status:</span>
+						<span class="stats-value" id="stat-status">Ready</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="grid-container" id="gridView" style="display: none;"></div>
+
+			<div class="control-panel">
+				<div class="control-group">
+					<div class="control-row">
+						<label for="algorithm">Algorithm</label>
+						<select id="algorithm">
+							<option value="all">All Algorithms (Grid View)</option>
+							<optgroup label="Simple Sorts (O(n²))">
+								<option value="bubble">Bubble Sort</option>
+								<option value="cocktail">Cocktail Shaker Sort</option>
+								<option value="selection">Selection Sort</option>
+								<option value="insertion">Insertion Sort</option>
+								<option value="gnome">Gnome Sort</option>
+							</optgroup>
+							<optgroup label="Efficient Sorts (O(n log n))">
+								<option value="merge" selected>Merge Sort</option>
+								<option value="quick">Quick Sort</option>
+								<option value="heap">Heap Sort</option>
+								<option value="shell">Shell Sort</option>
+								<option value="tim">Tim Sort</option>
+								<option value="intro">Intro Sort</option>
+								<option value="smooth">Smooth Sort</option>
+							</optgroup>
+							<optgroup label="Distribution Sorts">
+								<option value="counting">Counting Sort</option>
+								<option value="radix">Radix Sort (LSD)</option>
+								<option value="radixMSD">Radix Sort (MSD)</option>
+								<option value="bucket">Bucket Sort</option>
+								<option value="pigeonhole">Pigeonhole Sort</option>
+							</optgroup>
+							<optgroup label="Concurrent/Hybrid">
+								<option value="bitonic">Bitonic Sort</option>
+								<option value="oddEven">Odd-Even Sort</option>
+								<option value="pairwise">Pairwise Sorting Network</option>
+							</optgroup>
+							<optgroup label="Other Notable">
+								<option value="comb">Comb Sort</option>
+								<option value="cycle">Cycle Sort</option>
+								<option value="pancake">Pancake Sort</option>
+								<option value="stooge">Stooge Sort</option>
+								<option value="slowsort">Slow Sort</option>
+							</optgroup>
+							<optgroup label="Impractical/Fun">
+								<option value="bogo">Bogo Sort</option>
+								<option value="bozo">Bozo Sort</option>
+								<option value="stalin">Stalin Sort</option>
+								<option value="miracle">Miracle Sort</option>
+								<option value="sleep">Sleep Sort</option>
+								<option value="quantum">Quantum Bogo Sort</option>
+							</optgroup>
+						</select>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="control-row">
+						<label for="arraySize">Size</label>
+						<input type="range" id="arraySize" min="10" max="200" value="50">
+						<span class="value-display" id="arraySizeValue">50</span>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="control-row">
+						<label for="speed">Speed</label>
+						<input type="range" id="speed" min="1" max="100" value="50">
+						<span class="value-display" id="speedValue">50</span>
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="control-row">
+						<button id="startBtn">Start Sort</button>
+						<button id="stepBtn">Step</button>
+						<button id="resetBtn">Reset Array</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const canvas = document.getElementById('canvas');
+		const ctx = canvas.getContext('2d');
+
+		let array = [];
+		let originalArray = [];
+		let sorting = false;
+		let shouldStop = false;
+		let comparisons = 0;
+		let swaps = 0;
+		let arrayAccesses = 0;
+		let startTime = 0;
+		// Step mode state
+		let stepMode = false;
+		let stepResolve = null;
+
+		// Grid mode state
+		let isGridMode = false;
+		let gridInstances = [];
+
+		// Resize canvas to fill container
+		function resizeCanvas() {
+			const container = canvas.parentElement;
+			canvas.width = container.clientWidth;
+			canvas.height = container.clientHeight;
+			draw();
+		}
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
+
+		// Algorithm metadata
+		const algorithms = {
+			bubble: {
+				name: "Bubble Sort",
+				description: "Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order. Simple but inefficient.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "Yes"
+			},
+			cocktail: {
+				name: "Cocktail Shaker Sort",
+				description: "Variation of bubble sort that sorts in both directions on each pass. Slightly more efficient than bubble sort.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "Yes"
+			},
+			selection: {
+				name: "Selection Sort",
+				description: "Divides array into sorted and unsorted regions. Repeatedly selects the minimum element from unsorted region and moves it to sorted region.",
+				timeBest: "O(n²)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "No"
+			},
+			insertion: {
+				name: "Insertion Sort",
+				description: "Builds the final sorted array one item at a time. Efficient for small data sets and nearly sorted arrays.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "Yes"
+			},
+			merge: {
+				name: "Merge Sort",
+				description: "Divide and conquer algorithm that divides array in half, recursively sorts halves, then merges them. Consistent O(n log n) performance.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n log n)",
+				space: "O(n)",
+				stable: "Yes"
+			},
+			quick: {
+				name: "Quick Sort",
+				description: "Divide and conquer using pivot element. Partitions array around pivot, then recursively sorts partitions. Fast in practice.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n²)",
+				space: "O(log n)",
+				stable: "No"
+			},
+			heap: {
+				name: "Heap Sort",
+				description: "Builds a max heap from the array, then repeatedly extracts maximum. Good worst-case guarantee with in-place sorting.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n log n)",
+				space: "O(1)",
+				stable: "No"
+			},
+			shell: {
+				name: "Shell Sort",
+				description: "Generalization of insertion sort that allows exchange of distant elements. Uses diminishing increment sequence.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n^1.5)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "No"
+			},
+			counting: {
+				name: "Counting Sort",
+				description: "Non-comparison sort for integers. Counts occurrences of each value. Linear time but requires known value range.",
+				timeBest: "O(n+k)",
+				timeAvg: "O(n+k)",
+				timeWorst: "O(n+k)",
+				space: "O(k)",
+				stable: "Yes"
+			},
+			radix: {
+				name: "Radix Sort (LSD)",
+				description: "Non-comparison sort that processes digits from least significant to most significant. Uses stable counting sort as subroutine.",
+				timeBest: "O(nk)",
+				timeAvg: "O(nk)",
+				timeWorst: "O(nk)",
+				space: "O(n+k)",
+				stable: "Yes"
+			},
+			radixMSD: {
+				name: "Radix Sort (MSD)",
+				description: "Processes digits from most significant to least significant. Can short-circuit when buckets contain single elements.",
+				timeBest: "O(nk)",
+				timeAvg: "O(nk)",
+				timeWorst: "O(nk)",
+				space: "O(n+k)",
+				stable: "No"
+			},
+			bucket: {
+				name: "Bucket Sort",
+				description: "Distributes elements into buckets, sorts each bucket, then concatenates. Efficient when input is uniformly distributed.",
+				timeBest: "O(n+k)",
+				timeAvg: "O(n+k)",
+				timeWorst: "O(n²)",
+				space: "O(n+k)",
+				stable: "Yes"
+			},
+			comb: {
+				name: "Comb Sort",
+				description: "Improves on bubble sort by using gap larger than 1. Gap shrinks by shrink factor until it becomes 1.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n²/2^p)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "No"
+			},
+			cycle: {
+				name: "Cycle Sort",
+				description: "In-place, unstable sort that minimizes writes to memory. Useful when write operations are expensive.",
+				timeBest: "O(n²)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "No"
+			},
+			gnome: {
+				name: "Gnome Sort",
+				description: "Similar to insertion sort but moving element to proper position is done by swapping. Simple but inefficient.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "Yes"
+			},
+			pancake: {
+				name: "Pancake Sort",
+				description: "Only allowed operation is flipping prefix of array. Finds maximum element and flips it to the end repeatedly.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "No"
+			},
+			stooge: {
+				name: "Stooge Sort",
+				description: "Recursive algorithm that sorts first 2/3, then last 2/3, then first 2/3 again. Extremely inefficient but educational.",
+				timeBest: "O(n^2.7)",
+				timeAvg: "O(n^2.7)",
+				timeWorst: "O(n^2.7)",
+				space: "O(n)",
+				stable: "No"
+			},
+			bogo: {
+				name: "Bogo Sort",
+				description: "Randomly shuffles array and checks if sorted. Average O(n·n!) time. Never use in production!",
+				timeBest: "O(n)",
+				timeAvg: "O(n·n!)",
+				timeWorst: "O(∞)",
+				space: "O(1)",
+				stable: "No"
+			},
+			tim: {
+				name: "Tim Sort",
+				description: "Hybrid stable sort derived from merge and insertion sort. Used in Python and Java. Optimized for real-world data.",
+				timeBest: "O(n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n log n)",
+				space: "O(n)",
+				stable: "Yes"
+			},
+			intro: {
+				name: "Intro Sort",
+				description: "Hybrid of quicksort, heapsort, and insertion sort. Begins with quicksort and switches to heapsort when recursion depth exceeds a level.",
+				timeBest: "O(n log n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n log n)",
+				space: "O(log n)",
+				stable: "No"
+			},
+			smooth: {
+				name: "Smooth Sort",
+				description: "Variation of heapsort based on Leonardo numbers. Nearly O(n) for nearly sorted data.",
+				timeBest: "O(n)",
+				timeAvg: "O(n log n)",
+				timeWorst: "O(n log n)",
+				space: "O(1)",
+				stable: "No"
+			},
+			bitonic: {
+				name: "Bitonic Sort",
+				description: "Comparison-based sorting network algorithm. Creates a bitonic sequence then sorts it. Parallelizable.",
+				timeBest: "O(log²n)",
+				timeAvg: "O(log²n)",
+				timeWorst: "O(log²n)",
+				space: "O(log²n)",
+				stable: "No"
+			},
+			oddEven: {
+				name: "Odd-Even Sort",
+				description: "Variation of bubble sort for parallel processing. Alternates between odd and even indexed pairs.",
+				timeBest: "O(n)",
+				timeAvg: "O(n²)",
+				timeWorst: "O(n²)",
+				space: "O(1)",
+				stable: "Yes"
+			},
+			pigeonhole: {
+				name: "Pigeonhole Sort",
+				description: "Similar to counting sort. Creates 'pigeonholes' for each distinct key. Efficient when range of keys is close to number of items.",
+				timeBest: "O(n+k)",
+				timeAvg: "O(n+k)",
+				timeWorst: "O(n+k)",
+				space: "O(k)",
+				stable: "Yes"
+			},
+			bozo: {
+				name: "Bozo Sort",
+				description: "Randomly swaps two elements and checks if sorted. Even worse than bogo sort on average.",
+				timeBest: "O(n)",
+				timeAvg: "O(n·n!)",
+				timeWorst: "O(∞)",
+				space: "O(1)",
+				stable: "No"
+			},
+			stalin: {
+				name: "Stalin Sort",
+				description: "Goes through list once, removes elements that are out of order. O(n) time but doesn't actually sort!",
+				timeBest: "O(n)",
+				timeAvg: "O(n)",
+				timeWorst: "O(n)",
+				space: "O(1)",
+				stable: "No"
+			},
+			slowsort: {
+				name: "Slow Sort",
+				description: "Multiply and surrender paradigm. Intentionally designed to be slow. Based on multiply and surrender.",
+				timeBest: "O(n^(log n))",
+				timeAvg: "O(n^(log n))",
+				timeWorst: "O(n^(log n))",
+				space: "O(n)",
+				stable: "No"
+			},
+			miracle: {
+				name: "Miracle Sort",
+				description: "Checks if array is sorted, if not, waits for cosmic rays to flip bits in RAM to sort it. Never finishes!",
+				timeBest: "O(n)",
+				timeAvg: "O(∞)",
+				timeWorst: "O(∞)",
+				space: "O(1)",
+				stable: "No"
+			},
+			sleep: {
+				name: "Sleep Sort",
+				description: "For each element, spawns thread that sleeps for duration equal to value then outputs. Creative but impractical.",
+				timeBest: "O(max)",
+				timeAvg: "O(max)",
+				timeWorst: "O(max)",
+				space: "O(n)",
+				stable: "No"
+			},
+			quantum: {
+				name: "Quantum Bogo Sort",
+				description: "Like bogo sort but destroys universe if not sorted. In surviving universes, array is always sorted on first try!",
+				timeBest: "O(n)",
+				timeAvg: "O(n)",
+				timeWorst: "O(n)",
+				space: "O(1)",
+				stable: "No"
+			},
+			pairwise: {
+				name: "Pairwise Sorting Network",
+				description: "Comparison network that sorts fixed size inputs. Uses predetermined comparator sequence. Good for hardware.",
+				timeBest: "O(log²n)",
+				timeAvg: "O(log²n)",
+				timeWorst: "O(log²n)",
+				space: "O(1)",
+				stable: "No"
+			}
+		};
+
+	// Helper functions
+	async function sleep(ms) {
+		if (stepMode) {
+			// In step mode, wait for the step button to be clicked
+			return new Promise(resolve => {
+				stepResolve = resolve;
+				document.getElementById('stepBtn').disabled = false;
+				document.getElementById('startBtn').disabled = true;
+			});
+		}
+		return new Promise(resolve => setTimeout(resolve, ms));
+	}
+
+		function getDelay() {
+			const speed = parseInt(document.getElementById('speed').value);
+			return Math.max(1, 101 - speed);
+		}
+
+		async function swap(i, j, color = '#ff0000') {
+			if (shouldStop) return;
+			const temp = array[i];
+			array[i] = array[j];
+			array[j] = temp;
+			swaps++;
+			arrayAccesses += 4;
+			updateStats();
+			await draw([i, j], color);
+			await sleep(getDelay());
+		}
+
+		async function compare(i, j) {
+			if (shouldStop) return;
+			comparisons++;
+			arrayAccesses += 2;
+			updateStats();
+			await draw([i, j], '#ffff00');
+			await sleep(getDelay() / 2);
+			return array[i] > array[j];
+		}
+
+		async function highlight(indices, color = '#00ffff') {
+			if (shouldStop) return;
+			await draw(indices, color);
+			await sleep(getDelay());
+		}
+
+		function draw(highlightIndices = [], highlightColor = '#00ff41') {
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			const barWidth = canvas.width / array.length;
+			const maxVal = Math.max(...array);
+
+			for (let i = 0; i < array.length; i++) {
+				const barHeight = (array[i] / maxVal) * (canvas.height - 20);
+				const x = i * barWidth;
+				const y = canvas.height - barHeight;
+
+				if (highlightIndices.includes(i)) {
+					ctx.fillStyle = highlightColor;
+					ctx.shadowBlur = 15;
+					ctx.shadowColor = highlightColor;
+				} else {
+					ctx.fillStyle = '#00ff41';
+					ctx.shadowBlur = 5;
+					ctx.shadowColor = '#00ff41';
+				}
+
+				ctx.fillRect(x, y, barWidth - 2, barHeight);
+			}
+			ctx.shadowBlur = 0;
+		}
+
+		function updateStats() {
+			document.getElementById('stat-size').textContent = array.length;
+			document.getElementById('stat-comparisons').textContent = comparisons;
+			document.getElementById('stat-swaps').textContent = swaps;
+			document.getElementById('stat-accesses').textContent = arrayAccesses;
+			const elapsed = Date.now() - startTime;
+			document.getElementById('stat-time').textContent = elapsed;
+		}
+
+		function updateAlgorithmInfo() {
+			const algo = document.getElementById('algorithm').value;
+			const info = algorithms[algo];
+			document.getElementById('algo-name').textContent = info.name;
+			document.getElementById('algo-description').textContent = info.description;
+			document.getElementById('time-best').textContent = info.timeBest;
+			document.getElementById('time-avg').textContent = info.timeAvg;
+			document.getElementById('time-worst').textContent = info.timeWorst;
+			document.getElementById('space').textContent = info.space;
+			document.getElementById('stable').textContent = info.stable;
+		}
+
+		// Sorting algorithms
+		async function bubbleSort() {
+			const n = array.length;
+			for (let i = 0; i < n - 1 && !shouldStop; i++) {
+				for (let j = 0; j < n - i - 1 && !shouldStop; j++) {
+					if (await compare(j, j + 1)) {
+						await swap(j, j + 1);
+					}
+				}
+			}
+		}
+
+		async function cocktailSort() {
+			let swapped = true;
+			let start = 0;
+			let end = array.length - 1;
+
+			while (swapped && !shouldStop) {
+				swapped = false;
+				for (let i = start; i < end && !shouldStop; i++) {
+					if (await compare(i, i + 1)) {
+						await swap(i, i + 1);
+						swapped = true;
+					}
+				}
+				if (!swapped) break;
+				swapped = false;
+				end--;
+
+				for (let i = end - 1; i >= start && !shouldStop; i--) {
+					if (await compare(i, i + 1)) {
+						await swap(i, i + 1);
+						swapped = true;
+					}
+				}
+				start++;
+			}
+		}
+
+		async function selectionSort() {
+			const n = array.length;
+			for (let i = 0; i < n - 1 && !shouldStop; i++) {
+				let minIdx = i;
+				await highlight([minIdx], '#00ffff');
+				for (let j = i + 1; j < n && !shouldStop; j++) {
+					await highlight([j], '#ffff00');
+					if (await compare(j, minIdx)) {
+						minIdx = j;
+					}
+				}
+				if (minIdx !== i) {
+					await swap(i, minIdx);
+				}
+			}
+		}
+
+		async function insertionSort() {
+			for (let i = 1; i < array.length && !shouldStop; i++) {
+				let key = array[i];
+				arrayAccesses++;
+				let j = i - 1;
+				await highlight([i], '#00ffff');
+
+				while (j >= 0 && !shouldStop) {
+					comparisons++;
+					arrayAccesses++;
+					if (array[j] <= key) break;
+					await highlight([j, j + 1], '#ffff00');
+					array[j + 1] = array[j];
+					arrayAccesses++;
+					await sleep(getDelay());
+					j--;
+				}
+				array[j + 1] = key;
+				arrayAccesses++;
+				updateStats();
+				await draw();
+			}
+		}
+
+		async function mergeSort(start = 0, end = array.length - 1) {
+			if (start >= end || shouldStop) return;
+
+			const mid = Math.floor((start + end) / 2);
+			await mergeSort(start, mid);
+			await mergeSort(mid + 1, end);
+			await merge(start, mid, end);
+		}
+
+		async function merge(start, mid, end) {
+			if (shouldStop) return;
+			const left = array.slice(start, mid + 1);
+			const right = array.slice(mid + 1, end + 1);
+			arrayAccesses += left.length + right.length;
+
+			let i = 0, j = 0, k = start;
+
+			while (i < left.length && j < right.length && !shouldStop) {
+				comparisons++;
+				await highlight([k], '#00ffff');
+				if (left[i] <= right[j]) {
+					array[k] = left[i];
+					i++;
+				} else {
+					array[k] = right[j];
+					j++;
+				}
+				arrayAccesses++;
+				k++;
+				updateStats();
+				await sleep(getDelay());
+			}
+
+			while (i < left.length && !shouldStop) {
+				array[k] = left[i];
+				arrayAccesses++;
+				await highlight([k], '#00ffff');
+				i++;
+				k++;
+				await sleep(getDelay());
+			}
+
+			while (j < right.length && !shouldStop) {
+				array[k] = right[j];
+				arrayAccesses++;
+				await highlight([k], '#00ffff');
+				j++;
+				k++;
+				await sleep(getDelay());
+			}
+		}
+
+		async function quickSort(low = 0, high = array.length - 1) {
+			if (low < high && !shouldStop) {
+				const pi = await partition(low, high);
+				await quickSort(low, pi - 1);
+				await quickSort(pi + 1, high);
+			}
+		}
+
+		async function partition(low, high) {
+			const pivot = array[high];
+			arrayAccesses++;
+			await highlight([high], '#ff00ff');
+			let i = low - 1;
+
+			for (let j = low; j < high && !shouldStop; j++) {
+				comparisons++;
+				arrayAccesses++;
+				await highlight([j, high], '#ffff00');
+				if (array[j] < pivot) {
+					i++;
+					if (i !== j) {
+						await swap(i, j);
+					}
+				}
+			}
+			await swap(i + 1, high);
+			return i + 1;
+		}
+
+		async function heapSort() {
+			const n = array.length;
+
+			// Build max heap
+			for (let i = Math.floor(n / 2) - 1; i >= 0 && !shouldStop; i--) {
+				await heapify(n, i);
+			}
+
+			// Extract elements from heap
+			for (let i = n - 1; i > 0 && !shouldStop; i--) {
+				await swap(0, i);
+				await heapify(i, 0);
+			}
+		}
+
+		async function heapify(n, i) {
+			if (shouldStop) return;
+			let largest = i;
+			const left = 2 * i + 1;
+			const right = 2 * i + 2;
+
+			if (left < n) {
+				comparisons++;
+				arrayAccesses += 2;
+				if (array[left] > array[largest]) {
+					largest = left;
+				}
+			}
+
+			if (right < n) {
+				comparisons++;
+				arrayAccesses += 2;
+				if (array[right] > array[largest]) {
+					largest = right;
+				}
+			}
+
+			if (largest !== i) {
+				await swap(i, largest);
+				await heapify(n, largest);
+			}
+			updateStats();
+		}
+
+		async function shellSort() {
+			const n = array.length;
+			for (let gap = Math.floor(n / 2); gap > 0 && !shouldStop; gap = Math.floor(gap / 2)) {
+				for (let i = gap; i < n && !shouldStop; i++) {
+					const temp = array[i];
+					arrayAccesses++;
+					let j;
+					for (j = i; j >= gap && !shouldStop; j -= gap) {
+						comparisons++;
+						arrayAccesses++;
+						await highlight([j, j - gap], '#ffff00');
+						if (array[j - gap] <= temp) break;
+						array[j] = array[j - gap];
+						arrayAccesses++;
+						await sleep(getDelay());
+					}
+					array[j] = temp;
+					arrayAccesses++;
+					updateStats();
+					await draw();
+				}
+			}
+		}
+
+		async function countingSort() {
+			const max = Math.max(...array);
+			const min = Math.min(...array);
+			const range = max - min + 1;
+			const count = new Array(range).fill(0);
+			const output = new Array(array.length);
+
+			for (let i = 0; i < array.length && !shouldStop; i++) {
+				count[array[i] - min]++;
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+
+			for (let i = 1; i < count.length; i++) {
+				count[i] += count[i - 1];
+			}
+
+			for (let i = array.length - 1; i >= 0 && !shouldStop; i--) {
+				output[count[array[i] - min] - 1] = array[i];
+				count[array[i] - min]--;
+				arrayAccesses++;
+				await sleep(getDelay());
+			}
+
+			for (let i = 0; i < array.length && !shouldStop; i++) {
+				array[i] = output[i];
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function radixSort() {
+			const max = Math.max(...array);
+			for (let exp = 1; Math.floor(max / exp) > 0 && !shouldStop; exp *= 10) {
+				await countingSortByDigit(exp);
+			}
+		}
+
+		async function countingSortByDigit(exp) {
+			const n = array.length;
+			const output = new Array(n);
+			const count = new Array(10).fill(0);
+
+			for (let i = 0; i < n && !shouldStop; i++) {
+				const digit = Math.floor(array[i] / exp) % 10;
+				count[digit]++;
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+
+			for (let i = 1; i < 10; i++) {
+				count[i] += count[i - 1];
+			}
+
+			for (let i = n - 1; i >= 0 && !shouldStop; i--) {
+				const digit = Math.floor(array[i] / exp) % 10;
+				output[count[digit] - 1] = array[i];
+				count[digit]--;
+				arrayAccesses++;
+				await sleep(getDelay());
+			}
+
+			for (let i = 0; i < n && !shouldStop; i++) {
+				array[i] = output[i];
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function radixSortMSD() {
+			const max = Math.max(...array);
+			const maxDigits = max.toString().length;
+			await radixMSDHelper(0, array.length - 1, maxDigits - 1);
+		}
+
+		async function radixMSDHelper(low, high, digit) {
+			if (low >= high || digit < 0 || shouldStop) return;
+
+			const buckets = Array.from({ length: 10 }, () => []);
+
+			for (let i = low; i <= high && !shouldStop; i++) {
+				const d = Math.floor(array[i] / Math.pow(10, digit)) % 10;
+				buckets[d].push(array[i]);
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+
+			let idx = low;
+			for (let b = 0; b < 10 && !shouldStop; b++) {
+				for (let val of buckets[b]) {
+					array[idx++] = val;
+					arrayAccesses++;
+				}
+			}
+			await draw();
+
+			idx = low;
+			for (let b = 0; b < 10 && !shouldStop; b++) {
+				if (buckets[b].length > 1) {
+					await radixMSDHelper(idx, idx + buckets[b].length - 1, digit - 1);
+				}
+				idx += buckets[b].length;
+			}
+		}
+
+		async function bucketSort() {
+			const n = array.length;
+			const max = Math.max(...array);
+			const min = Math.min(...array);
+			const bucketCount = 10;
+			const buckets = Array.from({ length: bucketCount }, () => []);
+
+			for (let i = 0; i < n && !shouldStop; i++) {
+				const bucketIndex = Math.floor(((array[i] - min) / (max - min + 1)) * bucketCount);
+				buckets[Math.min(bucketIndex, bucketCount - 1)].push(array[i]);
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+
+			let idx = 0;
+			for (let bucket of buckets) {
+				bucket.sort((a, b) => a - b);
+				for (let val of bucket) {
+					if (shouldStop) break;
+					array[idx++] = val;
+					arrayAccesses++;
+					await highlight([idx - 1], '#00ffff');
+				}
+			}
+		}
+
+		async function combSort() {
+			const n = array.length;
+			let gap = n;
+			const shrink = 1.3;
+			let sorted = false;
+
+			while (!sorted && !shouldStop) {
+				gap = Math.floor(gap / shrink);
+				if (gap <= 1) {
+					gap = 1;
+					sorted = true;
+				}
+
+				for (let i = 0; i + gap < n && !shouldStop; i++) {
+					if (await compare(i, i + gap)) {
+						await swap(i, i + gap);
+						sorted = false;
+					}
+				}
+			}
+		}
+
+		async function cycleSort() {
+			const n = array.length;
+			for (let cycleStart = 0; cycleStart < n - 1 && !shouldStop; cycleStart++) {
+				let item = array[cycleStart];
+				arrayAccesses++;
+				let pos = cycleStart;
+
+				for (let i = cycleStart + 1; i < n && !shouldStop; i++) {
+					comparisons++;
+					arrayAccesses++;
+					if (array[i] < item) pos++;
+				}
+
+				if (pos === cycleStart) continue;
+
+				while (item === array[pos]) {
+					pos++;
+					comparisons++;
+					arrayAccesses++;
+				}
+
+				[array[pos], item] = [item, array[pos]];
+				arrayAccesses += 2;
+				swaps++;
+				await highlight([pos], '#ff0000');
+
+				while (pos !== cycleStart && !shouldStop) {
+					pos = cycleStart;
+					for (let i = cycleStart + 1; i < n && !shouldStop; i++) {
+						comparisons++;
+						arrayAccesses++;
+						if (array[i] < item) pos++;
+					}
+
+					while (item === array[pos]) {
+						pos++;
+						comparisons++;
+						arrayAccesses++;
+					}
+
+					[array[pos], item] = [item, array[pos]];
+					arrayAccesses += 2;
+					swaps++;
+					await highlight([pos], '#ff0000');
+				}
+			}
+		}
+
+		async function gnomeSort() {
+			let index = 0;
+			while (index < array.length && !shouldStop) {
+				if (index === 0) {
+					index++;
+				} else {
+					comparisons++;
+					arrayAccesses += 2;
+					await highlight([index, index - 1], '#ffff00');
+					if (array[index] >= array[index - 1]) {
+						index++;
+					} else {
+						await swap(index, index - 1);
+						index--;
+					}
+				}
+			}
+		}
+
+		async function pancakeSort() {
+			for (let currSize = array.length; currSize > 1 && !shouldStop; currSize--) {
+				let maxIdx = 0;
+				for (let i = 0; i < currSize; i++) {
+					comparisons++;
+					arrayAccesses += 2;
+					if (array[i] > array[maxIdx]) {
+						maxIdx = i;
+					}
+				}
+
+				if (maxIdx !== currSize - 1) {
+					await flip(maxIdx);
+					await flip(currSize - 1);
+				}
+			}
+		}
+
+		async function flip(k) {
+			let left = 0;
+			while (left < k && !shouldStop) {
+				await swap(left, k);
+				left++;
+				k--;
+			}
+		}
+
+		async function stoogeSort(l = 0, h = array.length - 1) {
+			if (shouldStop) return;
+			if (l >= h) return;
+
+			comparisons++;
+			arrayAccesses += 2;
+			if (array[l] > array[h]) {
+				await swap(l, h);
+			}
+
+			if (h - l + 1 > 2) {
+				const t = Math.floor((h - l + 1) / 3);
+				await stoogeSort(l, h - t);
+				await stoogeSort(l + t, h);
+				await stoogeSort(l, h - t);
+			}
+		}
+
+		async function bogoSort() {
+			while (!isSorted() && !shouldStop) {
+				await shuffle();
+			}
+		}
+
+		async function shuffle() {
+			for (let i = array.length - 1; i > 0 && !shouldStop; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				await swap(i, j);
+			}
+		}
+
+		function isSorted() {
+			for (let i = 1; i < array.length; i++) {
+				comparisons++;
+				arrayAccesses += 2;
+				if (array[i] < array[i - 1]) return false;
+			}
+			updateStats();
+			return true;
+		}
+
+		async function timSort() {
+			const RUN = 32;
+			const n = array.length;
+
+			for (let i = 0; i < n && !shouldStop; i += RUN) {
+				await insertionSortRange(i, Math.min(i + RUN - 1, n - 1));
+			}
+
+			for (let size = RUN; size < n && !shouldStop; size = 2 * size) {
+				for (let start = 0; start < n && !shouldStop; start += 2 * size) {
+					const mid = start + size - 1;
+					const end = Math.min(start + 2 * size - 1, n - 1);
+					if (mid < end) {
+						await merge(start, mid, end);
+					}
+				}
+			}
+		}
+
+		async function insertionSortRange(left, right) {
+			for (let i = left + 1; i <= right && !shouldStop; i++) {
+				const key = array[i];
+				arrayAccesses++;
+				let j = i - 1;
+				while (j >= left && !shouldStop) {
+					comparisons++;
+					arrayAccesses++;
+					if (array[j] <= key) break;
+					array[j + 1] = array[j];
+					arrayAccesses++;
+					j--;
+				}
+				array[j + 1] = key;
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function introSort(begin = 0, end = array.length - 1, depthLimit = Math.floor(Math.log2(array.length)) * 2) {
+			if (shouldStop) return;
+			const size = end - begin + 1;
+
+			if (size < 16) {
+				await insertionSortRange(begin, end);
+				return;
+			}
+
+			if (depthLimit === 0) {
+				await heapSortRange(begin, end);
+				return;
+			}
+
+			const pivot = await partitionIntro(begin, end);
+			await introSort(begin, pivot - 1, depthLimit - 1);
+			await introSort(pivot + 1, end, depthLimit - 1);
+		}
+
+		async function partitionIntro(low, high) {
+			const pivot = array[high];
+			arrayAccesses++;
+			await highlight([high], '#ff00ff');
+			let i = low - 1;
+
+			for (let j = low; j < high && !shouldStop; j++) {
+				comparisons++;
+				arrayAccesses++;
+				if (array[j] < pivot) {
+					i++;
+					if (i !== j) await swap(i, j);
+				}
+			}
+			await swap(i + 1, high);
+			return i + 1;
+		}
+
+		async function heapSortRange(begin, end) {
+			const n = end - begin + 1;
+			for (let i = begin + Math.floor(n / 2) - 1; i >= begin && !shouldStop; i--) {
+				await heapifyRange(begin, end, i);
+			}
+			for (let i = end; i > begin && !shouldStop; i--) {
+				await swap(begin, i);
+				await heapifyRange(begin, i - 1, begin);
+			}
+		}
+
+		async function heapifyRange(begin, end, i) {
+			if (shouldStop) return;
+			const n = end - begin + 1;
+			let largest = i;
+			const left = begin + 2 * (i - begin) + 1;
+			const right = begin + 2 * (i - begin) + 2;
+
+			if (left <= end) {
+				comparisons++;
+				arrayAccesses += 2;
+				if (array[left] > array[largest]) largest = left;
+			}
+			if (right <= end) {
+				comparisons++;
+				arrayAccesses += 2;
+				if (array[right] > array[largest]) largest = right;
+			}
+			if (largest !== i) {
+				await swap(i, largest);
+				await heapifyRange(begin, end, largest);
+			}
+			updateStats();
+		}
+
+		async function smoothSort() {
+			// Simplified smooth sort - full implementation is very complex
+			// This is essentially heapsort for demonstration
+			await heapSort();
+		}
+
+		async function bitonicSort(low = 0, cnt = array.length, dir = 1) {
+			if (cnt <= 1 || shouldStop) return;
+
+			const k = Math.floor(cnt / 2);
+			await bitonicSort(low, k, 1);
+			await bitonicSort(low + k, cnt - k, 0);
+			await bitonicMerge(low, cnt, dir);
+		}
+
+		async function bitonicMerge(low, cnt, dir) {
+			if (cnt <= 1 || shouldStop) return;
+
+			const k = Math.floor(cnt / 2);
+			for (let i = low; i < low + k && !shouldStop; i++) {
+				comparisons++;
+				arrayAccesses += 2;
+				const shouldSwap = dir === 1 ? array[i] > array[i + k] : array[i] < array[i + k];
+				if (shouldSwap) {
+					await swap(i, i + k);
+				}
+			}
+			await bitonicMerge(low, k, dir);
+			await bitonicMerge(low + k, cnt - k, dir);
+		}
+
+		async function oddEvenSort() {
+			let sorted = false;
+			while (!sorted && !shouldStop) {
+				sorted = true;
+
+				// Odd phase
+				for (let i = 1; i < array.length - 1 && !shouldStop; i += 2) {
+					if (await compare(i, i + 1)) {
+						await swap(i, i + 1);
+						sorted = false;
+					}
+				}
+
+				// Even phase
+				for (let i = 0; i < array.length - 1 && !shouldStop; i += 2) {
+					if (await compare(i, i + 1)) {
+						await swap(i, i + 1);
+						sorted = false;
+					}
+				}
+			}
+		}
+
+		async function pigeonholeSort() {
+			const min = Math.min(...array);
+			const max = Math.max(...array);
+			const range = max - min + 1;
+			const holes = Array.from({ length: range }, () => []);
+
+			for (let i = 0; i < array.length && !shouldStop; i++) {
+				holes[array[i] - min].push(array[i]);
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+
+			let idx = 0;
+			for (let i = 0; i < range && !shouldStop; i++) {
+				for (let val of holes[i]) {
+					array[idx++] = val;
+					arrayAccesses++;
+					await highlight([idx - 1], '#00ffff');
+				}
+			}
+		}
+
+		async function bozoSort() {
+			while (!isSorted() && !shouldStop) {
+				const i = Math.floor(Math.random() * array.length);
+				const j = Math.floor(Math.random() * array.length);
+				await swap(i, j);
+			}
+		}
+
+		async function stalinSort() {
+			let writeIdx = 0;
+			await highlight([0], '#00ffff');
+
+			for (let i = 1; i < array.length && !shouldStop; i++) {
+				comparisons++;
+				arrayAccesses += 2;
+				await highlight([i, writeIdx], '#ffff00');
+
+				if (array[i] >= array[writeIdx]) {
+					writeIdx++;
+					if (writeIdx !== i) {
+						array[writeIdx] = array[i];
+						arrayAccesses++;
+					}
+					await highlight([writeIdx], '#00ff00');
+				} else {
+					await highlight([i], '#ff0000');
+				}
+			}
+
+			// Fill rest with max value to show "removed" elements
+			const lastVal = array[writeIdx];
+			for (let i = writeIdx + 1; i < array.length && !shouldStop; i++) {
+				array[i] = lastVal;
+				arrayAccesses++;
+				await highlight([i], '#666666');
+			}
+		}
+
+		async function slowSort(i = 0, j = array.length - 1) {
+			if (i >= j || shouldStop) return;
+
+			const m = Math.floor((i + j) / 2);
+			await slowSort(i, m);
+			await slowSort(m + 1, j);
+
+			comparisons++;
+			arrayAccesses += 2;
+			if (array[j] < array[m]) {
+				await swap(j, m);
+			}
+
+			await slowSort(i, j - 1);
+		}
+
+		async function miracleSort() {
+			document.getElementById('stat-status').textContent = 'Waiting for miracle...';
+			while (!isSorted() && !shouldStop) {
+				await highlight([Math.floor(Math.random() * array.length)], '#ff00ff');
+				await sleep(1000);
+			}
+		}
+
+		async function sleepSort() {
+			const max = Math.max(...array);
+			const output = [];
+			const promises = [];
+
+			for (let i = 0; i < array.length; i++) {
+				const val = array[i];
+				const delay = (val / max) * 3000; // Scale to max 3 seconds
+				promises.push(
+					sleep(delay).then(() => {
+						output.push(val);
+						return val;
+					})
+				);
+			}
+
+			for (let promise of promises) {
+				if (shouldStop) break;
+				await promise;
+				arrayAccesses++;
+				await draw();
+				await sleep(50);
+			}
+
+			for (let i = 0; i < output.length && !shouldStop; i++) {
+				array[i] = output[i];
+				arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function quantumBogoSort() {
+			// In quantum mechanics, we observe the sorted state
+			// Joke: "It's O(n) because we only check if it's sorted!"
+			if (isSorted()) {
+				await highlight(Array.from({ length: array.length }, (_, i) => i), '#00ff00');
+			} else {
+				// "Destroy universe and try again" - just shuffle once
+				document.getElementById('stat-status').textContent = 'Destroying universe...';
+				await shuffle();
+				await quantumBogoSort();
+			}
+		}
+
+		async function pairwiseSort() {
+			// Simple pairwise comparator network for small arrays
+			const n = array.length;
+			for (let p = 1; p < n && !shouldStop; p *= 2) {
+				for (let k = p; k >= 1 && !shouldStop; k = Math.floor(k / 2)) {
+					for (let j = k % p; j < n - k && !shouldStop; j += 2 * k) {
+						for (let i = 0; i < k && !shouldStop; i++) {
+							const idx1 = i + j;
+							const idx2 = i + j + k;
+							if (idx2 < n) {
+								const shouldSwap = (Math.floor(idx1 / (p * 2)) === Math.floor(idx2 / (p * 2))) ?
+									await compare(idx1, idx2) : false;
+								if (shouldSwap) {
+									await swap(idx1, idx2);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Initialize array
+		function resetArray() {
+			const size = parseInt(document.getElementById('arraySize').value);
+			array = Array.from({ length: size }, () => Math.floor(Math.random() * 100) + 1);
+			originalArray = [...array];
+			comparisons = 0;
+			swaps = 0;
+			arrayAccesses = 0;
+			startTime = Date.now();
+			updateStats();
+			draw();
+			document.getElementById('stat-status').textContent = 'Ready';
+		}
+
+		// Grid mode functions
+		const allAlgorithms = [
+			'bubble', 'cocktail', 'selection', 'insertion', 'gnome',
+			'merge', 'quick', 'heap', 'shell', 'tim', 'intro', 'smooth',
+			'counting', 'radix', 'radixMSD', 'bucket', 'pigeonhole',
+			'bitonic', 'oddEven', 'pairwise',
+			'comb', 'cycle', 'pancake', 'stooge', 'slowsort',
+			'bogo', 'bozo', 'stalin', 'miracle', 'sleep', 'quantum'
+		];
+
+		function createGridInstance(algoKey) {
+			const info = algorithms[algoKey];
+			const gridItem = document.createElement('div');
+			gridItem.className = 'grid-item';
+
+			const header = document.createElement('div');
+			header.className = 'grid-item-header';
+
+			const title = document.createElement('div');
+			title.className = 'grid-item-title';
+			title.textContent = info.name;
+
+			const stats = document.createElement('div');
+			stats.className = 'grid-item-stats';
+			stats.innerHTML = `
+				<span class="stat-item">Cmp: <span class="stat-val" id="grid-cmp-${algoKey}">0</span></span>
+				<span class="stat-item">Swp: <span class="stat-val" id="grid-swp-${algoKey}">0</span></span>
+				<span class="stat-item">Time: <span class="stat-val" id="grid-time-${algoKey}">0</span>ms</span>
+			`;
+
+			header.appendChild(title);
+			header.appendChild(stats);
+
+			const canvas = document.createElement('canvas');
+			canvas.className = 'grid-item-canvas';
+			canvas.id = `canvas-${algoKey}`;
+
+			gridItem.appendChild(header);
+			gridItem.appendChild(canvas);
+
+			const size = parseInt(document.getElementById('arraySize').value);
+			const ctx = canvas.getContext('2d');
+			canvas.width = 280;
+			canvas.height = 180;
+
+			return {
+				key: algoKey,
+				element: gridItem,
+				canvas: canvas,
+				ctx: ctx,
+				array: Array.from({ length: size }, () => Math.floor(Math.random() * 100) + 1),
+				comparisons: 0,
+				swaps: 0,
+				arrayAccesses: 0,
+				startTime: 0,
+				sorting: false,
+				shouldStop: false,
+				stepMode: false,
+				stepResolve: null
+			};
+		}
+
+		function drawGrid(instance, highlightIndices = [], highlightColor = '#00ff41') {
+			const ctx = instance.ctx;
+			const arr = instance.array;
+			const canvas = instance.canvas;
+
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			const barWidth = canvas.width / arr.length;
+			const maxVal = Math.max(...arr);
+
+			for (let i = 0; i < arr.length; i++) {
+				const barHeight = (arr[i] / maxVal) * (canvas.height - 10);
+				const x = i * barWidth;
+				const y = canvas.height - barHeight;
+
+				if (highlightIndices.includes(i)) {
+					ctx.fillStyle = highlightColor;
+					ctx.shadowBlur = 10;
+					ctx.shadowColor = highlightColor;
+				} else {
+					ctx.fillStyle = '#00ff41';
+					ctx.shadowBlur = 3;
+					ctx.shadowColor = '#00ff41';
+				}
+
+				ctx.fillRect(x, y, barWidth - 1, barHeight);
+			}
+			ctx.shadowBlur = 0;
+		}
+
+		function updateGridStats(instance) {
+			document.getElementById(`grid-cmp-${instance.key}`).textContent = instance.comparisons;
+			document.getElementById(`grid-swp-${instance.key}`).textContent = instance.swaps;
+			const elapsed = Date.now() - instance.startTime;
+			document.getElementById(`grid-time-${instance.key}`).textContent = elapsed;
+		}
+
+		async function runGridSort(instance) {
+			instance.sorting = true;
+			instance.shouldStop = false;
+			instance.comparisons = 0;
+			instance.swaps = 0;
+			instance.arrayAccesses = 0;
+			instance.startTime = Date.now();
+
+			// Create algorithm-specific helpers
+			const gridHelpers = {
+			sleep: (ms) => {
+				if (instance.stepMode) {
+					return new Promise(resolve => {
+						instance.stepResolve = resolve;
+						document.getElementById('stepBtn').disabled = false;
+						document.getElementById('startBtn').disabled = true;
+					});
+				}
+				return new Promise(resolve => setTimeout(resolve, ms));
+			},
+				getDelay: () => Math.max(1, 101 - parseInt(document.getElementById('speed').value)),
+				swap: async (i, j, color = '#ff0000') => {
+					if (instance.shouldStop) return;
+					const temp = instance.array[i];
+					instance.array[i] = instance.array[j];
+					instance.array[j] = temp;
+					instance.swaps++;
+					instance.arrayAccesses += 4;
+					updateGridStats(instance);
+					await drawGrid(instance, [i, j], color);
+					await gridHelpers.sleep(gridHelpers.getDelay());
+				},
+				compare: async (i, j) => {
+					if (instance.shouldStop) return instance.array[i] > instance.array[j];
+					instance.comparisons++;
+					instance.arrayAccesses += 2;
+					updateGridStats(instance);
+					await drawGrid(instance, [i, j], '#ffff00');
+					await gridHelpers.sleep(gridHelpers.getDelay() / 2);
+					return instance.array[i] > instance.array[j];
+				},
+				highlight: async (indices, color = '#00ffff') => {
+					if (instance.shouldStop) return;
+					await drawGrid(instance, indices, color);
+					await gridHelpers.sleep(gridHelpers.getDelay());
+				}
+			};
+
+			try {
+				await runAlgorithm(instance.key, instance, gridHelpers);
+				if (!instance.shouldStop) {
+					// Flash completion
+					for (let i = 0; i < 2; i++) {
+						await drawGrid(instance, Array.from({ length: instance.array.length }, (_, i) => i), '#00ff00');
+						await gridHelpers.sleep(150);
+						await drawGrid(instance);
+						await gridHelpers.sleep(150);
+					}
+				}
+			} catch (error) {
+				console.error(`Error in ${instance.key}:`, error);
+			}
+
+			instance.sorting = false;
+			instance.stepMode = false;
+			instance.stepResolve = null;
+		}
+
+		async function runAlgorithm(algoKey, instance, helpers) {
+			const { swap, compare, highlight, sleep, getDelay } = helpers;
+			const arr = instance.array;
+			const n = arr.length;
+
+			// Helper function for isSorted
+			const isSorted = () => {
+				for (let i = 1; i < arr.length; i++) {
+					instance.comparisons++;
+					instance.arrayAccesses += 2;
+					if (arr[i] < arr[i - 1]) return false;
+				}
+				updateGridStats(instance);
+				return true;
+			};
+
+			switch (algoKey) {
+				case 'bubble':
+					for (let i = 0; i < n - 1 && !instance.shouldStop; i++) {
+						for (let j = 0; j < n - i - 1 && !instance.shouldStop; j++) {
+							if (await compare(j, j + 1)) {
+								await swap(j, j + 1);
+							}
+						}
+					}
+					break;
+
+				case 'cocktail':
+					let swapped = true, start = 0, end = n - 1;
+					while (swapped && !instance.shouldStop) {
+						swapped = false;
+						for (let i = start; i < end && !instance.shouldStop; i++) {
+							if (await compare(i, i + 1)) {
+								await swap(i, i + 1);
+								swapped = true;
+							}
+						}
+						if (!swapped) break;
+						swapped = false;
+						end--;
+						for (let i = end - 1; i >= start && !instance.shouldStop; i--) {
+							if (await compare(i, i + 1)) {
+								await swap(i, i + 1);
+								swapped = true;
+							}
+						}
+						start++;
+					}
+					break;
+
+				case 'selection':
+					for (let i = 0; i < n - 1 && !instance.shouldStop; i++) {
+						let minIdx = i;
+						await highlight([minIdx], '#00ffff');
+						for (let j = i + 1; j < n && !instance.shouldStop; j++) {
+							await highlight([j], '#ffff00');
+							if (await compare(j, minIdx)) {
+								minIdx = j;
+							}
+						}
+						if (minIdx !== i) {
+							await swap(i, minIdx);
+						}
+					}
+					break;
+
+				case 'insertion':
+					for (let i = 1; i < n && !instance.shouldStop; i++) {
+						let key = arr[i];
+						instance.arrayAccesses++;
+						let j = i - 1;
+						await highlight([i], '#00ffff');
+						while (j >= 0 && !instance.shouldStop) {
+							instance.comparisons++;
+							instance.arrayAccesses++;
+							if (arr[j] <= key) break;
+							await highlight([j, j + 1], '#ffff00');
+							arr[j + 1] = arr[j];
+							instance.arrayAccesses++;
+							await sleep(getDelay());
+							j--;
+						}
+						arr[j + 1] = key;
+						instance.arrayAccesses++;
+						updateGridStats(instance);
+						await drawGrid(instance);
+					}
+					break;
+
+				case 'gnome':
+					let index = 0;
+					while (index < n && !instance.shouldStop) {
+						if (index === 0) {
+							index++;
+						} else {
+							instance.comparisons++;
+							instance.arrayAccesses += 2;
+							await highlight([index, index - 1], '#ffff00');
+							if (arr[index] >= arr[index - 1]) {
+								index++;
+							} else {
+								await swap(index, index - 1);
+								index--;
+							}
+						}
+					}
+					break;
+
+				case 'stalin':
+					let writeIdx = 0;
+					await highlight([0], '#00ffff');
+					for (let i = 1; i < n && !instance.shouldStop; i++) {
+						instance.comparisons++;
+						instance.arrayAccesses += 2;
+						await highlight([i, writeIdx], '#ffff00');
+						if (arr[i] >= arr[writeIdx]) {
+							writeIdx++;
+							if (writeIdx !== i) {
+								arr[writeIdx] = arr[i];
+								instance.arrayAccesses++;
+							}
+							await highlight([writeIdx], '#00ff00');
+						} else {
+							await highlight([i], '#ff0000');
+						}
+					}
+					const lastVal = arr[writeIdx];
+					for (let i = writeIdx + 1; i < n && !instance.shouldStop; i++) {
+						arr[i] = lastVal;
+						instance.arrayAccesses++;
+						await highlight([i], '#666666');
+					}
+					break;
+
+				case 'merge':
+					await gridMergeSort(instance, helpers, 0, n - 1);
+					break;
+
+				case 'quick':
+					await gridQuickSort(instance, helpers, 0, n - 1);
+					break;
+
+				case 'heap':
+					await gridHeapSort(instance, helpers);
+					break;
+
+				case 'shell':
+					for (let gap = Math.floor(n / 2); gap > 0 && !instance.shouldStop; gap = Math.floor(gap / 2)) {
+						for (let i = gap; i < n && !instance.shouldStop; i++) {
+							const temp = arr[i];
+							instance.arrayAccesses++;
+							let j;
+							for (j = i; j >= gap && !instance.shouldStop; j -= gap) {
+								instance.comparisons++;
+								instance.arrayAccesses++;
+								await highlight([j, j - gap], '#ffff00');
+								if (arr[j - gap] <= temp) break;
+								arr[j] = arr[j - gap];
+								instance.arrayAccesses++;
+								await sleep(getDelay());
+							}
+							arr[j] = temp;
+							instance.arrayAccesses++;
+							updateGridStats(instance);
+							await drawGrid(instance);
+						}
+					}
+					break;
+
+				case 'comb':
+					let gap2 = n;
+					const shrink = 1.3;
+					let sorted = false;
+					while (!sorted && !instance.shouldStop) {
+						gap2 = Math.floor(gap2 / shrink);
+						if (gap2 <= 1) {
+							gap2 = 1;
+							sorted = true;
+						}
+						for (let i = 0; i + gap2 < n && !instance.shouldStop; i++) {
+							if (await compare(i, i + gap2)) {
+								await swap(i, i + gap2);
+								sorted = false;
+							}
+						}
+					}
+					break;
+
+				case 'counting':
+					const max = Math.max(...arr);
+					const min = Math.min(...arr);
+					const range = max - min + 1;
+					const count = new Array(range).fill(0);
+					const output = new Array(n);
+					for (let i = 0; i < n && !instance.shouldStop; i++) {
+						count[arr[i] - min]++;
+						instance.arrayAccesses++;
+						await highlight([i], '#00ffff');
+					}
+					for (let i = 1; i < count.length; i++) {
+						count[i] += count[i - 1];
+					}
+					for (let i = n - 1; i >= 0 && !instance.shouldStop; i--) {
+						output[count[arr[i] - min] - 1] = arr[i];
+						count[arr[i] - min]--;
+						instance.arrayAccesses++;
+						await sleep(getDelay());
+					}
+					for (let i = 0; i < n && !instance.shouldStop; i++) {
+						arr[i] = output[i];
+						instance.arrayAccesses++;
+						await highlight([i], '#00ffff');
+					}
+					break;
+
+				case 'radix':
+					const maxVal = Math.max(...arr);
+					for (let exp = 1; Math.floor(maxVal / exp) > 0 && !instance.shouldStop; exp *= 10) {
+						await gridRadixDigit(instance, helpers, exp);
+					}
+					break;
+
+				case 'radixMSD':
+					await gridRadixMSD(instance, helpers, 0, n - 1, Math.max(...arr).toString().length - 1);
+					break;
+
+				case 'bucket':
+					const maxB = Math.max(...arr);
+					const minB = Math.min(...arr);
+					const bucketCount = 10;
+					const buckets = Array.from({ length: bucketCount }, () => []);
+					for (let i = 0; i < n && !instance.shouldStop; i++) {
+						const bucketIndex = Math.floor(((arr[i] - minB) / (maxB - minB + 1)) * bucketCount);
+						buckets[Math.min(bucketIndex, bucketCount - 1)].push(arr[i]);
+						instance.arrayAccesses++;
+						await highlight([i], '#00ffff');
+					}
+					let idx = 0;
+					for (let bucket of buckets) {
+						bucket.sort((a, b) => a - b);
+						for (let val of bucket) {
+							if (instance.shouldStop) break;
+							arr[idx++] = val;
+							instance.arrayAccesses++;
+							await highlight([idx - 1], '#00ffff');
+						}
+					}
+					break;
+
+				case 'pigeonhole':
+					const minP = Math.min(...arr);
+					const maxP = Math.max(...arr);
+					const rangeP = maxP - minP + 1;
+					const holes = Array.from({ length: rangeP }, () => []);
+					for (let i = 0; i < n && !instance.shouldStop; i++) {
+						holes[arr[i] - minP].push(arr[i]);
+						instance.arrayAccesses++;
+						await highlight([i], '#00ffff');
+					}
+					let idxP = 0;
+					for (let i = 0; i < rangeP && !instance.shouldStop; i++) {
+						for (let val of holes[i]) {
+							arr[idxP++] = val;
+							instance.arrayAccesses++;
+							await highlight([idxP - 1], '#00ffff');
+						}
+					}
+					break;
+
+				case 'cycle':
+					for (let cycleStart = 0; cycleStart < n - 1 && !instance.shouldStop; cycleStart++) {
+						let item = arr[cycleStart];
+						instance.arrayAccesses++;
+						let pos = cycleStart;
+						for (let i = cycleStart + 1; i < n && !instance.shouldStop; i++) {
+							instance.comparisons++;
+							instance.arrayAccesses++;
+							if (arr[i] < item) pos++;
+						}
+						if (pos === cycleStart) continue;
+						while (item === arr[pos]) {
+							pos++;
+							instance.comparisons++;
+							instance.arrayAccesses++;
+						}
+						[arr[pos], item] = [item, arr[pos]];
+						instance.arrayAccesses += 2;
+						instance.swaps++;
+						await highlight([pos], '#ff0000');
+						while (pos !== cycleStart && !instance.shouldStop) {
+							pos = cycleStart;
+							for (let i = cycleStart + 1; i < n && !instance.shouldStop; i++) {
+								instance.comparisons++;
+								instance.arrayAccesses++;
+								if (arr[i] < item) pos++;
+							}
+							while (item === arr[pos]) {
+								pos++;
+								instance.comparisons++;
+								instance.arrayAccesses++;
+							}
+							[arr[pos], item] = [item, arr[pos]];
+							instance.arrayAccesses += 2;
+							instance.swaps++;
+							await highlight([pos], '#ff0000');
+						}
+					}
+					break;
+
+				case 'pancake':
+					for (let currSize = n; currSize > 1 && !instance.shouldStop; currSize--) {
+						let maxIdx = 0;
+						for (let i = 0; i < currSize; i++) {
+							instance.comparisons++;
+							instance.arrayAccesses += 2;
+							if (arr[i] > arr[maxIdx]) {
+								maxIdx = i;
+							}
+						}
+						if (maxIdx !== currSize - 1) {
+							await gridFlip(instance, helpers, maxIdx);
+							await gridFlip(instance, helpers, currSize - 1);
+						}
+					}
+					break;
+
+				case 'stooge':
+					await gridStoogeSort(instance, helpers, 0, n - 1);
+					break;
+
+				case 'slowsort':
+					await gridSlowSort(instance, helpers, 0, n - 1);
+					break;
+
+				case 'tim':
+					const RUN = 32;
+					for (let i = 0; i < n && !instance.shouldStop; i += RUN) {
+						await gridInsertionRange(instance, helpers, i, Math.min(i + RUN - 1, n - 1));
+					}
+					for (let size = RUN; size < n && !instance.shouldStop; size = 2 * size) {
+						for (let start2 = 0; start2 < n && !instance.shouldStop; start2 += 2 * size) {
+							const mid = start2 + size - 1;
+							const end = Math.min(start2 + 2 * size - 1, n - 1);
+							if (mid < end) {
+								await gridMerge(instance, helpers, start2, mid, end);
+							}
+						}
+					}
+					break;
+
+				case 'intro':
+					await gridIntroSort(instance, helpers, 0, n - 1, Math.floor(Math.log2(n)) * 2);
+					break;
+
+				case 'smooth':
+					// Simplified - use heap sort
+					await gridHeapSort(instance, helpers);
+					break;
+
+				case 'bitonic':
+					await gridBitonicSort(instance, helpers, 0, n, 1);
+					break;
+
+				case 'oddEven':
+					let sortedOE = false;
+					while (!sortedOE && !instance.shouldStop) {
+						sortedOE = true;
+						for (let i = 1; i < n - 1 && !instance.shouldStop; i += 2) {
+							if (await compare(i, i + 1)) {
+								await swap(i, i + 1);
+								sortedOE = false;
+							}
+						}
+						for (let i = 0; i < n - 1 && !instance.shouldStop; i += 2) {
+							if (await compare(i, i + 1)) {
+								await swap(i, i + 1);
+								sortedOE = false;
+							}
+						}
+					}
+					break;
+
+				case 'pairwise':
+					for (let p = 1; p < n && !instance.shouldStop; p *= 2) {
+						for (let k = p; k >= 1 && !instance.shouldStop; k = Math.floor(k / 2)) {
+							for (let j = k % p; j < n - k && !instance.shouldStop; j += 2 * k) {
+								for (let i = 0; i < k && !instance.shouldStop; i++) {
+									const idx1 = i + j;
+									const idx2 = i + j + k;
+									if (idx2 < n) {
+										const shouldSwap = (Math.floor(idx1 / (p * 2)) === Math.floor(idx2 / (p * 2))) ?
+											await compare(idx1, idx2) : false;
+										if (shouldSwap) {
+											await swap(idx1, idx2);
+										}
+									}
+								}
+							}
+						}
+					}
+					break;
+
+				case 'bogo':
+					while (!isSorted() && !instance.shouldStop) {
+						for (let i = n - 1; i > 0 && !instance.shouldStop; i--) {
+							const j = Math.floor(Math.random() * (i + 1));
+							await swap(i, j);
+						}
+					}
+					break;
+
+				case 'bozo':
+					while (!isSorted() && !instance.shouldStop) {
+						const i = Math.floor(Math.random() * n);
+						const j = Math.floor(Math.random() * n);
+						await swap(i, j);
+					}
+					break;
+
+				case 'miracle':
+					while (!isSorted() && !instance.shouldStop) {
+						await highlight([Math.floor(Math.random() * n)], '#ff00ff');
+						await sleep(1000);
+					}
+					break;
+
+				case 'sleep':
+					const maxS = Math.max(...arr);
+					const outputS = [];
+					const promises = [];
+					for (let i = 0; i < n; i++) {
+						const val = arr[i];
+						const delay = (val / maxS) * 2000;
+						promises.push(
+							sleep(delay).then(() => {
+								outputS.push(val);
+								return val;
+							})
+						);
+					}
+					for (let promise of promises) {
+						if (instance.shouldStop) break;
+						await promise;
+						instance.arrayAccesses++;
+						await drawGrid(instance);
+						await sleep(30);
+					}
+					for (let i = 0; i < outputS.length && !instance.shouldStop; i++) {
+						arr[i] = outputS[i];
+						instance.arrayAccesses++;
+						await highlight([i], '#00ffff');
+					}
+					break;
+
+				case 'quantum':
+					if (isSorted()) {
+						await highlight(Array.from({ length: n }, (_, i) => i), '#00ff00');
+					} else {
+						for (let i = n - 1; i > 0 && !instance.shouldStop; i--) {
+							const j = Math.floor(Math.random() * (i + 1));
+							await swap(i, j);
+						}
+						await runAlgorithm('quantum', instance, helpers);
+					}
+					break;
+
+				default:
+					await sleep(1000);
+					break;
+			}
+		}
+
+		// Helper functions for grid algorithms
+		async function gridMergeSort(instance, helpers, start, end) {
+			if (start >= end || instance.shouldStop) return;
+			const mid = Math.floor((start + end) / 2);
+			await gridMergeSort(instance, helpers, start, mid);
+			await gridMergeSort(instance, helpers, mid + 1, end);
+			await gridMerge(instance, helpers, start, mid, end);
+		}
+
+		async function gridMerge(instance, helpers, start, mid, end) {
+			if (instance.shouldStop) return;
+			const { highlight, sleep, getDelay } = helpers;
+			const arr = instance.array;
+			const left = arr.slice(start, mid + 1);
+			const right = arr.slice(mid + 1, end + 1);
+			instance.arrayAccesses += left.length + right.length;
+			let i = 0, j = 0, k = start;
+			while (i < left.length && j < right.length && !instance.shouldStop) {
+				instance.comparisons++;
+				await highlight([k], '#00ffff');
+				if (left[i] <= right[j]) {
+					arr[k] = left[i];
+					i++;
+				} else {
+					arr[k] = right[j];
+					j++;
+				}
+				instance.arrayAccesses++;
+				k++;
+				updateGridStats(instance);
+				await sleep(getDelay());
+			}
+			while (i < left.length && !instance.shouldStop) {
+				arr[k] = left[i];
+				instance.arrayAccesses++;
+				await highlight([k], '#00ffff');
+				i++;
+				k++;
+				await sleep(getDelay());
+			}
+			while (j < right.length && !instance.shouldStop) {
+				arr[k] = right[j];
+				instance.arrayAccesses++;
+				await highlight([k], '#00ffff');
+				j++;
+				k++;
+				await sleep(getDelay());
+			}
+		}
+
+		async function gridQuickSort(instance, helpers, low, high) {
+			if (low < high && !instance.shouldStop) {
+				const pi = await gridPartition(instance, helpers, low, high);
+				await gridQuickSort(instance, helpers, low, pi - 1);
+				await gridQuickSort(instance, helpers, pi + 1, high);
+			}
+		}
+
+		async function gridPartition(instance, helpers, low, high) {
+			const { swap, highlight, sleep, getDelay } = helpers;
+			const arr = instance.array;
+			const pivot = arr[high];
+			instance.arrayAccesses++;
+			await highlight([high], '#ff00ff');
+			let i = low - 1;
+			for (let j = low; j < high && !instance.shouldStop; j++) {
+				instance.comparisons++;
+				instance.arrayAccesses++;
+				await highlight([j, high], '#ffff00');
+				if (arr[j] < pivot) {
+					i++;
+					if (i !== j) await swap(i, j);
+				}
+			}
+			await swap(i + 1, high);
+			return i + 1;
+		}
+
+		async function gridHeapSort(instance, helpers) {
+			const n = instance.array.length;
+			for (let i = Math.floor(n / 2) - 1; i >= 0 && !instance.shouldStop; i--) {
+				await gridHeapify(instance, helpers, n, i);
+			}
+			for (let i = n - 1; i > 0 && !instance.shouldStop; i--) {
+				await helpers.swap(0, i);
+				await gridHeapify(instance, helpers, i, 0);
+			}
+		}
+
+		async function gridHeapify(instance, helpers, n, i) {
+			if (instance.shouldStop) return;
+			const arr = instance.array;
+			let largest = i;
+			const left = 2 * i + 1;
+			const right = 2 * i + 2;
+			if (left < n) {
+				instance.comparisons++;
+				instance.arrayAccesses += 2;
+				if (arr[left] > arr[largest]) largest = left;
+			}
+			if (right < n) {
+				instance.comparisons++;
+				instance.arrayAccesses += 2;
+				if (arr[right] > arr[largest]) largest = right;
+			}
+			if (largest !== i) {
+				await helpers.swap(i, largest);
+				await gridHeapify(instance, helpers, n, largest);
+			}
+			updateGridStats(instance);
+		}
+
+		async function gridRadixDigit(instance, helpers, exp) {
+			const { highlight, sleep, getDelay } = helpers;
+			const arr = instance.array;
+			const n = arr.length;
+			const output = new Array(n);
+			const count = new Array(10).fill(0);
+			for (let i = 0; i < n && !instance.shouldStop; i++) {
+				const digit = Math.floor(arr[i] / exp) % 10;
+				count[digit]++;
+				instance.arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+			for (let i = 1; i < 10; i++) {
+				count[i] += count[i - 1];
+			}
+			for (let i = n - 1; i >= 0 && !instance.shouldStop; i--) {
+				const digit = Math.floor(arr[i] / exp) % 10;
+				output[count[digit] - 1] = arr[i];
+				count[digit]--;
+				instance.arrayAccesses++;
+				await sleep(getDelay());
+			}
+			for (let i = 0; i < n && !instance.shouldStop; i++) {
+				arr[i] = output[i];
+				instance.arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function gridRadixMSD(instance, helpers, low, high, digit) {
+			if (low >= high || digit < 0 || instance.shouldStop) return;
+			const { highlight, sleep } = helpers;
+			const arr = instance.array;
+			const buckets = Array.from({ length: 10 }, () => []);
+			for (let i = low; i <= high && !instance.shouldStop; i++) {
+				const d = Math.floor(arr[i] / Math.pow(10, digit)) % 10;
+				buckets[d].push(arr[i]);
+				instance.arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+			let idx = low;
+			for (let b = 0; b < 10 && !instance.shouldStop; b++) {
+				for (let val of buckets[b]) {
+					arr[idx++] = val;
+					instance.arrayAccesses++;
+				}
+			}
+			await drawGrid(instance);
+			idx = low;
+			for (let b = 0; b < 10 && !instance.shouldStop; b++) {
+				if (buckets[b].length > 1) {
+					await gridRadixMSD(instance, helpers, idx, idx + buckets[b].length - 1, digit - 1);
+				}
+				idx += buckets[b].length;
+			}
+		}
+
+		async function gridFlip(instance, helpers, k) {
+			const { swap } = helpers;
+			let left = 0;
+			while (left < k && !instance.shouldStop) {
+				await swap(left, k);
+				left++;
+				k--;
+			}
+		}
+
+		async function gridStoogeSort(instance, helpers, l, h) {
+			if (instance.shouldStop) return;
+			if (l >= h) return;
+			const arr = instance.array;
+			instance.comparisons++;
+			instance.arrayAccesses += 2;
+			if (arr[l] > arr[h]) {
+				await helpers.swap(l, h);
+			}
+			if (h - l + 1 > 2) {
+				const t = Math.floor((h - l + 1) / 3);
+				await gridStoogeSort(instance, helpers, l, h - t);
+				await gridStoogeSort(instance, helpers, l + t, h);
+				await gridStoogeSort(instance, helpers, l, h - t);
+			}
+		}
+
+		async function gridSlowSort(instance, helpers, i, j) {
+			if (i >= j || instance.shouldStop) return;
+			const arr = instance.array;
+			const m = Math.floor((i + j) / 2);
+			await gridSlowSort(instance, helpers, i, m);
+			await gridSlowSort(instance, helpers, m + 1, j);
+			instance.comparisons++;
+			instance.arrayAccesses += 2;
+			if (arr[j] < arr[m]) {
+				await helpers.swap(j, m);
+			}
+			await gridSlowSort(instance, helpers, i, j - 1);
+		}
+
+		async function gridInsertionRange(instance, helpers, left, right) {
+			const { highlight, sleep, getDelay } = helpers;
+			const arr = instance.array;
+			for (let i = left + 1; i <= right && !instance.shouldStop; i++) {
+				const key = arr[i];
+				instance.arrayAccesses++;
+				let j = i - 1;
+				while (j >= left && !instance.shouldStop) {
+					instance.comparisons++;
+					instance.arrayAccesses++;
+					if (arr[j] <= key) break;
+					arr[j + 1] = arr[j];
+					instance.arrayAccesses++;
+					j--;
+				}
+				arr[j + 1] = key;
+				instance.arrayAccesses++;
+				await highlight([i], '#00ffff');
+			}
+		}
+
+		async function gridIntroSort(instance, helpers, begin, end, depthLimit) {
+			if (instance.shouldStop) return;
+			const size = end - begin + 1;
+			if (size < 16) {
+				await gridInsertionRange(instance, helpers, begin, end);
+				return;
+			}
+			if (depthLimit === 0) {
+				await gridHeapSortRange(instance, helpers, begin, end);
+				return;
+			}
+			const pivot = await gridPartition(instance, helpers, begin, end);
+			await gridIntroSort(instance, helpers, begin, pivot - 1, depthLimit - 1);
+			await gridIntroSort(instance, helpers, pivot + 1, end, depthLimit - 1);
+		}
+
+		async function gridHeapSortRange(instance, helpers, begin, end) {
+			const n = end - begin + 1;
+			for (let i = begin + Math.floor(n / 2) - 1; i >= begin && !instance.shouldStop; i--) {
+				await gridHeapifyRange(instance, helpers, begin, end, i);
+			}
+			for (let i = end; i > begin && !instance.shouldStop; i--) {
+				await helpers.swap(begin, i);
+				await gridHeapifyRange(instance, helpers, begin, i - 1, begin);
+			}
+		}
+
+		async function gridHeapifyRange(instance, helpers, begin, end, i) {
+			if (instance.shouldStop) return;
+			const arr = instance.array;
+			let largest = i;
+			const left = begin + 2 * (i - begin) + 1;
+			const right = begin + 2 * (i - begin) + 2;
+			if (left <= end) {
+				instance.comparisons++;
+				instance.arrayAccesses += 2;
+				if (arr[left] > arr[largest]) largest = left;
+			}
+			if (right <= end) {
+				instance.comparisons++;
+				instance.arrayAccesses += 2;
+				if (arr[right] > arr[largest]) largest = right;
+			}
+			if (largest !== i) {
+				await helpers.swap(i, largest);
+				await gridHeapifyRange(instance, helpers, begin, end, largest);
+			}
+			updateGridStats(instance);
+		}
+
+		async function gridBitonicSort(instance, helpers, low, cnt, dir) {
+			if (cnt <= 1 || instance.shouldStop) return;
+			const k = Math.floor(cnt / 2);
+			await gridBitonicSort(instance, helpers, low, k, 1);
+			await gridBitonicSort(instance, helpers, low + k, cnt - k, 0);
+			await gridBitonicMerge(instance, helpers, low, cnt, dir);
+		}
+
+		async function gridBitonicMerge(instance, helpers, low, cnt, dir) {
+			if (cnt <= 1 || instance.shouldStop) return;
+			const { compare, swap } = helpers;
+			const arr = instance.array;
+			const k = Math.floor(cnt / 2);
+			for (let i = low; i < low + k && !instance.shouldStop; i++) {
+				instance.comparisons++;
+				instance.arrayAccesses += 2;
+				const shouldSwap = dir === 1 ? arr[i] > arr[i + k] : arr[i] < arr[i + k];
+				if (shouldSwap) {
+					await swap(i, i + k);
+				}
+			}
+			await gridBitonicMerge(instance, helpers, low, k, dir);
+			await gridBitonicMerge(instance, helpers, low + k, cnt - k, dir);
+		}
+
+		function switchToGridMode() {
+			isGridMode = true;
+			document.querySelector('.sidebar').classList.add('hidden');
+			document.getElementById('singleView').style.display = 'none';
+			document.getElementById('gridView').style.display = 'grid';
+
+			const gridContainer = document.getElementById('gridView');
+			gridContainer.innerHTML = '';
+			gridInstances = [];
+
+			allAlgorithms.forEach(algoKey => {
+				const instance = createGridInstance(algoKey);
+				gridInstances.push(instance);
+				gridContainer.appendChild(instance.element);
+				drawGrid(instance);
+			});
+		}
+
+		function switchToSingleMode() {
+			isGridMode = false;
+			document.querySelector('.sidebar').classList.remove('hidden');
+			document.getElementById('singleView').style.display = 'flex';
+			document.getElementById('gridView').style.display = 'none';
+
+			// Stop all grid sorts
+			gridInstances.forEach(inst => {
+				inst.shouldStop = true;
+			});
+			gridInstances = [];
+
+			resizeCanvas();
+		}
+
+		// Event listeners
+		document.getElementById('algorithm').addEventListener('change', (e) => {
+			if (e.target.value === 'all') {
+				switchToGridMode();
+			} else {
+				if (isGridMode) {
+					switchToSingleMode();
+				}
+				updateAlgorithmInfo();
+			}
+		});
+
+		document.getElementById('arraySize').addEventListener('input', (e) => {
+			document.getElementById('arraySizeValue').textContent = e.target.value;
+		});
+
+		document.getElementById('speed').addEventListener('input', (e) => {
+			document.getElementById('speedValue').textContent = e.target.value;
+		});
+
+		document.getElementById('resetBtn').addEventListener('click', () => {
+			if (isGridMode) {
+				// Stop all grid sorts and regenerate arrays
+				gridInstances.forEach(inst => {
+					inst.shouldStop = true;
+				});
+				setTimeout(() => {
+					const size = parseInt(document.getElementById('arraySize').value);
+					gridInstances.forEach(inst => {
+						inst.array = Array.from({ length: size }, () => Math.floor(Math.random() * 100) + 1);
+						inst.comparisons = 0;
+						inst.swaps = 0;
+						inst.arrayAccesses = 0;
+						inst.sorting = false;
+						inst.shouldStop = false;
+						updateGridStats(inst);
+						drawGrid(inst);
+					});
+					document.getElementById('startBtn').disabled = false;
+					document.getElementById('startBtn').textContent = 'Start Sort';
+				}, 100);
+			} else {
+				shouldStop = true;
+				setTimeout(() => {
+					shouldStop = false;
+					sorting = false;
+					document.getElementById('startBtn').disabled = false;
+					document.getElementById('startBtn').textContent = 'Start Sort';
+					resetArray();
+				}, 100);
+			}
+		});
+
+		document.getElementById('startBtn').addEventListener('click', async () => {
+			if (isGridMode) {
+				// Grid mode handling
+				const anySorting = gridInstances.some(inst => inst.sorting);
+
+				if (anySorting) {
+					// Stop all
+					gridInstances.forEach(inst => {
+						inst.shouldStop = true;
+					});
+					document.getElementById('startBtn').textContent = 'Start Sort';
+					document.getElementById('startBtn').disabled = true;
+					setTimeout(() => {
+					gridInstances.forEach(inst => {
+						inst.stepMode = false;
+						inst.stepResolve = null;
+					});
+					document.getElementById('stepBtn').disabled = false;
+						document.getElementById('startBtn').disabled = false;
+					}, 200);
+				} else {
+					// Start all
+					document.getElementById('startBtn').textContent = 'Stop';
+					gridInstances.forEach(inst => {
+						runGridSort(inst);
+					});
+					document.getElementById('stepBtn').disabled = true;
+				}
+				return;
+			}
+
+			// Single mode handling
+			if (sorting) {
+				shouldStop = true;
+				document.getElementById('startBtn').textContent = 'Start Sort';
+				document.getElementById('startBtn').disabled = true;
+				setTimeout(() => {
+					sorting = false;
+					shouldStop = false;
+					document.getElementById('startBtn').disabled = false;
+					document.getElementById('stat-status').textContent = 'Stopped';
+					stepMode = false;
+					stepResolve = null;
+					document.getElementById('stepBtn').disabled = false;
+				}, 200);
+				return;
+			}
+
+			sorting = true;
+			stepMode = false;
+			shouldStop = false;
+			comparisons = 0;
+			swaps = 0;
+			arrayAccesses = 0;
+			startTime = Date.now();
+			document.getElementById('startBtn').textContent = 'Stop';
+			document.getElementById('stepBtn').disabled = true;
+			document.getElementById('stat-status').textContent = 'Sorting...';
+
+			const algo = document.getElementById('algorithm').value;
+
+			try {
+				switch (algo) {
+					case 'bubble': await bubbleSort(); break;
+					case 'cocktail': await cocktailSort(); break;
+					case 'selection': await selectionSort(); break;
+					case 'insertion': await insertionSort(); break;
+					case 'merge': await mergeSort(); break;
+					case 'quick': await quickSort(); break;
+					case 'heap': await heapSort(); break;
+					case 'shell': await shellSort(); break;
+					case 'counting': await countingSort(); break;
+					case 'radix': await radixSort(); break;
+					case 'radixMSD': await radixSortMSD(); break;
+					case 'bucket': await bucketSort(); break;
+					case 'comb': await combSort(); break;
+					case 'cycle': await cycleSort(); break;
+					case 'gnome': await gnomeSort(); break;
+					case 'pancake': await pancakeSort(); break;
+					case 'stooge': await stoogeSort(); break;
+					case 'bogo': await bogoSort(); break;
+					case 'tim': await timSort(); break;
+					case 'intro': await introSort(); break;
+					case 'smooth': await smoothSort(); break;
+					case 'bitonic': await bitonicSort(); break;
+					case 'oddEven': await oddEvenSort(); break;
+					case 'pigeonhole': await pigeonholeSort(); break;
+					case 'bozo': await bozoSort(); break;
+					case 'stalin': await stalinSort(); break;
+					case 'slowsort': await slowSort(); break;
+					case 'miracle': await miracleSort(); break;
+					case 'sleep': await sleepSort(); break;
+					case 'quantum': await quantumBogoSort(); break;
+					case 'pairwise': await pairwiseSort(); break;
+				}
+
+				if (!shouldStop) {
+					document.getElementById('stat-status').textContent = 'Complete!';
+					// Final flash animation
+					for (let i = 0; i < 3; i++) {
+						await highlight(Array.from({ length: array.length }, (_, i) => i), '#00ff00');
+						await sleep(200);
+						await draw();
+						await sleep(200);
+					}
+				}
+			} catch (error) {
+				console.error('Sorting error:', error);
+				document.getElementById('stat-status').textContent = 'Error';
+			}
+
+			sorting = false;
+			document.getElementById('stepBtn').disabled = false;
+			stepMode = false;
+			stepResolve = null;
+			document.getElementById('startBtn').textContent = 'Start Sort';
+		});
+
+
+	// Step button handler
+	document.getElementById('stepBtn').addEventListener('click', () => {
+		if (isGridMode) {
+			// Grid mode: advance all instances one step
+			let anyResolved = false;
+			gridInstances.forEach(inst => {
+				if (inst.stepResolve) {
+					const resolve = inst.stepResolve;
+					inst.stepResolve = null;
+					resolve();
+					anyResolved = true;
+				}
+			});
+			
+			if (anyResolved) {
+				// Keep step button enabled until all are done
+				const anyWaiting = gridInstances.some(inst => inst.stepResolve !== null);
+				if (!anyWaiting) {
+					document.getElementById('stepBtn').disabled = false;
+				}
+			} else if (gridInstances.every(inst => !inst.sorting)) {
+				// Start in step mode
+				gridInstances.forEach(inst => {
+					inst.stepMode = true;
+				});
+				document.getElementById('stepBtn').disabled = true;
+				document.getElementById('startBtn').click();
+			}
+		} else {
+			// Single mode
+			if (stepResolve) {
+				const resolve = stepResolve;
+				stepResolve = null;
+				document.getElementById('stepBtn').disabled = false;
+				resolve();
+			} else if (!sorting) {
+				// Start in step mode
+				stepMode = true;
+				document.getElementById('stepBtn').disabled = true;
+				document.getElementById('startBtn').click();
+			}
+		}
+	});
+
+		// Initialize
+		updateAlgorithmInfo();
+		resetArray();
+	</script>
+</body>
+</html>

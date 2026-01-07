@@ -1,0 +1,2826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathfinding Algorithm Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e0a;
+            color: #00ff41;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-bar {
+            background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
+            border-bottom: 3px solid #00ff41;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 255, 65, 0.4), inset 0 1px 0 rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 15px;
+            border: 2px solid #00ff41;
+            background: #001a00;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .back-link:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        .back-link::before {
+            content: "← ";
+        }
+
+        .title-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #00ff41;
+            text-shadow:
+                0 0 10px #00ff41,
+                0 0 20px #00ff41,
+                0 0 30px #00ff41,
+                0 2px 0 #003311;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .title-subtitle {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: #00ff4199;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            width: 280px;
+            overflow-y: auto;
+            border-right: 2px solid #00ff41;
+            box-shadow: 5px 0 30px rgba(0, 255, 65, 0.2);
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            margin-bottom: 20px;
+            background: #001a00;
+            border-radius: 4px;
+            border: 2px solid #00ff4140;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+            padding-bottom: 8px;
+        }
+
+        .sidebar p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 12px;
+        }
+
+        .sidebar code {
+            background: #000;
+            padding: 2px 6px;
+            border: 1px solid #00ff4140;
+            border-radius: 2px;
+            font-size: 10px;
+            color: #00ff41;
+        }
+
+        .sidebar ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .sidebar li {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #00ff41aa;
+            margin-bottom: 8px;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #canvas {
+            display: block;
+            background: #000;
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+            box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
+        }
+
+        .control-panel {
+            background: linear-gradient(180deg, #0f1e0f 0%, #071207 100%);
+            border-top: 2px solid #00ff41;
+            padding: 20px;
+            box-shadow: 0 -5px 30px rgba(0, 255, 65, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00ff41;
+            text-shadow: 0 0 5px #00ff41;
+            font-weight: bold;
+        }
+
+        .value-display {
+            color: #0f0;
+            font-size: 14px;
+            text-shadow: 0 0 8px #00ff41;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #001a00;
+            border: 1px solid #00ff41;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        button {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            background: #001a00;
+            color: #00ff41;
+        }
+
+        #runButton {
+            background: #003311;
+            font-size: 16px;
+            padding: 18px 30px;
+            border: 3px solid #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5), inset 0 0 10px rgba(0, 255, 65, 0.1);
+            animation: pulse 2s infinite;
+            width: 100%;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        #runButton:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 30px #00ff41, inset 0 0 20px rgba(0, 255, 65, 0.3);
+            animation: none;
+            transform: scale(1.02);
+        }
+
+        #runButton:active {
+            transform: scale(0.98);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 255, 65, 0.5), inset 0 0 10px rgba(0, 255, 65, 0.1);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 255, 65, 0.7), inset 0 0 15px rgba(0, 255, 65, 0.2);
+            }
+        }
+
+        select.algorithm-dropdown {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            outline: none;
+        }
+
+        select.algorithm-dropdown:hover {
+            background: #003311;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+        }
+
+        select.algorithm-dropdown option {
+            background: #001a00;
+            color: #00ff41;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #00ff4140;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #00ff4199;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            grid-column: span 2;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-button {
+            flex: 1;
+            padding: 8px;
+            opacity: 0.6;
+        }
+
+        .mode-button.active {
+            opacity: 1;
+            background: #003311;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            grid-column: 1 / -1;
+            padding: 15px;
+            border-top: 1px solid #00ff4140;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #00ff41;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 65, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        #canvas {
+            animation: flicker 0.15s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a href="index.html" class="back-link">Experiments</a>
+        <div class="title-text">PATHFINDING</div>
+        <div class="title-subtitle">ALGORITHM VISUALIZATION</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+
+            <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="nodesVisited">0</div>
+                <div class="stat-label">Nodes Visited</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="pathLength">0</div>
+                <div class="stat-label">Path Length</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="pathCost">0.0</div>
+                <div class="stat-label">Path Cost</div>
+            </div>
+        </div>
+
+        <div class="control-group" style="grid-column: 1 / -1;">
+            <label>Mode</label>
+            <div class="mode-selector">
+                <button class="mode-button active" onclick="setMode('wall')">Draw Walls</button>
+                <button class="mode-button" onclick="setMode('erase')">Erase</button>
+                <button class="mode-button" onclick="setMode('start')">Set Start</button>
+                <button class="mode-button" onclick="setMode('end')">Set End</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Algorithm</label>
+            <select id="algorithmSelector" class="algorithm-dropdown" onchange="onAlgorithmChange()">
+                <option value="all" selected>All (Compare Side-by-Side)</option>
+                <option value="dijkstra">Dijkstra's Algorithm</option>
+                <option value="astar">A* Search</option>
+                <option value="bfs">Breadth-First Search</option>
+                <option value="greedy">Greedy Best-First</option>
+                <option value="bidirectional">Bidirectional Search</option>
+                <option value="jps">Jump Point Search</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Grid Size: <span class="value-display" id="gridSizeValue">30</span></label>
+            <input type="range" id="gridSize" min="10" max="100" value="30" step="5">
+        </div>
+
+        <div class="control-group">
+            <label>Animation Speed: <span class="value-display" id="speedValue">50%</span></label>
+            <input type="range" id="animationSpeed" min="0" max="1" value="0.5" step="0.01">
+        </div>
+
+        <div class="control-group" style="grid-column: 1 / -1;">
+            <button onclick="toggleAlgorithm()" id="runButton">▶ Run Algorithm</button>
+        </div>
+
+        <div class="button-group">
+            <button onclick="clearPath()">Clear Path</button>
+            <button onclick="clearGrid()">Clear Grid</button>
+        </div>
+
+        <div class="button-group">
+            <button onclick="generateMaze()">Generate Maze</button>
+            <button onclick="generateRandomObstacles()">Random Obstacles</button>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00ff41;"></div>
+                <span>Start</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff0041;"></div>
+                <span>End</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #333;"></div>
+                <span>Wall</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #004411;"></div>
+                <span>Visited</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #006622;"></div>
+                <span>Frontier</span>
+            </div>
+            <div class="legend-item" id="frontierEndLegend" style="display: none;">
+                <div class="legend-color" style="background: #664400;"></div>
+                <span>Frontier (End)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffaa00;"></div>
+                <span>Path</span>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Grid state
+        let gridSize = 30;
+        let cellSize = 0;
+        let grid = [];
+        let startNode = null;
+        let endNode = null;
+        let startNodeRelative = { rowRatio: 0.5, colRatio: 0.25 }; // Store relative positions
+        let endNodeRelative = { rowRatio: 0.5, colRatio: 0.75 };
+        let currentMode = 'wall';
+        let isMouseDown = false;
+        let animationSpeed = 0.5;
+        let isRunning = false;
+        let currentAlgorithm = 'all';
+        let viewMode = 'all'; // 'single' or 'all'
+        let algorithmGrids = {}; // Stores separate grids for each algorithm in 'all' mode
+        const algorithmOrder = ['dijkstra', 'astar', 'bfs', 'greedy', 'bidirectional', 'jps'];
+        let hasInitialWall = false; // Track if initial wall has been created
+
+        // Node states
+        const EMPTY = 0;
+        const WALL = 1;
+        const START = 2;
+        const END = 3;
+        const VISITED = 4;
+        const FRONTIER = 5;
+        const PATH = 6;
+        const FRONTIER_END = 7;
+
+        // Algorithm metadata
+        const ALGORITHMS = {
+            dijkstra: {
+                name: "Dijkstra's Algorithm",
+                description: "Dijkstra's algorithm finds the shortest path between nodes in a graph. It's widely used in GPS navigation, network routing, and game AI.",
+                history: "Named after Dutch computer scientist Edsger W. Dijkstra, who published it in 1956.",
+                howItWorks: [
+                    "<strong>Initialize:</strong> Set start node distance to 0, all others to infinity",
+                    "<strong>Visit:</strong> Pick the unvisited node with smallest distance",
+                    "<strong>Update:</strong> Check all neighbors and update their distances if we found a shorter path",
+                    "<strong>Repeat:</strong> Continue until we reach the end or run out of nodes"
+                ],
+                visualization: "Green cells mark the start point, red cells mark the destination. Dark green shows visited nodes. Medium green shows the frontier - nodes being considered. Orange highlights the final shortest path once found.",
+                complexity: "Using a priority queue: <code>O((V + E) log V)</code>. This implementation uses a simple sorted array, which is <code>O(V²)</code> but easier to visualize.",
+                tryItOut: "Draw walls by clicking and dragging. Use the maze generator for interesting patterns. Adjust the animation speed to see the algorithm in action, or set it to max for instant results.",
+                showFrontierEnd: false
+            },
+            astar: {
+                name: "A* Search",
+                description: "A* (pronounced 'A-star') combines Dijkstra's distance tracking with a heuristic estimate of remaining distance. This makes it faster while still guaranteeing the shortest path.",
+                history: "Developed in 1968 by Peter Hart, Nils Nilsson, and Bertram Raphael. It's one of the most widely used pathfinding algorithms in video games and robotics.",
+                howItWorks: [
+                    "<strong>Initialize:</strong> Calculate f(n) = g(n) + h(n) for start node",
+                    "<strong>g(n):</strong> Actual distance from start (like Dijkstra)",
+                    "<strong>h(n):</strong> Heuristic estimate to goal (Manhattan distance)",
+                    "<strong>Visit:</strong> Always expand the node with lowest f(n)",
+                    "<strong>Optimal:</strong> Finds shortest path if heuristic never overestimates"
+                ],
+                visualization: "A* explores fewer nodes than Dijkstra by prioritizing nodes that are both close to start AND close to goal. Watch how it forms a more directed search pattern towards the destination.",
+                complexity: "<code>O((V + E) log V)</code> with priority queue. Performance depends heavily on heuristic quality. Manhattan distance is perfect for grid-based movement.",
+                tryItOut: "Compare with Dijkstra! Run both algorithms on the same maze. A* should visit significantly fewer nodes while finding the same optimal path.",
+                showFrontierEnd: false
+            },
+            bfs: {
+                name: "Breadth-First Search",
+                description: "BFS explores the graph layer by layer, visiting all neighbors before moving to the next layer. Simple and guaranteed to find the shortest path in unweighted graphs.",
+                history: "One of the earliest graph search algorithms, BFS dates back to the 1950s. It's a fundamental algorithm in computer science.",
+                howItWorks: [
+                    "<strong>Initialize:</strong> Add start node to queue",
+                    "<strong>Process:</strong> Remove first node from queue (FIFO)",
+                    "<strong>Explore:</strong> Add all unvisited neighbors to back of queue",
+                    "<strong>Mark:</strong> Mark current node as visited",
+                    "<strong>Repeat:</strong> Continue until destination found or queue empty"
+                ],
+                visualization: "BFS creates a perfect circular wavefront emanating from the start. Each 'wave' represents nodes at the same distance from start. This is the simplest shortest-path algorithm.",
+                complexity: "<code>O(V + E)</code> - Linear in vertices and edges. More efficient than Dijkstra when all edges have equal weight.",
+                tryItOut: "Perfect for understanding pathfinding basics. Watch the algorithm expand uniformly in all directions like a ripple in water.",
+                showFrontierEnd: false
+            },
+            greedy: {
+                name: "Greedy Best-First Search",
+                description: "Greedy Best-First only uses the heuristic, ignoring path cost. It rushes straight towards the goal, making it fast but not always optimal.",
+                history: "A simplified version of A*, Greedy Best-First sacrifices optimality for speed. Useful when 'good enough' paths are acceptable.",
+                howItWorks: [
+                    "<strong>Initialize:</strong> Calculate heuristic h(n) for start node",
+                    "<strong>Greedy Choice:</strong> Always expand node with lowest h(n)",
+                    "<strong>Ignore Cost:</strong> Don't track actual distance traveled",
+                    "<strong>Rush Forward:</strong> Head straight towards goal",
+                    "<strong>Trade-off:</strong> Fast but may miss shorter paths"
+                ],
+                visualization: "Watch Greedy Best-First make a beeline for the goal! It explores very few nodes but may take a longer path than necessary. Great for demonstrating the importance of considering path cost.",
+                complexity: "<code>O((V + E) log V)</code> in worst case, but often much faster in practice. Can be as bad as <code>O(V²)</code> with poor heuristic.",
+                tryItOut: "Try a U-shaped obstacle! Greedy will get 'stuck' exploring the dead end before backtracking, while A* avoids this trap.",
+                showFrontierEnd: false
+            },
+            bidirectional: {
+                name: "Bidirectional Search",
+                description: "Bidirectional search runs two simultaneous BFS searches - one from start, one from goal. When they meet in the middle, we've found a path!",
+                history: "First described in the late 1960s. Bidirectional search can dramatically reduce search space compared to unidirectional search.",
+                howItWorks: [
+                    "<strong>Initialize:</strong> Start BFS from both start and end nodes",
+                    "<strong>Alternate:</strong> Expand one step from start, then one from end",
+                    "<strong>Check:</strong> After each expansion, check if frontiers intersect",
+                    "<strong>Meet:</strong> Stop when a node is visited from both sides",
+                    "<strong>Reconstruct:</strong> Build path from both meeting directions"
+                ],
+                visualization: "Watch two wavefronts expand! Green frontier from start, orange from end. When they meet, we have our path. Notice how much less area is explored compared to single-direction search.",
+                complexity: "<code>O(b^(d/2))</code> where b is branching factor and d is depth. This is a huge improvement over single-direction <code>O(b^d)</code>!",
+                tryItOut: "Perfect for long paths! The speedup is most dramatic when start and end are far apart. Compare nodes visited with regular BFS.",
+                showFrontierEnd: true
+            },
+            jps: {
+                name: "Jump Point Search",
+                description: "Jump Point Search is an optimization of A* for uniform-cost grids. It 'jumps' over intermediate nodes, visiting only critical decision points.",
+                history: "Developed by Daniel Harabor and Alban Grastien in 2011. JPS can be 10-40x faster than A* on grid maps while finding identical paths.",
+                howItWorks: [
+                    "<strong>Jump Points:</strong> Identify critical nodes where paths can diverge",
+                    "<strong>Straight Lines:</strong> Skip all nodes in straight corridors",
+                    "<strong>Forced Neighbors:</strong> Stop at corners where we must change direction",
+                    "<strong>Pruning:</strong> Eliminate redundant paths that can't be optimal",
+                    "<strong>A* Core:</strong> Use A* with only jump points in the search"
+                ],
+                visualization: "JPS visits far fewer nodes! It leaps across open spaces and only pauses at corners. The path is identical to A* but the search is dramatically faster.",
+                complexity: "<code>O(log V)</code> per jump in open areas. Practical speedup is 10-40x over A* with same path quality.",
+                tryItOut: "Run JPS on large open grids! Watch it skip vast areas that A* would tediously explore. Best speedup is in maps with long corridors.",
+                showFrontierEnd: false
+            }
+        };
+
+        function onAlgorithmChange() {
+            const selector = document.getElementById('algorithmSelector');
+            currentAlgorithm = selector.value;
+
+            if (currentAlgorithm === 'all') {
+                viewMode = 'all';
+                updateSidebarForAllMode();
+                initGrid(); // Reinitialize grids for all mode
+            } else {
+                viewMode = 'single';
+                updateSidebarContent(currentAlgorithm);
+                initGrid(); // Reinitialize for single mode
+            }
+            clearPath();
+        }
+
+        function updateSidebarContent(algorithmKey) {
+            const algo = ALGORITHMS[algorithmKey];
+            const sidebar = document.getElementById('sidebarContent');
+
+            // Show/hide frontier end legend
+            const frontierEndLegend = document.getElementById('frontierEndLegend');
+            if (algo.showFrontierEnd) {
+                frontierEndLegend.style.display = 'flex';
+            } else {
+                frontierEndLegend.style.display = 'none';
+            }
+
+            sidebar.innerHTML = `
+                <div class="sidebar-section">
+                    <h2>What is ${algo.name}?</h2>
+                    <p>${algo.description}</p>
+                    <p>${algo.history}</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>How It Works</h2>
+                    <p>The algorithm ${algorithmKey === 'bidirectional' ? 'searches from both ends' : 'explores nodes'} ${algorithmKey === 'dijkstra' ? 'in order of distance' : algorithmKey === 'bfs' ? 'layer by layer' : 'strategically'}:</p>
+                    <ul>
+                        ${algo.howItWorks.map(step => `<li>${step}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Visualization Guide</h2>
+                    <p>${algo.visualization}</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Time Complexity</h2>
+                    <p>${algo.complexity}</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Try It Out</h2>
+                    <p>${algo.tryItOut}</p>
+                </div>
+            `;
+        }
+
+        function updateSidebarForAllMode() {
+            const sidebar = document.getElementById('sidebarContent');
+            const frontierEndLegend = document.getElementById('frontierEndLegend');
+            frontierEndLegend.style.display = 'flex';
+
+            sidebar.innerHTML = `
+                <div class="sidebar-section">
+                    <h2>Compare All Algorithms</h2>
+                    <p>Watch all 6 pathfinding algorithms solve the same maze simultaneously! This side-by-side comparison lets you see the differences in how each algorithm explores the grid.</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Algorithm Grid Layout</h2>
+                    <ul>
+                        <li><strong>Dijkstra:</strong> Top-left - Explores by distance, guarantees optimal</li>
+                        <li><strong>A*:</strong> Top-middle - Uses heuristic, faster than Dijkstra</li>
+                        <li><strong>BFS:</strong> Top-right - Layer-by-layer expansion</li>
+                        <li><strong>Greedy:</strong> Bottom-left - Rushes to goal, may be suboptimal</li>
+                        <li><strong>Bidirectional:</strong> Bottom-middle - Searches from both ends</li>
+                        <li><strong>JPS:</strong> Bottom-right - Jumps over redundant nodes</li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>What to Watch For</h2>
+                    <p><strong>Nodes Visited:</strong> JPS and A* typically visit the fewest nodes.</p>
+                    <p><strong>Exploration Pattern:</strong> BFS creates perfect circles, Greedy beelines to goal, Bidirectional meets in middle.</p>
+                    <p><strong>Path Quality:</strong> Dijkstra, A*, BFS, and JPS find optimal paths. Greedy may not.</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Shared Grid</h2>
+                    <p>Drawing walls on any grid updates ALL grids. All algorithms solve the same maze with the same start and end points.</p>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Try It Out</h2>
+                    <p>Generate a maze and run all algorithms! Watch the speed differences. Try U-shaped obstacles to see Greedy struggle while A* excels.</p>
+                </div>
+            `;
+        }
+
+        function resizeCanvas() {
+            const titleBar = document.querySelector('.title-bar');
+            const controlPanel = document.querySelector('.control-panel');
+            const sidebar = document.querySelector('.sidebar');
+            canvas.width = window.innerWidth - sidebar.offsetWidth;
+            canvas.height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+            initGrid();
+            draw();
+        }
+
+        function initGrid() {
+            if (viewMode === 'single') {
+                cellSize = Math.min(
+                    canvas.width / gridSize,
+                    canvas.height / gridSize
+                );
+
+                const cols = Math.floor(canvas.width / cellSize);
+                const rows = Math.floor(canvas.height / cellSize);
+
+                grid = createEmptyGrid(rows, cols);
+
+                // Calculate start and end positions from relative ratios
+                startNode = {
+                    row: Math.floor(rows * startNodeRelative.rowRatio),
+                    col: Math.floor(cols * startNodeRelative.colRatio)
+                };
+                endNode = {
+                    row: Math.floor(rows * endNodeRelative.rowRatio),
+                    col: Math.floor(cols * endNodeRelative.colRatio)
+                };
+
+                // Ensure they're within bounds
+                startNode.row = Math.min(Math.max(0, startNode.row), rows - 1);
+                startNode.col = Math.min(Math.max(0, startNode.col), cols - 1);
+                endNode.row = Math.min(Math.max(0, endNode.row), rows - 1);
+                endNode.col = Math.min(Math.max(0, endNode.col), cols - 1);
+
+                grid[startNode.row][startNode.col].state = START;
+                grid[endNode.row][endNode.col].state = END;
+
+                // Create default wall on first load
+                if (!hasInitialWall) {
+                    createDefaultWall(rows, cols);
+                    hasInitialWall = true;
+                }
+            } else {
+                // In 'all' mode, divide canvas into 3x2 grid (3 columns, 2 rows)
+                const subCanvasWidth = canvas.width / 3;
+                const subCanvasHeight = canvas.height / 2;
+
+                cellSize = Math.min(
+                    subCanvasWidth / gridSize,
+                    subCanvasHeight / gridSize
+                );
+
+                const cols = Math.floor(subCanvasWidth / cellSize);
+                const rows = Math.floor(subCanvasHeight / cellSize);
+
+                // Create shared base grid for walls/start/end
+                grid = createEmptyGrid(rows, cols);
+
+                // Initialize separate grids for each algorithm
+                algorithmOrder.forEach(alg => {
+                    algorithmGrids[alg] = createEmptyGrid(rows, cols);
+                });
+
+                // Calculate start and end positions from relative ratios
+                startNode = {
+                    row: Math.floor(rows * startNodeRelative.rowRatio),
+                    col: Math.floor(cols * startNodeRelative.colRatio)
+                };
+                endNode = {
+                    row: Math.floor(rows * endNodeRelative.rowRatio),
+                    col: Math.floor(cols * endNodeRelative.colRatio)
+                };
+
+                // Ensure they're within bounds
+                startNode.row = Math.min(Math.max(0, startNode.row), rows - 1);
+                startNode.col = Math.min(Math.max(0, startNode.col), cols - 1);
+                endNode.row = Math.min(Math.max(0, endNode.row), rows - 1);
+                endNode.col = Math.min(Math.max(0, endNode.col), cols - 1);
+
+                // Set start and end on all grids
+                grid[startNode.row][startNode.col].state = START;
+                grid[endNode.row][endNode.col].state = END;
+                algorithmOrder.forEach(alg => {
+                    algorithmGrids[alg][startNode.row][startNode.col].state = START;
+                    algorithmGrids[alg][endNode.row][endNode.col].state = END;
+                });
+
+                // Create default wall on first load
+                if (!hasInitialWall) {
+                    createDefaultWall(rows, cols);
+                    hasInitialWall = true;
+                }
+            }
+        }
+
+        function createEmptyGrid(rows, cols) {
+            return Array(rows).fill(null).map(() =>
+                Array(cols).fill(null).map(() => ({
+                    state: EMPTY,
+                    distance: Infinity,
+                    previous: null,
+                    visited: false,
+                    // New properties for advanced algorithms
+                    heuristic: 0,
+                    fScore: Infinity,
+                    visitedFromStart: false,
+                    visitedFromEnd: false,
+                    previousFromEnd: null,
+                    distanceFromEnd: Infinity
+                }))
+            );
+        }
+
+        function createDefaultWall(rows, cols) {
+            // Create a vertical brick wall 5 cells wide, 50% height, centered
+            const wallWidth = 5;
+            const centerCol = Math.floor(cols / 2);
+            const wallStartCol = Math.floor(centerCol - wallWidth / 2);
+            const wallEndCol = wallStartCol + wallWidth;
+
+            const wallHeight = Math.floor(rows * 0.5);
+            const wallStartRow = Math.floor(rows * 0.25);
+            const wallEndRow = wallStartRow + wallHeight;
+
+            // Place walls in the base grid
+            for (let row = wallStartRow; row < wallEndRow; row++) {
+                for (let col = wallStartCol; col < wallEndCol; col++) {
+                    if (col >= 0 && col < cols && row >= 0 && row < rows) {
+                        const node = grid[row][col];
+                        if (node.state !== START && node.state !== END) {
+                            node.state = WALL;
+                        }
+                    }
+                }
+            }
+
+            // If in 'all' mode, sync walls to all algorithm grids
+            if (viewMode === 'all') {
+                for (let row = wallStartRow; row < wallEndRow; row++) {
+                    for (let col = wallStartCol; col < wallEndCol; col++) {
+                        if (col >= 0 && col < cols && row >= 0 && row < rows) {
+                            algorithmOrder.forEach(alg => {
+                                const node = algorithmGrids[alg][row][col];
+                                if (node.state !== START && node.state !== END) {
+                                    node.state = WALL;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        function getNodeColor(state) {
+            switch(state) {
+                case WALL: return '#333';
+                case START: return '#00ff41';
+                case END: return '#ff0041';
+                case VISITED: return '#004411';
+                case FRONTIER: return '#006622';
+                case FRONTIER_END: return '#664400';
+                case PATH: return '#ffaa00';
+                default: return '#0a0e0a';
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (viewMode === 'single') {
+                drawSingleGrid(grid, 0, 0);
+            } else {
+                drawAllGrids();
+            }
+        }
+
+        function drawSingleGrid(gridToDraw, offsetX, offsetY) {
+            const rows = gridToDraw.length;
+            const cols = gridToDraw[0].length;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const node = gridToDraw[row][col];
+                    const x = offsetX + col * cellSize;
+                    const y = offsetY + row * cellSize;
+
+                    ctx.fillStyle = getNodeColor(node.state);
+                    ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+
+                    // Add glow effect for start and end
+                    if (node.state === START || node.state === END) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = getNodeColor(node.state);
+                        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+        }
+
+        function drawAllGrids() {
+            const subCanvasWidth = canvas.width / 3;
+            const subCanvasHeight = canvas.height / 2;
+
+            // Draw grid lines separating the sub-canvases
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 2;
+
+            // Vertical lines
+            ctx.beginPath();
+            ctx.moveTo(subCanvasWidth, 0);
+            ctx.lineTo(subCanvasWidth, canvas.height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(subCanvasWidth * 2, 0);
+            ctx.lineTo(subCanvasWidth * 2, canvas.height);
+            ctx.stroke();
+
+            // Horizontal line
+            ctx.beginPath();
+            ctx.moveTo(0, subCanvasHeight);
+            ctx.lineTo(canvas.width, subCanvasHeight);
+            ctx.stroke();
+
+            // Draw each algorithm's grid
+            const positions = [
+                { row: 0, col: 0 }, // dijkstra - top left
+                { row: 0, col: 1 }, // astar - top middle
+                { row: 0, col: 2 }, // bfs - top right
+                { row: 1, col: 0 }, // greedy - bottom left
+                { row: 1, col: 1 }, // bidirectional - bottom middle
+                { row: 1, col: 2 }  // jps - bottom right
+            ];
+
+            algorithmOrder.forEach((alg, index) => {
+                const pos = positions[index];
+                const offsetX = pos.col * subCanvasWidth;
+                const offsetY = pos.row * subCanvasHeight;
+
+                drawSingleGrid(algorithmGrids[alg], offsetX, offsetY);
+
+                // Draw algorithm label
+                ctx.fillStyle = '#00ff41';
+                ctx.font = 'bold 16px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#00ff41';
+                ctx.fillText(ALGORITHMS[alg].name, offsetX + subCanvasWidth / 2, offsetY + 20);
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function getGridCoords(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            if (viewMode === 'single') {
+                const col = Math.floor(x / cellSize);
+                const row = Math.floor(y / cellSize);
+
+                if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
+                    return { row, col };
+                }
+                return null;
+            } else {
+                // In 'all' mode, determine which sub-canvas was clicked
+                const subCanvasWidth = canvas.width / 3;
+                const subCanvasHeight = canvas.height / 2;
+
+                const subCol = Math.floor(x / subCanvasWidth);
+                const subRow = Math.floor(y / subCanvasHeight);
+
+                // Calculate local coordinates within the sub-canvas
+                const localX = x - (subCol * subCanvasWidth);
+                const localY = y - (subRow * subCanvasHeight);
+
+                const col = Math.floor(localX / cellSize);
+                const row = Math.floor(localY / cellSize);
+
+                // Use the first algorithm's grid for size checking
+                const refGrid = algorithmGrids[algorithmOrder[0]];
+                if (row >= 0 && row < refGrid.length && col >= 0 && col < refGrid[0].length) {
+                    return { row, col };
+                }
+                return null;
+            }
+        }
+
+        function handleCellClick(row, col) {
+            if (isRunning) return;
+
+            if (viewMode === 'single') {
+                const node = grid[row][col];
+
+                switch(currentMode) {
+                    case 'wall':
+                        if (node.state !== START && node.state !== END) {
+                            node.state = WALL;
+                        }
+                        break;
+                    case 'erase':
+                        if (node.state !== START && node.state !== END) {
+                            node.state = EMPTY;
+                        }
+                        break;
+                    case 'start':
+                        if (startNode) {
+                            grid[startNode.row][startNode.col].state = EMPTY;
+                        }
+                        startNode = { row, col };
+                        node.state = START;
+                        // Update relative position
+                        startNodeRelative.rowRatio = row / grid.length;
+                        startNodeRelative.colRatio = col / grid[0].length;
+                        break;
+                    case 'end':
+                        if (endNode) {
+                            grid[endNode.row][endNode.col].state = EMPTY;
+                        }
+                        endNode = { row, col };
+                        node.state = END;
+                        // Update relative position
+                        endNodeRelative.rowRatio = row / grid.length;
+                        endNodeRelative.colRatio = col / grid[0].length;
+                        break;
+                }
+            } else {
+                // In 'all' mode, update all grids
+                const baseNode = grid[row][col];
+
+                switch(currentMode) {
+                    case 'wall':
+                        if (baseNode.state !== START && baseNode.state !== END) {
+                            baseNode.state = WALL;
+                            algorithmOrder.forEach(alg => {
+                                const node = algorithmGrids[alg][row][col];
+                                if (node.state !== START && node.state !== END) {
+                                    node.state = WALL;
+                                }
+                            });
+                        }
+                        break;
+                    case 'erase':
+                        if (baseNode.state !== START && baseNode.state !== END) {
+                            baseNode.state = EMPTY;
+                            algorithmOrder.forEach(alg => {
+                                const node = algorithmGrids[alg][row][col];
+                                if (node.state !== START && node.state !== END) {
+                                    node.state = EMPTY;
+                                }
+                            });
+                        }
+                        break;
+                    case 'start':
+                        if (startNode) {
+                            grid[startNode.row][startNode.col].state = EMPTY;
+                            algorithmOrder.forEach(alg => {
+                                algorithmGrids[alg][startNode.row][startNode.col].state = EMPTY;
+                            });
+                        }
+                        startNode = { row, col };
+                        baseNode.state = START;
+                        algorithmOrder.forEach(alg => {
+                            algorithmGrids[alg][row][col].state = START;
+                        });
+                        // Update relative position
+                        startNodeRelative.rowRatio = row / grid.length;
+                        startNodeRelative.colRatio = col / grid[0].length;
+                        break;
+                    case 'end':
+                        if (endNode) {
+                            grid[endNode.row][endNode.col].state = EMPTY;
+                            algorithmOrder.forEach(alg => {
+                                algorithmGrids[alg][endNode.row][endNode.col].state = EMPTY;
+                            });
+                        }
+                        endNode = { row, col };
+                        baseNode.state = END;
+                        algorithmOrder.forEach(alg => {
+                            algorithmGrids[alg][row][col].state = END;
+                        });
+                        // Update relative position
+                        endNodeRelative.rowRatio = row / grid.length;
+                        endNodeRelative.colRatio = col / grid[0].length;
+                        break;
+                }
+            }
+            draw();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            const coords = getGridCoords(e.clientX, e.clientY);
+            if (coords) handleCellClick(coords.row, coords.col);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isMouseDown && (currentMode === 'wall' || currentMode === 'erase')) {
+                const coords = getGridCoords(e.clientX, e.clientY);
+                if (coords) handleCellClick(coords.row, coords.col);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+        });
+
+        document.getElementById('gridSize').addEventListener('input', (e) => {
+            gridSize = parseInt(e.target.value);
+            document.getElementById('gridSizeValue').textContent = gridSize;
+            initGrid();
+            draw();
+        });
+
+        document.getElementById('animationSpeed').addEventListener('input', (e) => {
+            animationSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = Math.round(animationSpeed * 100) + '%';
+        });
+
+        function clearPath() {
+            function clearGridPath(gridToClear) {
+                for (let row = 0; row < gridToClear.length; row++) {
+                    for (let col = 0; col < gridToClear[0].length; col++) {
+                        const node = gridToClear[row][col];
+                        if (node.state === VISITED || node.state === FRONTIER ||
+                            node.state === FRONTIER_END || node.state === PATH) {
+                            node.state = EMPTY;
+                        }
+                        // Reset all tracking properties
+                        node.distance = Infinity;
+                        node.previous = null;
+                        node.visited = false;
+                        node.heuristic = 0;
+                        node.fScore = Infinity;
+                        node.visitedFromStart = false;
+                        node.visitedFromEnd = false;
+                        node.previousFromEnd = null;
+                        node.distanceFromEnd = Infinity;
+                    }
+                }
+            }
+
+            clearGridPath(grid);
+
+            if (viewMode === 'all') {
+                algorithmOrder.forEach(alg => {
+                    clearGridPath(algorithmGrids[alg]);
+                });
+            }
+
+            document.getElementById('nodesVisited').textContent = '0';
+            document.getElementById('pathLength').textContent = '0';
+            document.getElementById('pathCost').textContent = '0.0';
+            draw();
+        }
+
+        function clearGrid() {
+            function clearSingleGrid(gridToClear) {
+                for (let row = 0; row < gridToClear.length; row++) {
+                    for (let col = 0; col < gridToClear[0].length; col++) {
+                        const node = gridToClear[row][col];
+                        if (node.state !== START && node.state !== END) {
+                            node.state = EMPTY;
+                        }
+                        node.distance = Infinity;
+                        node.previous = null;
+                        node.visited = false;
+                        node.heuristic = 0;
+                        node.fScore = Infinity;
+                        node.visitedFromStart = false;
+                        node.visitedFromEnd = false;
+                        node.previousFromEnd = null;
+                        node.distanceFromEnd = Infinity;
+                    }
+                }
+            }
+
+            clearSingleGrid(grid);
+
+            if (viewMode === 'all') {
+                algorithmOrder.forEach(alg => {
+                    clearSingleGrid(algorithmGrids[alg]);
+                });
+            }
+
+            document.getElementById('nodesVisited').textContent = '0';
+            document.getElementById('pathLength').textContent = '0';
+            document.getElementById('pathCost').textContent = '0.0';
+            draw();
+        }
+
+        function getNeighbors(row, col) {
+            const neighbors = [];
+            const directions = [
+                [-1, 0], [1, 0], [0, -1], [0, 1] // 4-directional
+            ];
+
+            for (const [dr, dc] of directions) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                if (newRow >= 0 && newRow < grid.length &&
+                    newCol >= 0 && newCol < grid[0].length) {
+                    neighbors.push({ row: newRow, col: newCol });
+                }
+            }
+            return neighbors;
+        }
+
+        function manhattanDistance(from, to) {
+            return Math.abs(from.row - to.row) + Math.abs(from.col - to.col);
+        }
+
+        function stopAlgorithm() {
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        function toggleAlgorithm() {
+            if (isRunning) {
+                stopAlgorithm();
+            } else {
+                runAlgorithm();
+            }
+        }
+
+        async function runAlgorithm() {
+            if (!startNode || !endNode) {
+                alert('Please set both start and end nodes!');
+                return;
+            }
+
+            const selector = document.getElementById('algorithmSelector');
+            currentAlgorithm = selector.value;
+
+            if (currentAlgorithm === 'all') {
+                await runAllAlgorithms();
+            } else {
+                switch(currentAlgorithm) {
+                    case 'dijkstra':
+                        await runDijkstra();
+                        break;
+                    case 'astar':
+                        await runAStar();
+                        break;
+                    case 'bfs':
+                        await runBFS();
+                        break;
+                    case 'greedy':
+                        await runGreedy();
+                        break;
+                    case 'bidirectional':
+                        await runBidirectional();
+                        break;
+                    case 'jps':
+                        await runJPS();
+                        break;
+                }
+            }
+        }
+
+        async function runAllAlgorithms() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            // Run all 6 algorithms concurrently, each on its own grid
+            const algorithmPromises = [
+                runDijkstraOnGrid(algorithmGrids['dijkstra']),
+                runAStarOnGrid(algorithmGrids['astar']),
+                runBFSOnGrid(algorithmGrids['bfs']),
+                runGreedyOnGrid(algorithmGrids['greedy']),
+                runBidirectionalOnGrid(algorithmGrids['bidirectional']),
+                runJPSOnGrid(algorithmGrids['jps'])
+            ];
+
+            await Promise.all(algorithmPromises);
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        // Helper functions to run algorithms on specific grids
+        async function runDijkstraOnGrid(gridToUse) {
+            const rows = gridToUse.length;
+            const cols = gridToUse[0].length;
+
+            gridToUse[startNode.row][startNode.col].distance = 0;
+
+            const unvisited = [];
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (gridToUse[row][col].state !== WALL) {
+                        unvisited.push({ row, col });
+                    }
+                }
+            }
+
+            let iterationCount = 0;
+
+            while (unvisited.length > 0 && isRunning) {
+                unvisited.sort((a, b) =>
+                    gridToUse[a.row][a.col].distance - gridToUse[b.row][b.col].distance
+                );
+
+                const current = unvisited.shift();
+                const currentNode = gridToUse[current.row][current.col];
+
+                if (currentNode.distance === Infinity) break;
+                if (current.row === endNode.row && current.col === endNode.col) break;
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    const alt = currentNode.distance + 1;
+                    if (alt < neighborNode.distance) {
+                        neighborNode.distance = alt;
+                        neighborNode.previous = current;
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning) return;
+            await reconstructPathOnGrid(gridToUse);
+        }
+
+        async function runAStarOnGrid(gridToUse) {
+            gridToUse[startNode.row][startNode.col].distance = 0;
+            gridToUse[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+            gridToUse[startNode.row][startNode.col].fScore = gridToUse[startNode.row][startNode.col].heuristic;
+
+            const openSet = [startNode];
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    gridToUse[a.row][a.col].fScore - gridToUse[b.row][b.col].fScore
+                );
+
+                const current = openSet.shift();
+                const currentNode = gridToUse[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) break;
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    const tentativeG = currentNode.distance + 1;
+                    if (tentativeG < neighborNode.distance) {
+                        neighborNode.previous = current;
+                        neighborNode.distance = tentativeG;
+                        neighborNode.heuristic = manhattanDistance(neighbor, endNode);
+                        neighborNode.fScore = tentativeG + neighborNode.heuristic;
+
+                        if (!openSet.find(n => n.row === neighbor.row && n.col === neighbor.col)) {
+                            openSet.push(neighbor);
+                        }
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning) return;
+            await reconstructPathOnGrid(gridToUse);
+        }
+
+        async function runBFSOnGrid(gridToUse) {
+            const queue = [startNode];
+            gridToUse[startNode.row][startNode.col].visited = true;
+            let iterationCount = 0;
+
+            while (queue.length > 0 && isRunning) {
+                const current = queue.shift();
+                const currentNode = gridToUse[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) break;
+
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    neighborNode.visited = true;
+                    neighborNode.previous = current;
+                    neighborNode.distance = currentNode.distance + 1;
+                    queue.push(neighbor);
+
+                    if (neighborNode.state !== START && neighborNode.state !== END) {
+                        neighborNode.state = FRONTIER;
+                    }
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning) return;
+            await reconstructPathOnGrid(gridToUse);
+        }
+
+        async function runGreedyOnGrid(gridToUse) {
+            gridToUse[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+
+            const openSet = [startNode];
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    gridToUse[a.row][a.col].heuristic - gridToUse[b.row][b.col].heuristic
+                );
+
+                const current = openSet.shift();
+                const currentNode = gridToUse[current.row][current.col];
+
+                if (currentNode.visited) continue;
+                if (current.row === endNode.row && current.col === endNode.col) break;
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    if (!neighborNode.previous) {
+                        neighborNode.previous = current;
+                        neighborNode.heuristic = manhattanDistance(neighbor, endNode);
+                        neighborNode.distance = currentNode.distance + 1;
+                        openSet.push(neighbor);
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning) return;
+            await reconstructPathOnGrid(gridToUse);
+        }
+
+        async function runBidirectionalOnGrid(gridToUse) {
+            const queueStart = [startNode];
+            const queueEnd = [endNode];
+
+            gridToUse[startNode.row][startNode.col].visitedFromStart = true;
+            gridToUse[endNode.row][endNode.col].visitedFromEnd = true;
+            gridToUse[startNode.row][startNode.col].distance = 0;
+            gridToUse[endNode.row][endNode.col].distanceFromEnd = 0;
+
+            let meetingPoint = null;
+            let iterationCount = 0;
+
+            while ((queueStart.length > 0 || queueEnd.length > 0) && isRunning && !meetingPoint) {
+                if (queueStart.length > 0) {
+                    const current = queueStart.shift();
+                    const currentNode = gridToUse[current.row][current.col];
+
+                    if (currentNode.state !== START && currentNode.state !== END) {
+                        currentNode.state = VISITED;
+                    }
+
+                    const neighbors = getNeighbors(current.row, current.col);
+                    for (const neighbor of neighbors) {
+                        const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                        if (neighborNode.state === WALL || neighborNode.visitedFromStart) continue;
+
+                        neighborNode.visitedFromStart = true;
+                        neighborNode.previous = current;
+                        neighborNode.distance = currentNode.distance + 1;
+                        queueStart.push(neighbor);
+
+                        if (neighborNode.visitedFromEnd) {
+                            meetingPoint = neighbor;
+                            break;
+                        }
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+
+                    if (meetingPoint) break;
+                }
+
+                if (queueEnd.length > 0 && !meetingPoint) {
+                    const current = queueEnd.shift();
+                    const currentNode = gridToUse[current.row][current.col];
+
+                    const neighbors = getNeighbors(current.row, current.col);
+                    for (const neighbor of neighbors) {
+                        const neighborNode = gridToUse[neighbor.row][neighbor.col];
+                        if (neighborNode.state === WALL || neighborNode.visitedFromEnd) continue;
+
+                        neighborNode.visitedFromEnd = true;
+                        neighborNode.previousFromEnd = current;
+                        neighborNode.distanceFromEnd = currentNode.distanceFromEnd + 1;
+                        queueEnd.push(neighbor);
+
+                        if (neighborNode.visitedFromStart) {
+                            meetingPoint = neighbor;
+                            break;
+                        }
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER_END;
+                        }
+                    }
+
+                    if (meetingPoint) break;
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning || !meetingPoint) return;
+
+            // Reconstruct bidirectional path
+            const pathNodes = [];
+            let current = meetingPoint;
+            while (current) {
+                const node = gridToUse[current.row][current.col];
+                pathNodes.push(current);
+                current = node.previous;
+            }
+
+            current = gridToUse[meetingPoint.row][meetingPoint.col].previousFromEnd;
+            while (current) {
+                const node = gridToUse[current.row][current.col];
+                pathNodes.push(current);
+                current = node.previousFromEnd;
+            }
+
+            for (let i = 0; i < pathNodes.length; i++) {
+                if (!isRunning) break;
+                const node = pathNodes[i];
+                const gridNode = gridToUse[node.row][node.col];
+                if (gridNode.state !== START && gridNode.state !== END) {
+                    gridNode.state = PATH;
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (i % 10 === 0 || i === pathNodes.length - 1) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+        }
+
+        async function runJPSOnGrid(gridToUse) {
+            gridToUse[startNode.row][startNode.col].distance = 0;
+            gridToUse[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+            gridToUse[startNode.row][startNode.col].fScore = gridToUse[startNode.row][startNode.col].heuristic;
+
+            const openSet = [startNode];
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    gridToUse[a.row][a.col].fScore - gridToUse[b.row][b.col].fScore
+                );
+
+                const current = openSet.shift();
+                const currentNode = gridToUse[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break;
+                }
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+
+                const jumpPoints = findJumpPointsForGrid(current, endNode, gridToUse);
+
+                for (const jp of jumpPoints) {
+                    const jpNode = gridToUse[jp.row][jp.col];
+                    if (jpNode.visited) continue;
+
+                    const tentativeG = currentNode.distance + manhattanDistance(current, jp);
+                    if (tentativeG < jpNode.distance) {
+                        jpNode.previous = current;
+                        jpNode.distance = tentativeG;
+                        jpNode.heuristic = manhattanDistance(jp, endNode);
+                        jpNode.fScore = tentativeG + jpNode.heuristic;
+
+                        if (!openSet.find(n => n.row === jp.row && n.col === jp.col)) {
+                            openSet.push(jp);
+                        }
+
+                        if (jpNode.state !== START && jpNode.state !== END) {
+                            jpNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+            if (!isRunning) return;
+
+            // Check if we found a path
+            const endNodeObj = gridToUse[endNode.row][endNode.col];
+            if (endNodeObj.previous || (endNode.row === startNode.row && endNode.col === startNode.col)) {
+                await reconstructPathOnGrid(gridToUse);
+            }
+        }
+
+        function findJumpPointsForGrid(current, goal, gridToUse) {
+            const jumpPoints = [];
+            const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+
+            for (const [dr, dc] of directions) {
+                const jp = jumpForGrid(current, dr, dc, goal, gridToUse);
+                if (jp) jumpPoints.push(jp);
+            }
+
+            return jumpPoints;
+        }
+
+        function jumpForGrid(current, dr, dc, goal, gridToUse) {
+            // For 4-directional grids, just return the immediate neighbor
+            // True JPS requires 8-directional movement to be effective
+            const next = { row: current.row + dr, col: current.col + dc };
+
+            // Check bounds
+            if (next.row < 0 || next.row >= gridToUse.length ||
+                next.col < 0 || next.col >= gridToUse[0].length) {
+                return null;
+            }
+
+            const nextNode = gridToUse[next.row][next.col];
+
+            // Hit a wall
+            if (nextNode.state === WALL) return null;
+
+            // Return this neighbor as a jump point
+            return next;
+        }
+
+        function hasForcedNeighborForGrid(node, dr, dc, gridToUse) {
+            const row = node.row;
+            const col = node.col;
+
+            if (dr !== 0) {
+                const left = col - 1;
+                const right = col + 1;
+
+                if (left >= 0 && gridToUse[row][left].state === WALL) {
+                    const leftForced = row + dr;
+                    if (leftForced >= 0 && leftForced < gridToUse.length &&
+                        gridToUse[leftForced][left].state !== WALL) {
+                        return true;
+                    }
+                }
+
+                if (right < gridToUse[0].length && gridToUse[row][right].state === WALL) {
+                    const rightForced = row + dr;
+                    if (rightForced >= 0 && rightForced < gridToUse.length &&
+                        gridToUse[rightForced][right].state !== WALL) {
+                        return true;
+                    }
+                }
+            } else {
+                const up = row - 1;
+                const down = row + 1;
+
+                if (up >= 0 && gridToUse[up][col].state === WALL) {
+                    const upForced = col + dc;
+                    if (upForced >= 0 && upForced < gridToUse[0].length &&
+                        gridToUse[up][upForced].state !== WALL) {
+                        return true;
+                    }
+                }
+
+                if (down < gridToUse.length && gridToUse[down][col].state === WALL) {
+                    const downForced = col + dc;
+                    if (downForced >= 0 && downForced < gridToUse[0].length &&
+                        gridToUse[down][downForced].state !== WALL) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        async function reconstructPathOnGrid(gridToUse) {
+            let current = endNode;
+            const jumpPoints = [];
+
+            while (current) {
+                const node = gridToUse[current.row][current.col];
+                if (node.previous) {
+                    jumpPoints.push(current);
+                    current = node.previous;
+                } else {
+                    break;
+                }
+            }
+
+            // Fill in the path between jump points
+            const pathNodes = [];
+            if (jumpPoints.length === 0) {
+                return;
+            }
+
+            const reversedJumps = jumpPoints.reverse();
+            for (let i = 0; i < reversedJumps.length; i++) {
+                const from = i === 0 ? startNode : reversedJumps[i - 1];
+                const to = reversedJumps[i];
+
+                // Add all cells between from and to (not including from, but including to)
+                const dr = Math.sign(to.row - from.row);
+                const dc = Math.sign(to.col - from.col);
+                let r = from.row;
+                let c = from.col;
+
+                // Move one step at a time until we reach the destination
+                while (r !== to.row || c !== to.col) {
+                    if (r !== to.row) r += dr;
+                    if (c !== to.col) c += dc;
+                    pathNodes.push({ row: r, col: c });
+                }
+            }
+
+            for (let i = 0; i < pathNodes.length; i++) {
+                if (!isRunning) break;
+
+                const node = pathNodes[i];
+                const gridNode = gridToUse[node.row][node.col];
+                if (gridNode.state !== START && gridNode.state !== END) {
+                    gridNode.state = PATH;
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (i % 10 === 0 || i === pathNodes.length - 1) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+        }
+
+        async function runDijkstra() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            const rows = grid.length;
+            const cols = grid[0].length;
+
+            // Initialize
+            grid[startNode.row][startNode.col].distance = 0;
+
+            const unvisited = [];
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (grid[row][col].state !== WALL) {
+                        unvisited.push({ row, col });
+                    }
+                }
+            }
+
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while (unvisited.length > 0 && isRunning) {
+                // Find node with minimum distance
+                unvisited.sort((a, b) =>
+                    grid[a.row][a.col].distance - grid[b.row][b.col].distance
+                );
+
+                const current = unvisited.shift();
+                const currentNode = grid[current.row][current.col];
+
+                if (currentNode.distance === Infinity) {
+                    break; // No path exists
+                }
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break; // Found the end
+                }
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+                nodesVisited++;
+
+                // Update neighbors
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = grid[neighbor.row][neighbor.col];
+
+                    if (neighborNode.state === WALL || neighborNode.visited) {
+                        continue;
+                    }
+
+                    const alt = currentNode.distance + 1;
+
+                    if (alt < neighborNode.distance) {
+                        neighborNode.distance = alt;
+                        neighborNode.previous = current;
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            await reconstructPath();
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        async function runAStar() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            grid[startNode.row][startNode.col].distance = 0;
+            grid[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+            grid[startNode.row][startNode.col].fScore = grid[startNode.row][startNode.col].heuristic;
+
+            const openSet = [startNode];
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    grid[a.row][a.col].fScore - grid[b.row][b.col].fScore
+                );
+
+                const current = openSet.shift();
+                const currentNode = grid[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break;
+                }
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+                nodesVisited++;
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = grid[neighbor.row][neighbor.col];
+
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    const tentativeG = currentNode.distance + 1;
+
+                    if (tentativeG < neighborNode.distance) {
+                        neighborNode.previous = current;
+                        neighborNode.distance = tentativeG;
+                        neighborNode.heuristic = manhattanDistance(neighbor, endNode);
+                        neighborNode.fScore = tentativeG + neighborNode.heuristic;
+
+                        if (!openSet.find(n => n.row === neighbor.row && n.col === neighbor.col)) {
+                            openSet.push(neighbor);
+                        }
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            await reconstructPath();
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        async function runBFS() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            const queue = [startNode];
+            grid[startNode.row][startNode.col].visited = true;
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while (queue.length > 0 && isRunning) {
+                const current = queue.shift();
+                const currentNode = grid[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break;
+                }
+
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+                nodesVisited++;
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = grid[neighbor.row][neighbor.col];
+
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    neighborNode.visited = true;
+                    neighborNode.previous = current;
+                    neighborNode.distance = currentNode.distance + 1;
+                    queue.push(neighbor);
+
+                    if (neighborNode.state !== START && neighborNode.state !== END) {
+                        neighborNode.state = FRONTIER;
+                    }
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            await reconstructPath();
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        async function runGreedy() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            grid[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+
+            const openSet = [startNode];
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    grid[a.row][a.col].heuristic - grid[b.row][b.col].heuristic
+                );
+
+                const current = openSet.shift();
+                const currentNode = grid[current.row][current.col];
+
+                if (currentNode.visited) continue;
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break;
+                }
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+                nodesVisited++;
+
+                const neighbors = getNeighbors(current.row, current.col);
+                for (const neighbor of neighbors) {
+                    const neighborNode = grid[neighbor.row][neighbor.col];
+
+                    if (neighborNode.state === WALL || neighborNode.visited) continue;
+
+                    if (!neighborNode.previous) {
+                        neighborNode.previous = current;
+                        neighborNode.heuristic = manhattanDistance(neighbor, endNode);
+                        neighborNode.distance = currentNode.distance + 1;
+                        openSet.push(neighbor);
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            await reconstructPath();
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        async function runBidirectional() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            const queueStart = [startNode];
+            const queueEnd = [endNode];
+
+            grid[startNode.row][startNode.col].visitedFromStart = true;
+            grid[endNode.row][endNode.col].visitedFromEnd = true;
+            grid[startNode.row][startNode.col].distance = 0;
+            grid[endNode.row][endNode.col].distanceFromEnd = 0;
+
+            let meetingPoint = null;
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while ((queueStart.length > 0 || queueEnd.length > 0) && isRunning && !meetingPoint) {
+                // Expand from start
+                if (queueStart.length > 0) {
+                    const current = queueStart.shift();
+                    const currentNode = grid[current.row][current.col];
+
+                    if (currentNode.state !== START && currentNode.state !== END) {
+                        currentNode.state = VISITED;
+                    }
+                    nodesVisited++;
+
+                    const neighbors = getNeighbors(current.row, current.col);
+                    for (const neighbor of neighbors) {
+                        const neighborNode = grid[neighbor.row][neighbor.col];
+
+                        if (neighborNode.state === WALL || neighborNode.visitedFromStart) continue;
+
+                        neighborNode.visitedFromStart = true;
+                        neighborNode.previous = current;
+                        neighborNode.distance = currentNode.distance + 1;
+                        queueStart.push(neighbor);
+
+                        // Check if we've met the other search
+                        if (neighborNode.visitedFromEnd) {
+                            meetingPoint = neighbor;
+                            break;
+                        }
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER;
+                        }
+                    }
+
+                    if (meetingPoint) break;
+                }
+
+                // Expand from end
+                if (queueEnd.length > 0 && !meetingPoint) {
+                    const current = queueEnd.shift();
+                    const currentNode = grid[current.row][current.col];
+
+                    nodesVisited++;
+
+                    const neighbors = getNeighbors(current.row, current.col);
+                    for (const neighbor of neighbors) {
+                        const neighborNode = grid[neighbor.row][neighbor.col];
+
+                        if (neighborNode.state === WALL || neighborNode.visitedFromEnd) continue;
+
+                        neighborNode.visitedFromEnd = true;
+                        neighborNode.previousFromEnd = current;
+                        neighborNode.distanceFromEnd = currentNode.distanceFromEnd + 1;
+                        queueEnd.push(neighbor);
+
+                        // Check if we've met the other search
+                        if (neighborNode.visitedFromStart) {
+                            meetingPoint = neighbor;
+                            break;
+                        }
+
+                        if (neighborNode.state !== START && neighborNode.state !== END) {
+                            neighborNode.state = FRONTIER_END;
+                        }
+                    }
+
+                    if (meetingPoint) break;
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            // Reconstruct path from both directions
+            if (meetingPoint) {
+                let pathLength = 0;
+                const pathNodes = [];
+
+                // Path from start to meeting point
+                let current = meetingPoint;
+                while (current) {
+                    const node = grid[current.row][current.col];
+                    pathNodes.push(current);
+                    pathLength++;
+                    current = node.previous;
+                }
+
+                // Path from meeting point to end
+                current = grid[meetingPoint.row][meetingPoint.col].previousFromEnd;
+                while (current) {
+                    const node = grid[current.row][current.col];
+                    pathNodes.push(current);
+                    pathLength++;
+                    current = node.previousFromEnd;
+                }
+
+                // Animate path
+                for (let i = 0; i < pathNodes.length; i++) {
+                    if (!isRunning) break;
+
+                    const node = pathNodes[i];
+                    const gridNode = grid[node.row][node.col];
+                    if (gridNode.state !== START && gridNode.state !== END) {
+                        gridNode.state = PATH;
+                    }
+
+                    const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                    if (delay > 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        if (i % 10 === 0 || i === pathNodes.length - 1) {
+                            draw();
+                            await new Promise(resolve => setTimeout(resolve, 0));
+                        }
+                    }
+                }
+
+                document.getElementById('pathLength').textContent = pathLength - 1;
+                document.getElementById('pathCost').textContent = (pathLength - 1).toFixed(1);
+            }
+
+            draw();
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        async function runJPS() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('runButton').textContent = 'Stop';
+
+            clearPath();
+
+            grid[startNode.row][startNode.col].distance = 0;
+            grid[startNode.row][startNode.col].heuristic = manhattanDistance(startNode, endNode);
+            grid[startNode.row][startNode.col].fScore = grid[startNode.row][startNode.col].heuristic;
+
+            const openSet = [startNode];
+            let nodesVisited = 0;
+            let iterationCount = 0;
+
+            while (openSet.length > 0 && isRunning) {
+                openSet.sort((a, b) =>
+                    grid[a.row][a.col].fScore - grid[b.row][b.col].fScore
+                );
+
+                const current = openSet.shift();
+                const currentNode = grid[current.row][current.col];
+
+                if (current.row === endNode.row && current.col === endNode.col) {
+                    break;
+                }
+
+                currentNode.visited = true;
+                if (currentNode.state !== START && currentNode.state !== END) {
+                    currentNode.state = VISITED;
+                }
+                nodesVisited++;
+
+                // Find jump points instead of all neighbors
+                const jumpPoints = findJumpPoints(current, endNode);
+
+                for (const jp of jumpPoints) {
+                    const jpNode = grid[jp.row][jp.col];
+
+                    if (jpNode.visited) continue;
+
+                    const tentativeG = currentNode.distance + manhattanDistance(current, jp);
+
+                    if (tentativeG < jpNode.distance) {
+                        jpNode.previous = current;
+                        jpNode.distance = tentativeG;
+                        jpNode.heuristic = manhattanDistance(jp, endNode);
+                        jpNode.fScore = tentativeG + jpNode.heuristic;
+
+                        if (!openSet.find(n => n.row === jp.row && n.col === jp.col)) {
+                            openSet.push(jp);
+                        }
+
+                        if (jpNode.state !== START && jpNode.state !== END) {
+                            jpNode.state = FRONTIER;
+                        }
+                    }
+                }
+
+                document.getElementById('nodesVisited').textContent = nodesVisited;
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                iterationCount++;
+
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (iterationCount % 50 === 0) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            draw();
+
+            if (!isRunning) {
+                isRunning = false;
+                document.getElementById('runButton').textContent = 'Run Algorithm';
+                return;
+            }
+
+            await reconstructPath();
+
+            isRunning = false;
+            document.getElementById('runButton').textContent = 'Run Algorithm';
+        }
+
+        function findJumpPoints(current, goal) {
+            const jumpPoints = [];
+            const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+
+            for (const [dr, dc] of directions) {
+                const jp = jump(current, dr, dc, goal);
+                if (jp) jumpPoints.push(jp);
+            }
+
+            return jumpPoints;
+        }
+
+        function jump(current, dr, dc, goal) {
+            // For 4-directional grids, just return the immediate neighbor
+            // True JPS requires 8-directional movement to be effective
+            const next = { row: current.row + dr, col: current.col + dc };
+
+            // Check bounds
+            if (next.row < 0 || next.row >= grid.length ||
+                next.col < 0 || next.col >= grid[0].length) {
+                return null;
+            }
+
+            const nextNode = grid[next.row][next.col];
+
+            // Hit a wall
+            if (nextNode.state === WALL) return null;
+
+            // Return this neighbor as a jump point
+            return next;
+        }
+
+        function hasForcedNeighbor(node, dr, dc) {
+            const row = node.row;
+            const col = node.col;
+
+            if (dr !== 0) { // Vertical movement
+                // Check horizontal neighbors
+                const left = col - 1;
+                const right = col + 1;
+
+                if (left >= 0 && grid[row][left].state === WALL) {
+                    const leftForced = row + dr;
+                    if (leftForced >= 0 && leftForced < grid.length &&
+                        grid[leftForced][left].state !== WALL) {
+                        return true;
+                    }
+                }
+
+                if (right < grid[0].length && grid[row][right].state === WALL) {
+                    const rightForced = row + dr;
+                    if (rightForced >= 0 && rightForced < grid.length &&
+                        grid[rightForced][right].state !== WALL) {
+                        return true;
+                    }
+                }
+            } else { // Horizontal movement
+                // Check vertical neighbors
+                const up = row - 1;
+                const down = row + 1;
+
+                if (up >= 0 && grid[up][col].state === WALL) {
+                    const upForced = col + dc;
+                    if (upForced >= 0 && upForced < grid[0].length &&
+                        grid[up][upForced].state !== WALL) {
+                        return true;
+                    }
+                }
+
+                if (down < grid.length && grid[down][col].state === WALL) {
+                    const downForced = col + dc;
+                    if (downForced >= 0 && downForced < grid[0].length &&
+                        grid[down][downForced].state !== WALL) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        async function reconstructPath() {
+            let current = endNode;
+            const jumpPoints = [];
+
+            while (current) {
+                const node = grid[current.row][current.col];
+                if (node.previous) {
+                    jumpPoints.push(current);
+                    current = node.previous;
+                } else {
+                    break;
+                }
+            }
+
+            // Fill in the path between jump points (for JPS) or use directly (for other algorithms)
+            const pathNodes = [];
+            if (jumpPoints.length === 0) {
+                draw();
+                return;
+            }
+
+            const reversedJumps = jumpPoints.reverse();
+
+            // For JPS, we need to fill in the gaps between jump points
+            // For other algorithms, jump points are all adjacent so this still works
+            for (let i = 0; i < reversedJumps.length; i++) {
+                const from = i === 0 ? startNode : reversedJumps[i - 1];
+                const to = reversedJumps[i];
+
+                // Add all cells between from and to (not including from, but including to)
+                const dr = Math.sign(to.row - from.row);
+                const dc = Math.sign(to.col - from.col);
+                let r = from.row;
+                let c = from.col;
+
+                // Move one step at a time until we reach the destination
+                while (r !== to.row || c !== to.col) {
+                    if (r !== to.row) r += dr;
+                    if (c !== to.col) c += dc;
+                    pathNodes.push({ row: r, col: c });
+                }
+            }
+
+            // Animate path
+            for (let i = 0; i < pathNodes.length; i++) {
+                if (!isRunning) break;
+
+                const node = pathNodes[i];
+                const gridNode = grid[node.row][node.col];
+                if (gridNode.state !== START && gridNode.state !== END) {
+                    gridNode.state = PATH;
+                }
+
+                const delay = Math.floor(2000 * Math.exp(-10.6 * animationSpeed));
+                if (delay > 0) {
+                    draw();
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    if (i % 10 === 0 || i === pathNodes.length - 1) {
+                        draw();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+
+            document.getElementById('pathLength').textContent = pathNodes.length;
+            document.getElementById('pathCost').textContent = grid[endNode.row][endNode.col].distance.toFixed(1);
+
+            draw();
+        }
+
+        function generateMaze() {
+            clearGrid();
+
+            const rows = grid.length;
+            const cols = grid[0].length;
+
+            // Start with all walls
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (grid[row][col].state !== START && grid[row][col].state !== END) {
+                        grid[row][col].state = WALL;
+                        if (viewMode === 'all') {
+                            algorithmOrder.forEach(alg => {
+                                if (algorithmGrids[alg][row][col].state !== START && algorithmGrids[alg][row][col].state !== END) {
+                                    algorithmGrids[alg][row][col].state = WALL;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Recursive backtracking maze generation
+            const visited = new Set();
+
+            function carve(row, col) {
+                visited.add(`${row},${col}`);
+                if (grid[row][col].state !== START && grid[row][col].state !== END) {
+                    grid[row][col].state = EMPTY;
+                    if (viewMode === 'all') {
+                        algorithmOrder.forEach(alg => {
+                            if (algorithmGrids[alg][row][col].state !== START && algorithmGrids[alg][row][col].state !== END) {
+                                algorithmGrids[alg][row][col].state = EMPTY;
+                            }
+                        });
+                    }
+                }
+
+                const directions = [
+                    [-2, 0], [2, 0], [0, -2], [0, 2]
+                ].sort(() => Math.random() - 0.5);
+
+                for (const [dr, dc] of directions) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    const key = `${newRow},${newCol}`;
+
+                    if (newRow >= 0 && newRow < rows &&
+                        newCol >= 0 && newCol < cols &&
+                        !visited.has(key)) {
+
+                        const wallRow = row + dr / 2;
+                        const wallCol = col + dc / 2;
+
+                        if (grid[wallRow][wallCol].state !== START &&
+                            grid[wallRow][wallCol].state !== END) {
+                            grid[wallRow][wallCol].state = EMPTY;
+                            if (viewMode === 'all') {
+                                algorithmOrder.forEach(alg => {
+                                    if (algorithmGrids[alg][wallRow][wallCol].state !== START && algorithmGrids[alg][wallRow][wallCol].state !== END) {
+                                        algorithmGrids[alg][wallRow][wallCol].state = EMPTY;
+                                    }
+                                });
+                            }
+                        }
+
+                        carve(newRow, newCol);
+                    }
+                }
+            }
+
+            const startRow = startNode.row % 2 === 0 ? startNode.row : startNode.row - 1;
+            const startCol = startNode.col % 2 === 0 ? startNode.col : startNode.col - 1;
+            carve(startRow, startCol);
+
+            draw();
+        }
+
+        function generateRandomObstacles() {
+            clearGrid();
+
+            const rows = grid.length;
+            const cols = grid[0].length;
+            const density = 0.3;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (grid[row][col].state !== START && grid[row][col].state !== END) {
+                        if (Math.random() < density) {
+                            grid[row][col].state = WALL;
+                            if (viewMode === 'all') {
+                                algorithmOrder.forEach(alg => {
+                                    if (algorithmGrids[alg][row][col].state !== START && algorithmGrids[alg][row][col].state !== END) {
+                                        algorithmGrids[alg][row][col].state = WALL;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            draw();
+        }
+
+        // Initialize with URL parameter support
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedAlg = urlParams.get('alg') || 'all';
+            document.getElementById('algorithmSelector').value = selectedAlg;
+            currentAlgorithm = selectedAlg;
+
+            if (selectedAlg === 'all') {
+                viewMode = 'all';
+                updateSidebarForAllMode();
+            } else {
+                viewMode = 'single';
+                updateSidebarContent(selectedAlg);
+            }
+        });
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
