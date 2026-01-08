@@ -328,6 +328,136 @@
         .stat-value {
             color: #00ff41;
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            /* Hide sidebars on mobile */
+            .sidebar {
+                display: none;
+            }
+
+            /* Compact header */
+            .header {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+            }
+
+            .header-left {
+                gap: 10px;
+            }
+
+            .title {
+                font-size: 1em;
+                letter-spacing: 1px;
+            }
+
+            .header-stats {
+                gap: 10px;
+                font-size: 0.7em;
+            }
+
+            .header-stats span {
+                display: none;
+            }
+
+            .header-stats span:first-child,
+            .header-stats span:last-child {
+                display: inline;
+            }
+
+            /* Compact controls */
+            .controls {
+                padding: 10px;
+            }
+
+            .controls-row {
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 8px;
+            }
+
+            .control-group {
+                gap: 6px;
+                font-size: 0.8em;
+            }
+
+            .control-group label {
+                font-size: 0.75em;
+            }
+
+            input[type="range"] {
+                width: 80px;
+            }
+
+            select {
+                min-width: 100px;
+                padding: 4px 8px;
+                font-size: 0.75em;
+            }
+
+            .btn {
+                padding: 6px 10px;
+                font-size: 0.75em;
+            }
+
+            .tool-btn {
+                padding: 5px 8px;
+                font-size: 0.7em;
+            }
+
+            .tool-buttons {
+                gap: 4px;
+            }
+
+            .value-display {
+                min-width: 40px;
+                font-size: 0.7em;
+            }
+
+            /* Smaller canvas overlay */
+            .canvas-overlay {
+                top: 5px;
+                right: 5px;
+                padding: 6px;
+                font-size: 0.65em;
+            }
+
+            .stat-row {
+                gap: 10px;
+                margin-bottom: 2px;
+            }
+
+            /* Hide some stats on very small screens */
+            @media (max-width: 480px) {
+                .canvas-overlay .stat-row:nth-child(3),
+                .canvas-overlay .stat-row:nth-child(4) {
+                    display: none;
+                }
+            }
+        }
+
+        /* Very small screens - iPhone SE, etc */
+        @media (max-width: 400px) {
+            .title {
+                font-size: 0.85em;
+            }
+
+            .back-link {
+                font-size: 0.85em;
+            }
+
+            .header-stats {
+                font-size: 0.65em;
+            }
+
+            .controls {
+                padding: 8px;
+            }
+
+            .control-group label {
+                font-size: 0.7em;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1158,18 +1288,24 @@
                 this.mouseY = pos.y;
                 this.mouseDown = true;
 
+                // Larger touch targets on mobile
+                const isMobile = this.canvas.width < 768;
+                const grabRadius = isMobile ? 40 : 20;
+                const pinRadius = isMobile ? 30 : 15;
+                const cutRadius = isMobile ? 20 : 10;
+
                 switch (this.currentTool) {
                     case 'grab':
-                        this.grabbedPoint = this.findNearestPoint(pos.x, pos.y, 20);
+                        this.grabbedPoint = this.findNearestPoint(pos.x, pos.y, grabRadius);
                         break;
                     case 'pin':
-                        const pinPoint = this.findNearestPoint(pos.x, pos.y, 15);
+                        const pinPoint = this.findNearestPoint(pos.x, pos.y, pinRadius);
                         if (pinPoint) {
                             pinPoint.pinned = !pinPoint.pinned;
                         }
                         break;
                     case 'cut':
-                        this.cutNearestConstraint(pos.x, pos.y, 10);
+                        this.cutNearestConstraint(pos.x, pos.y, cutRadius);
                         break;
                     case 'circle':
                         this.dragStart = { x: pos.x, y: pos.y };
@@ -1273,28 +1409,65 @@
                 const cx = this.canvas.width / 2;
                 const cy = this.canvas.height / 3;
 
+                // Scale for mobile
+                const isMobile = this.canvas.width < 768;
+                const scale = isMobile ? 0.6 : 1.0;
+                const segmentScale = isMobile ? 0.7 : 1.0;
+
                 let result;
                 switch (preset) {
                     case 'cloth':
-                        result = PresetFactory.createCloth(cx - 150, cy - 100, 300, 250, 15);
+                        result = PresetFactory.createCloth(
+                            cx - 150 * scale,
+                            cy - 100 * scale,
+                            300 * scale,
+                            250 * scale,
+                            Math.floor(15 * segmentScale)
+                        );
                         break;
                     case 'rope':
-                        result = PresetFactory.createRope(cx, cy - 150, 300, 20);
+                        result = PresetFactory.createRope(
+                            cx,
+                            cy - 150 * scale,
+                            300 * scale,
+                            Math.floor(20 * segmentScale)
+                        );
                         break;
                     case 'chain':
-                        result = PresetFactory.createChain(cx, cy - 150, 300, 15);
+                        result = PresetFactory.createChain(
+                            cx,
+                            cy - 150 * scale,
+                            300 * scale,
+                            Math.floor(15 * segmentScale)
+                        );
                         break;
                     case 'jello':
-                        result = PresetFactory.createJello(cx - 100, cy - 100, 200, 10);
+                        result = PresetFactory.createJello(
+                            cx - 100 * scale,
+                            cy - 100 * scale,
+                            200 * scale,
+                            Math.floor(10 * segmentScale)
+                        );
                         break;
                     case 'ragdoll':
-                        result = PresetFactory.createRagdoll(cx, cy - 50, 1.2);
+                        result = PresetFactory.createRagdoll(cx, cy - 50 * scale, 1.2 * scale);
                         break;
                     case 'bridge':
-                        result = PresetFactory.createBridge(cx - 200, cy, 400, 25);
+                        result = PresetFactory.createBridge(
+                            cx - 200 * scale,
+                            cy,
+                            400 * scale,
+                            Math.floor(25 * segmentScale)
+                        );
                         break;
                     case 'hair':
-                        result = PresetFactory.createHair(cx, cy - 150, 8, 200, 15);
+                        result = PresetFactory.createHair(
+                            cx,
+                            cy - 150 * scale,
+                            isMobile ? 5 : 8,
+                            200 * scale,
+                            Math.floor(15 * segmentScale)
+                        );
                         break;
                 }
 
