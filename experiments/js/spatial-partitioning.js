@@ -11,7 +11,7 @@
  * Converts 2D coordinates into a 1D code that preserves spatial locality.
  * Useful for sorting particles to improve cache coherency and spatial queries.
  */
-class ZOrder {
+export class ZOrder {
     /**
      * Encode 2D coordinates into a Z-order code
      * @param {number} x - X coordinate
@@ -68,7 +68,7 @@ class ZOrder {
  * Divides 2D space into a regular grid of cells.
  * Efficient for collision detection with uniform distribution of objects.
  */
-class UniformGrid {
+export class UniformGrid {
     /**
      * Create a uniform grid
      * @param {number} width - Total width of the space
