@@ -4,41 +4,28 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title>experiments</title>
+	<link rel="stylesheet" href="styles/terminal-theme.css">
 	<style>
-		* { box-sizing: border-box; margin: 0; padding: 0; }
-		html,body { height: 100%; }
+		/* Experiment-specific overrides and styles */
+
 		body {
-			font-family: 'Courier New', monospace;
-			background: #0a0e0a;
-			color: #00ff41;
-			display: flex;
-			flex-direction: column;
-			min-height: 100vh;
+			overflow: auto; /* Allow scrolling for index page */
+		}
+
+		html,body {
+			height: 100%;
 		}
 
 		.title-bar {
-			background: linear-gradient(180deg, #1a2a1a 0%, #0f1e0f 100%);
-			border-bottom: 3px solid #00ff41;
-			padding: 18px 24px;
-			text-align: center;
-			box-shadow: 0 5px 30px rgba(0,255,65,0.25), inset 0 1px 0 rgba(0,255,65,0.15);
+			padding: 18px 24px; /* Custom padding for index */
 		}
 
 		.title-text {
-			font-size: 36px;
-			letter-spacing: 8px;
-			text-transform: uppercase;
-			color: #00ff41;
-			text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 2px 0 #003311;
-			font-weight: bold;
+			font-size: 36px; /* Larger title for index */
 		}
 
 		.subtitle {
-			font-size: 11px;
-			letter-spacing: 4px;
-			color: #00ff4199;
 			margin-top: 6px;
-			text-transform: uppercase;
 		}
 
 		main {
