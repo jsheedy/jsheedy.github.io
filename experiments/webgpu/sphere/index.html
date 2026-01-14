@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Sphere</title>
+    <link rel="stylesheet" href="../../styles/terminal-theme.css">
+    <style>
+        /* Canvas specific styling */
+        #canvas {
+            image-rendering: pixelated;
+        }
+
+        /* Prevent right-click menu on canvas */
+        #canvas {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        /* Help panel full width */
+        .help-panel {
+            grid-column: 1 / -1;
+        }
+
+        select {
+            background: #001a00;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            outline: none;
+        }
+
+        select:hover {
+            background: #002200;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.5);
+        }
+
+        select option {
+            background: #001a00;
+            color: #00ff41;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <a href="../../index.html" class="back-link">Experiments</a>
+        <div class="title-text">WEBGL SPHERE</div>
+        <div class="title-subtitle">ICOSPHERE POINT CLOUD RENDERER</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="control-panel">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="vertexCount">162</div>
+                <div class="stat-label">Vertices</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="fps">60</div>
+                <div class="stat-label">FPS</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="subdivisions">2</div>
+                <div class="stat-label">Subdivisions</div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Subdivisions: <span class="value-display" id="subdivisionsValue">2</span></label>
+            <input type="range" id="subdivisionsSlider" min="0" max="5" value="2" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>Rotation Speed: <span class="value-display" id="rotationValue">0.5</span></label>
+            <input type="range" id="rotationSlider" min="0" max="2" value="0.5" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Camera Distance: <span class="value-display" id="distanceValue">5.0</span></label>
+            <input type="range" id="distanceSlider" min="2" max="20" value="5" step="0.5">
+        </div>
+
+        <div class="button-group">
+            <button id="resetBtn">Reset Camera</button>
+            <button id="pauseBtn">Pause Rotation</button>
+        </div>
+
+        <div class="help-panel">
+            <h3>Controls</h3>
+            <p>◆ Left Drag: Orbit Camera</p>
+            <p>◆ Scroll Wheel: Zoom In/Out</p>
+            <p>◆ Right Drag: Pan View</p>
+            <p>◆ Subdivisions: 0 (12 verts) to 5 (10,242 verts)</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { SphereRenderer } from './pkg/webgpu_sphere.js';
+
+        const canvas = document.getElementById('canvas');
+        const titleBar = document.querySelector('.title-bar');
+        const controlPanel = document.querySelector('.control-panel');
+
+        // State (declare before using)
+        let renderer;
+        let lastTime = performance.now();
+        let fps = 60;
+        let frameCount = 0;
+        let fpsTime = 0;
+
+        // Mouse state
+        let isDragging = false;
+        let isPanning = false;
+        let isPaused = false;
+
+        // Canvas resize
+        function resizeCanvas() {
+            const width = window.innerWidth;
+            const height = window.innerHeight - titleBar.offsetHeight - controlPanel.offsetHeight;
+            canvas.width = width;
+            canvas.height = height;
+            if (renderer) {
+                renderer.resize(width, height);
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Mouse controls
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isDragging = true;
+            } else if (e.button === 2) {
+                isPanning = true;
+                e.preventDefault();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!renderer) return;
+
+            if (isDragging) {
+                const dx = e.movementX;
+                const dy = e.movementY;
+                renderer.orbit(dx * 0.01, dy * 0.01);
+            } else if (isPanning) {
+                const dx = e.movementX;
+                const dy = e.movementY;
+                renderer.pan(dx * 0.001, dy * 0.001);
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 0) isDragging = false;
+            if (e.button === 2) isPanning = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isPanning = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            if (!renderer) return;
+            e.preventDefault();
+            const delta = e.deltaY * -0.001;
+            renderer.zoom(delta);
+        }, { passive: false });
+
+        // Prevent context menu on right-click
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Slider controls
+        const subdivisionsSlider = document.getElementById('subdivisionsSlider');
+        const rotationSlider = document.getElementById('rotationSlider');
+        const distanceSlider = document.getElementById('distanceSlider');
+
+        subdivisionsSlider.addEventListener('input', (e) => {
+            if (!renderer) return;
+            const value = parseInt(e.target.value);
+            renderer.set_subdivisions(value);
+            document.getElementById('subdivisionsValue').textContent = value;
+            document.getElementById('subdivisions').textContent = value;
+        });
+
+        rotationSlider.addEventListener('input', (e) => {
+            if (!renderer) return;
+            const value = parseFloat(e.target.value);
+            renderer.set_rotation_speed(value);
+            document.getElementById('rotationValue').textContent = value.toFixed(1);
+        });
+
+        distanceSlider.addEventListener('input', (e) => {
+            if (!renderer) return;
+            const value = parseFloat(e.target.value);
+            // Zoom by calculating the delta from current distance
+            const currentDistance = 5.0; // This is approximate; ideally we'd track it
+            const targetDistance = value;
+            const delta = (targetDistance - currentDistance) / currentDistance;
+            renderer.zoom(delta);
+            document.getElementById('distanceValue').textContent = value.toFixed(1);
+        });
+
+        // Button controls
+        const resetBtn = document.getElementById('resetBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+
+        resetBtn.addEventListener('click', () => {
+            if (!renderer) return;
+            renderer.reset_camera();
+            distanceSlider.value = 5;
+            document.getElementById('distanceValue').textContent = '5.0';
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? 'Resume Rotation' : 'Pause Rotation';
+            if (!renderer) return;
+            renderer.set_rotation_speed(isPaused ? 0 : parseFloat(rotationSlider.value));
+        });
+
+        // Animation loop
+        function animate(currentTime) {
+            if (!renderer) {
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            const deltaTime = (currentTime - lastTime) * 0.001;
+            lastTime = currentTime;
+
+            // Calculate FPS
+            frameCount++;
+            fpsTime += deltaTime;
+            if (fpsTime >= 1.0) {
+                fps = Math.round(frameCount / fpsTime);
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                fpsTime = 0;
+            }
+
+            // Render
+            try {
+                renderer.render(deltaTime);
+
+                // Update stats
+                const vertexCount = renderer.get_vertex_count();
+                document.getElementById('vertexCount').textContent = vertexCount.toLocaleString();
+            } catch (error) {
+                console.error('Render error:', error);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize
+        async function init_app() {
+            try {
+                console.log('Starting initialization...');
+                console.log('WebGL available:', 'gpu' in navigator);
+                console.log('Canvas element:', canvas);
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+
+                console.log('Loading WASM module...');
+                await init();
+                console.log('WASM module loaded');
+
+                console.log('Creating SphereRenderer...');
+                renderer = await SphereRenderer.new('canvas');
+                console.log('WebGL Sphere initialized successfully');
+
+                // Update initial stats
+                document.getElementById('vertexCount').textContent = renderer.get_vertex_count().toLocaleString();
+
+                requestAnimationFrame(animate);
+            } catch (error) {
+                console.error('Failed to initialize WebGL:', error);
+                console.error('Error stack:', error.stack);
+                alert('Failed to initialize WebGL. Check console for details.\n\nError: ' + error.message);
+            }
+        }
+
+        init_app();
+    </script>
+</body>
+</html>
