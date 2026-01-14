@@ -98,4 +98,19 @@ impl SphereRenderer {
     pub fn get_subdivisions(&self) -> u32 {
         self.state.subdivisions
     }
+
+    /// Set whether to render faces (solid triangles)
+    pub fn set_render_faces(&mut self, enabled: bool) {
+        self.state.render_faces = enabled;
+    }
+
+    /// Set whether to render wireframe (edges)
+    pub fn set_render_wireframe(&mut self, enabled: bool) {
+        self.state.render_wireframe = enabled;
+    }
+
+    /// Set whether to render vertices (points)
+    pub fn set_render_vertices(&mut self, enabled: bool) {
+        self.state.render_vertices = enabled;
+    }
 }

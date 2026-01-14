@@ -94,6 +94,19 @@
             <button id="pauseBtn">Pause Rotation</button>
         </div>
 
+        <div class="control-group">
+            <label style="display: block; margin-bottom: 8px;">Render Mode:</label>
+            <label style="display: block; margin-bottom: 4px;">
+                <input type="checkbox" id="renderFaces" checked> Faces (Solid)
+            </label>
+            <label style="display: block; margin-bottom: 4px;">
+                <input type="checkbox" id="renderWireframe"> Wireframe (Mesh)
+            </label>
+            <label style="display: block; margin-bottom: 4px;">
+                <input type="checkbox" id="renderVertices"> Vertices (Points)
+            </label>
+        </div>
+
         <div class="help-panel">
             <h3>Controls</h3>
             <p>◆ Left Drag: Orbit Camera</p>
@@ -229,6 +242,26 @@
             pauseBtn.textContent = isPaused ? 'Resume Rotation' : 'Pause Rotation';
             if (!renderer) return;
             renderer.set_rotation_speed(isPaused ? 0 : parseFloat(rotationSlider.value));
+        });
+
+        // Render mode controls
+        const renderFaces = document.getElementById('renderFaces');
+        const renderWireframe = document.getElementById('renderWireframe');
+        const renderVertices = document.getElementById('renderVertices');
+
+        renderFaces.addEventListener('change', (e) => {
+            if (!renderer) return;
+            renderer.set_render_faces(e.target.checked);
+        });
+
+        renderWireframe.addEventListener('change', (e) => {
+            if (!renderer) return;
+            renderer.set_render_wireframe(e.target.checked);
+        });
+
+        renderVertices.addEventListener('change', (e) => {
+            if (!renderer) return;
+            renderer.set_render_vertices(e.target.checked);
         });
 
         // Animation loop

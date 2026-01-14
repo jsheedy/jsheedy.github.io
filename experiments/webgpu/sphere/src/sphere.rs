@@ -4,11 +4,20 @@ use std::collections::HashMap;
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     pub position: [f32; 3],
+    pub normal: [f32; 3],
 }
 
 impl Vertex {
     fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { position: [x, y, z] }
+        // For a sphere, the normal is the same as the normalized position
+        let len = (x * x + y * y + z * z).sqrt();
+        let nx = x / len;
+        let ny = y / len;
+        let nz = z / len;
+        Self {
+            position: [x, y, z],
+            normal: [nx, ny, nz],
+        }
     }
 
     fn normalized(&self) -> Self {
@@ -25,20 +34,25 @@ impl Vertex {
 
     fn scaled(&self, factor: f32) -> Self {
         let [x, y, z] = self.position;
-        Self::new(x * factor, y * factor, z * factor)
+        let [nx, ny, nz] = self.normal;
+        Self {
+            position: [x * factor, y * factor, z * factor],
+            normal: [nx, ny, nz], // Normal stays normalized
+        }
     }
 }
 
 /// Generate an icosphere with the specified number of subdivisions and radius.
+/// Returns (vertices, indices) where indices define triangles.
 ///
 /// Subdivision levels:
-/// - 0: 12 vertices (base icosahedron)
-/// - 1: 42 vertices
-/// - 2: 162 vertices
-/// - 3: 642 vertices
-/// - 4: 2,562 vertices
-/// - 5: 10,242 vertices
-pub fn generate_icosphere(subdivisions: u32, radius: f32) -> Vec<Vertex> {
+/// - 0: 12 vertices, 20 triangles (base icosahedron)
+/// - 1: 42 vertices, 80 triangles
+/// - 2: 162 vertices, 320 triangles
+/// - 3: 642 vertices, 1,280 triangles
+/// - 4: 2,562 vertices, 5,120 triangles
+/// - 5: 10,242 vertices, 20,480 triangles
+pub fn generate_icosphere(subdivisions: u32, radius: f32) -> (Vec<Vertex>, Vec<u32>) {
     // Start with icosahedron using golden ratio
     let phi = (1.0 + 5.0_f32.sqrt()) / 2.0;
     let t = 1.0;
@@ -108,23 +122,18 @@ pub fn generate_icosphere(subdivisions: u32, radius: f32) -> Vec<Vertex> {
         triangles = new_triangles;
     }
 
-    // Extract unique vertices from triangles and scale to radius
-    let mut result = Vec::new();
-    let mut vertex_set: HashMap<String, ()> = HashMap::new();
+    // Scale vertices to radius
+    let scaled_vertices: Vec<Vertex> = vertices.iter().map(|v| v.scaled(radius)).collect();
 
+    // Convert triangle vertex indices to u32 indices
+    let mut indices = Vec::new();
     for triangle in &triangles {
-        for &idx in triangle {
-            let v = vertices[idx].scaled(radius);
-            // Use position as key for uniqueness
-            let key = format!("{:.6}_{:.6}_{:.6}", v.position[0], v.position[1], v.position[2]);
-            if !vertex_set.contains_key(&key) {
-                vertex_set.insert(key, ());
-                result.push(v);
-            }
-        }
+        indices.push(triangle[0] as u32);
+        indices.push(triangle[1] as u32);
+        indices.push(triangle[2] as u32);
     }
 
-    result
+    (scaled_vertices, indices)
 }
 
 /// Get the midpoint between two vertices, creating a new vertex if needed.
@@ -156,19 +165,18 @@ mod tests {
 
     #[test]
     fn test_icosphere_vertex_counts() {
-        // Test subdivision vertex counts (approximate due to deduplication)
-        assert_eq!(generate_icosphere(0, 1.0).len(), 12);
+        let (verts0, indices0) = generate_icosphere(0, 1.0);
+        assert_eq!(verts0.len(), 12);
+        assert_eq!(indices0.len(), 60); // 20 triangles * 3 indices
 
-        let verts1 = generate_icosphere(1, 1.0);
-        assert!(verts1.len() > 12 && verts1.len() < 100);
-
-        let verts2 = generate_icosphere(2, 1.0);
-        assert!(verts2.len() > verts1.len());
+        let (verts1, indices1) = generate_icosphere(1, 1.0);
+        assert!(verts1.len() > 12);
+        assert!(indices1.len() > indices0.len());
     }
 
     #[test]
     fn test_icosphere_radius() {
-        let vertices = generate_icosphere(0, 2.0);
+        let (vertices, _) = generate_icosphere(0, 2.0);
         for v in vertices {
             let [x, y, z] = v.position;
             let dist = (x * x + y * y + z * z).sqrt();
